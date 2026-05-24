@@ -1,0 +1,439 @@
+# Claude Code — Maximum Efficiency Setup
+
+A complete replication guide for a high-context, low-friction Claude Code workflow. Covers persistent memory, session hooks, skills/plugins, codebase knowledge graphs, and permission configuration.
+
+---
+
+## Overview
+
+The system has 5 layers:
+
+| Layer | What it does |
+|-------|-------------|
+| **Memory files** | Persistent facts Claude recalls across sessions |
+| **CLAUDE.md** | Project rules loaded every session (checked into repo) |
+| **Hooks** | Shell scripts that fire on session start, prompt submit, tool use |
+| **Plugins/Skills** | Slash commands that unlock specialist behaviour |
+| **Graphify** | Turns your codebase into a queryable knowledge graph |
+
+---
+
+## 1. Memory Files
+
+### Where they live
+
+```
+~/.claude/projects/<encoded-path>/memory/
+```
+
+Encoded path = your project dir with `/` → `-`. Example:
+- Project: `/home/you/projects/myapp`
+- Memory dir: `~/.claude/projects/-home-you-projects-myapp/memory/`
+
+```bash
+mkdir -p ~/.claude/projects/-home-you-projects-myapp/memory/
+```
+
+### MEMORY.md — the index
+
+Claude loads this on every turn. Keep under 200 lines. One line per memory:
+
+```markdown
+# Memory Index
+
+- [User profile](user_profile.md) — senior Rails dev, new to React
+- [Stack decisions](project_stack.md) — React + Postgres + Vercel
+- [Deploy workflow](feedback_deploy.md) — always staging first
+- [UI rules](feedback_ui.md) — dark mode only, no glassmorphism
+```
+
+### Memory file format
+
+```markdown
+---
+name: short-kebab-slug
+description: one-line summary
+metadata:
+  type: user | feedback | project | reference
+---
+
+Content here.
+
+**Why:** reason this matters
+**How to apply:** when/where Claude uses this
+```
+
+### 4 memory types
+
+**`user`** — who the person is, how they work
+```markdown
+Senior backend dev (Go), new to React. Frame frontend in backend analogues.
+Prefers terse responses. No trailing summaries. Works solo, ships fast.
+```
+
+**`feedback`** — rules for how Claude should behave (most valuable type)
+```markdown
+
+**Why:** Breaking change hit prod — should have gone through staging first.
+**How to apply:** Default to staging. Ask before any prod deploy.
+```
+
+**`project`** — current state, decisions, pending work
+```markdown
+DB schema migration unrun — needs `npm run db:migrate` before deploy.
+Email provider domain unverified — outbound emails blocked in prod.
+
+**Why:** Active blockers; Claude needs to know before suggesting related features.
+**How to apply:** Flag these when user asks about affected features.
+```
+
+**`reference`** — where things live externally
+```markdown
+Bugs tracked in Linear project "SHOTIQ".
+Staging: https://staging.myapp.com
+```
+
+### Commands
+- `"save to memory"` — Claude saves relevant facts from conversation
+- `"remember X"` — saves immediately
+- `"forget X"` — removes matching entry
+
+---
+
+## 2. CLAUDE.md
+
+Two files. Both loaded every session.
+
+### Global: `~/.claude/CLAUDE.md`
+Rules that apply across all projects. Example:
+
+```markdown
+# Global Rules
+
+- Always read project CLAUDE.md before starting
+- Check decisions.md before any architectural suggestion
+- graphify — trigger: /graphify (see skills section)
+```
+
+### Project: `<project-root>/CLAUDE.md`
+Checked into repo. Covers stack, conventions, what NOT to do:
+
+```markdown
+# Project Rules
+
+## Stack
+Next.js App Router, Postgres, Tailwind, Vercel.
+
+## Conventions
+- All data scoped to org_id (never user_id directly)
+- No heavy client-side libs for server-side tasks
+- Dark mode only in MVP
+- Run `npm run gen:types` after every schema change
+
+## Do NOT
+- Expose service-role / admin keys to the client
+- Create DB tables without row-level security
+- Make file storage buckets public
+
+## Session Protocol
+1. Read this file
+2. Read latest 04-Sessions/YYYY-MM-DD.md
+3. Check decisions.md before architecture suggestions
+```
+
+Pair CLAUDE.md with a vault/docs folder:
+```
+project/
+├── CLAUDE.md
+└── docs/
+    ├── decisions.md       ← ADRs
+    ├── tech-stack.md
+    ├── component-map.md
+    └── sessions/          ← one file per session
+        └── 2026-05-24.md
+```
+
+---
+
+## 3. Hooks
+
+Hooks are shell/node scripts that fire at specific events. Configured in `~/.claude/settings.json`.
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{
+      "hooks": [{
+        "type": "command",
+        "command": "node ~/.claude/hooks/my-session-start.js",
+        "timeout": 5,
+        "statusMessage": "Loading context..."
+      }]
+    }],
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "node ~/.claude/hooks/my-prompt-hook.js",
+        "timeout": 5
+      }]
+    }],
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "bash ~/.claude/hooks/pre-bash.sh"
+      }]
+    }]
+  }
+}
+```
+
+### Hook output format
+
+Hooks communicate with Claude via stdout JSON:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "Text injected into Claude's context here."
+  }
+}
+```
+
+### Useful hook patterns
+
+**SessionStart — inject active rules:**
+```js
+// Fires on every session. Inject reminders, active mode, context.
+process.stdout.write(JSON.stringify({
+  hookSpecificOutput: {
+    hookEventName: "SessionStart",
+    additionalContext: "REMINDER: always staging before prod. Check decisions.md first."
+  }
+}));
+```
+
+**PreToolUse — intercept grep/search with graph:**
+```bash
+# If user runs grep and a knowledge graph exists, remind Claude to use it instead
+CMD=$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null)
+case "$CMD" in
+  *grep*|*find\ *)
+    [ -f graphify-out/graph.json ] && echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"Graph exists. Read GRAPH_REPORT.md first."}}'
+  ;;
+esac
+```
+
+**UserPromptSubmit — persist mode state:**
+```js
+// Track any active "mode" (e.g. terse mode) across prompts
+// Reads a flag file and injects reminder into every prompt
+const fs = require('fs');
+const flag = `${process.env.HOME}/.claude/.mymode-active`;
+if (fs.existsSync(flag)) {
+  const mode = fs.readFileSync(flag, 'utf8').trim();
+  process.stdout.write(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: "UserPromptSubmit",
+      additionalContext: `MODE ACTIVE: ${mode}. Apply rules.`
+    }
+  }));
+}
+```
+
+---
+
+## 4. Plugins & Skills
+
+Install via `settings.json` → `enabledPlugins` + `extraKnownMarketplaces`.
+
+### settings.json structure
+
+```json
+{
+  "enabledPlugins": {
+    "caveman@caveman": true,
+    "engineering-skills@claude-code-skills": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
+  },
+  "extraKnownMarketplaces": {
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
+    },
+    "claude-code-skills": {
+      "source": {
+        "source": "github",
+        "repo": "alirezarezvani/claude-skills"
+      }
+    },
+    "ui-ux-pro-max-skill": {
+      "source": {
+        "source": "github",
+        "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+      }
+    }
+  }
+}
+```
+
+### High-value plugins
+
+| Plugin | Trigger | What it does |
+|--------|---------|-------------|
+| **caveman** | `/caveman` | Terse mode — drops filler words, fragments OK. Major token savings. |
+| **graphify** | `/graphify` | Codebase → knowledge graph (see section 5) |
+| **engineering-skills** | auto | 23 production skills: architecture, security, fullstack, DevOps |
+| **engineering-advanced** | auto | 25 advanced skills: RAG, agent design, CI/CD, observability |
+| **ui-ux-pro-max** | auto | 50+ UI styles, 161 palettes, full design system |
+| **pw (Playwright)** | `/pw:*` | Test generation, migration, debugging, coverage |
+| **self-improving-agent** | `/self-improving-agent` | Claude reviews and improves its own behaviour |
+
+### Custom skills
+
+Create a skill file at `~/.claude/skills/<name>/SKILL.md`. Register in global CLAUDE.md:
+
+```markdown
+# ~/.claude/CLAUDE.md
+- **my-skill** — trigger: /my-skill. Does X.
+When user types /my-skill, invoke Skill tool with skill: "my-skill".
+```
+
+---
+
+## 5. Graphify — Codebase Knowledge Graph
+
+Turns any codebase into a navigable knowledge graph. Claude uses it instead of grep/find for codebase questions.
+
+### Install
+
+```bash
+pip install graphifyy
+# or
+uv tool install graphifyy
+```
+
+### Run
+
+```bash
+# In your project root:
+/graphify
+
+# Or direct:
+graphify .
+```
+
+Outputs to `graphify-out/`:
+- `GRAPH_REPORT.md` — god nodes, communities, suggested questions
+- `graph.html` — interactive visualization
+- `graph.json` — GraphRAG-ready JSON
+- `wiki/` — one article per community
+
+### Obsidian integration
+
+```bash
+# Export to existing Obsidian vault
+graphify --obsidian --obsidian-dir ~/vaults/my-project
+```
+
+### After code changes
+
+```bash
+graphify update .   # AST-only re-run, no LLM cost
+```
+
+### CLAUDE.md rule (add to project CLAUDE.md)
+
+```markdown
+## graphify
+
+This project has a knowledge graph at graphify-out/.
+
+Rules:
+- ALWAYS read graphify-out/GRAPH_REPORT.md before searching source files
+- For "how does X relate to Y" questions, use `graphify query "<question>"`
+- After modifying code, run `graphify update .`
+```
+
+### PreToolUse hook (auto-intercept grep)
+
+Add to `~/.claude/settings.json` hooks to automatically remind Claude when it tries to grep instead of query the graph (see hook example in section 3).
+
+### Excluding build artifacts
+
+Compiled/minified files (`.next/`, `.open-next/`, `node_modules/`, `.wrangler/`) pollute god nodes with garbage names. Filter them after detection:
+
+```python
+NOISE = ['.open-next', '.wrangler', '.next', 'node_modules']
+clean_nodes = [n for n in nodes if not any(p in (n.get('file') or '') for p in NOISE)]
+```
+
+---
+
+## 6. Settings — Full Reference
+
+Full `~/.claude/settings.json` structure for maximum efficiency:
+
+```json
+{
+  "theme": "dark",
+  "effortLevel": "high",
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(python3 *)",
+      "Bash(node *)",
+      "Read(/your/project/**)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/path/to/other/dir"
+    ]
+  },
+  "hooks": { ... },
+  "enabledPlugins": { ... },
+  "extraKnownMarketplaces": { ... },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/hooks/my-statusline.sh"
+  }
+}
+```
+
+**`effortLevel: "high"`** — Claude applies maximum reasoning effort by default.
+
+**Status line** — a small script that outputs text shown in Claude Code's bottom bar. Useful for showing active mode, git branch, or any live state.
+
+---
+
+## 7. Quick-Start Checklist
+
+```
+[ ] Create ~/.claude/projects/<encoded>/memory/MEMORY.md
+[ ] Create 2-3 seed memory files (user_profile, project_stack, feedback_deploy)
+[ ] Write project CLAUDE.md with stack, conventions, DO NOT list, session protocol
+[ ] Write global ~/.claude/CLAUDE.md with cross-project rules
+[ ] Install graphify: pip install graphifyy
+[ ] Run /graphify on codebase, add GRAPH_REPORT rule to CLAUDE.md
+[ ] Add graphify PreToolUse hook to settings.json
+[ ] Install caveman plugin for terse mode
+[ ] Set effortLevel: "high" in settings.json
+[ ] Add broad Bash/Read permissions to reduce approval prompts
+```
+
+---
+
+## 8. Workflow Each Session
+
+1. Claude reads MEMORY.md index → loads relevant memory files
+2. Claude reads CLAUDE.md (global + project)
+3. SessionStart hook fires → injects any active modes/reminders
+4. You work — Claude saves new memories when it learns something
+5. End session: say "save to memory" to capture any session decisions
+
+Over time, Claude's context of your project, preferences, and past decisions compounds — no re-explaining the stack, no re-correcting the same mistakes.

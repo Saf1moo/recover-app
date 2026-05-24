@@ -1,18 +1,30 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-// ─── Storage ────────────────────────────────────────────────────────────────
-const ROOT_KEY = "recover_root_v1"; // { activeId, accounts: {id: accountData} }
+// ─── Storage ─────────────────────────────────────────────────────────────────
+const ROOT_KEY = "recover_root_v1";
+
+const DEFAULT_ROUTINE_TARGETS = () => ({
+  bedtime: "22:30",
+  waketime: "06:30",
+  prayerTargets: {
+    fajr:    { earliest: "05:15", latest: "06:00" },
+    dhuhr:   { earliest: "13:00", latest: "14:30" },
+    asr:     { earliest: "16:30", latest: "17:45" },
+    maghrib: { earliest: "18:30", latest: "19:15" },
+    isha:    { earliest: "20:00", latest: "22:00" },
+  },
+});
 
 const accountDefaults = () => ({
   id: null, name: "", substance: "", color: "#34d399",
   sobrietyStart: null,
   habits: [], relapses: [], rewards: [], claimedRewards: [], journal: [],
-  routine: { bedtimeTarget: "22:30", wakeTarget: "06:30", reminderEnabled: true, reminderMinsBefore: 30 },
-  sleepLogs: [], claimedSleepRewards: [],
+  routineTargets: DEFAULT_ROUTINE_TARGETS(),
+  sleepLogs: [],
+  prayerLogs: [],
   goals: [], reminders: [],
-  // Post-relapse protocol
-  postRelapseActions: [],   // { id, text } — custom immediate actions
-  postRelapseReminders: [], // { id, text } — custom post-relapse affirmations
+  postRelapseActions: [],
+  postRelapseReminders: [],
 });
 
 function loadRoot() {
@@ -32,11 +44,6 @@ const MILESTONES = [
   { days: 30, label: "1 month", emoji: "🏆" }, { days: 60, label: "2 months", emoji: "🌟" },
   { days: 90, label: "3 months", emoji: "💎" }, { days: 180, label: "6 months", emoji: "🦋" },
   { days: 365, label: "1 year", emoji: "👑" },
-];
-const SLEEP_MS = [
-  { nights: 7, emoji: "🌙", reward: "7-night sleep streak" },
-  { nights: 14, emoji: "💤", reward: "14-night deep sleeper" },
-  { nights: 30, emoji: "🌟", reward: "30-night sleep master" },
 ];
 const BUILTIN_RELAPSE_TOOLS = [
   { id: "breathe", icon: "🫁", title: "Box breathing", desc: "4 in, hold 4, out 4, hold 4. Repeat 4×. Activates your parasympathetic nervous system." },
@@ -74,6 +81,7 @@ const CAT_HEX = { mental: "#a78bfa", physical: "#34d399", sleep: "#60a5fa", soci
 const GOAL_PERIODS = ["daily", "weekly", "monthly", "yearly"];
 const GOAL_COLORS = { daily: "#34d399", weekly: "#60a5fa", monthly: "#a78bfa", yearly: "#f59e0b" };
 const ACCOUNT_COLORS = ["#34d399", "#60a5fa", "#a78bfa", "#f97316", "#f472b6", "#f59e0b", "#f87171", "#2dd4bf"];
+const PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 const getDaysSince = d => d ? Math.floor((new Date() - new Date(d)) / 864e5) : 0;
@@ -85,38 +93,55 @@ const timeToMins = t => { if (!t) return 0; const [h, m] = t.split(":").map(Numb
 const sleepDur = (b, w) => { let bm = timeToMins(b), wm = timeToMins(w); if (wm <= bm) wm += 1440; return wm - bm; };
 const fmtDur = m => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
 const fmtTime = t => { if (!t) return "—"; const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "pm" : "am"}`; };
+const scoreColor = s => s >= 80 ? "#34d399" : s >= 60 ? "#60a5fa" : s >= 40 ? "#f59e0b" : "#f87171";
 
-function sleepQuality(log, routine) {
-  const { bedtime, waketime, durationMins: dur } = log;
-  const bm = timeToMins(bedtime), wm = timeToMins(waketime);
-  const tb = timeToMins(routine.bedtimeTarget), tw = timeToMins(routine.wakeTarget);
-  const nb = bm < 300 ? bm + 1440 : bm, nw = wm < 300 ? wm + 1440 : wm;
-  const ntb = tb < 300 ? tb + 1440 : tb, ntw = tw < 300 ? tw + 1440 : tw;
+// ─── Scoring ─────────────────────────────────────────────────────────────────
+function calcSleepScore(bedtime, waketime, durationMins, targets) {
   let score = 0;
-  if (dur >= 420 && dur <= 540) score += 3;
-  else if ((dur >= 360 && dur < 420) || (dur > 540 && dur <= 600)) score += 2;
-  else if (dur >= 300) score += 1;
-  const bd = Math.abs(nb - ntb);
-  if (bd <= 30) score += 2; else if (bd <= 90) score += 1;
-  const wd = Math.abs(nw - ntw);
-  if (wd <= 30) score += 2; else if (wd <= 90) score += 1;
-  if (bm >= 480 && bm <= 1320) score = Math.max(0, score - 4);
-  const pct = score / 7;
-  if (pct >= 0.85) return { label: "Excellent", color: "#34d399", score, max: 7, pct };
-  if (pct >= 0.65) return { label: "Good", color: "#60a5fa", score, max: 7, pct };
-  if (pct >= 0.40) return { label: "Fair", color: "#f59e0b", score, max: 7, pct };
-  return { label: "Poor", color: "#f87171", score, max: 7, pct };
+  const hrs = durationMins / 60;
+  if (hrs >= 7 && hrs <= 9) score += 30;
+  else if ((hrs >= 6 && hrs < 7) || (hrs > 9 && hrs <= 10)) score += 20;
+  else if ((hrs >= 5 && hrs < 6) || (hrs > 10 && hrs <= 11)) score += 10;
+
+  const bm = timeToMins(bedtime);
+  const tbm = timeToMins(targets.bedtime);
+  const nb = bm < 300 ? bm + 1440 : bm;
+  const ntb = tbm < 300 ? tbm + 1440 : tbm;
+  const bdiff = Math.abs(nb - ntb);
+  if (bdiff <= 30) score += 35;
+  else if (bdiff <= 60) score += 25;
+  else if (bdiff <= 90) score += 15;
+  else score += 5;
+  if (bm >= 60 && bm < 420) score = Math.max(0, score - 20);
+
+  const wm = timeToMins(waketime);
+  const twm = timeToMins(targets.waketime);
+  const nw = wm < 300 ? wm + 1440 : wm;
+  const ntw = twm < 300 ? twm + 1440 : twm;
+  const wdiff = Math.abs(nw - ntw);
+  if (wdiff <= 30) score += 35;
+  else if (wdiff <= 60) score += 25;
+  else if (wdiff <= 90) score += 15;
+  else score += 5;
+  if (wm >= 540) score = Math.max(0, score - 20);
+
+  return Math.max(0, Math.min(100, score));
 }
-function goodNightStreak(logs, routine) {
-  const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
-  let streak = 0, cursor = new Date(getTodayStr());
-  for (const log of sorted) {
-    const diff = Math.round((cursor - new Date(log.date)) / 864e5);
-    if (diff > 1) break;
-    if (sleepQuality(log, routine).pct >= 0.65) { streak++; cursor = new Date(log.date); } else break;
+
+function calcPrayerScore(prayers, prayerTargets) {
+  let total = 0;
+  const breakdown = {};
+  for (const p of PRAYER_NAMES) {
+    const entry = prayers?.[p];
+    if (!entry || entry.missed || !entry.time) { breakdown[p] = 0; continue; }
+    const t = timeToMins(entry.time);
+    const pts = (t >= timeToMins(prayerTargets[p].earliest) && t <= timeToMins(prayerTargets[p].latest)) ? 20 : 10;
+    breakdown[p] = pts;
+    total += pts;
   }
-  return streak;
+  return { total, breakdown };
 }
+
 function isGoalDone(goal) {
   const done = goal.done || [];
   const keys = { daily: getTodayStr(), weekly: getWeekStr(), monthly: getMonthStr(), yearly: getYearStr() };
@@ -128,52 +153,154 @@ function getPeriodKey(p) {
 const reqNotif = () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); };
 const sendNotif = (t, b) => { if ("Notification" in window && Notification.permission === "granted") new Notification(t, { body: b }); };
 
+// ─── Visual components ────────────────────────────────────────────────────────
+
+function CircleRing({ value = 0, size = 100, strokeWidth = 8 }) {
+  const r = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, value));
+  const offset = circ * (1 - pct / 100);
+  const col = scoreColor(pct);
+  const cx = size / 2, cy = size / 2;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1a1a1e" strokeWidth={strokeWidth} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth={strokeWidth}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round" transform={`rotate(-90 ${cx} ${cy})`}
+        style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central"
+        fill={col} fontSize={size * 0.24} fontWeight="700" fontFamily="monospace">
+        {Math.round(pct)}
+      </text>
+    </svg>
+  );
+}
+
+function HeatmapGrid({ getScore }) {
+  const today = getTodayStr();
+  const DAYS = 91;
+  const CELL = 11, GAP = 2, STEP = CELL + GAP;
+  const cols = Math.ceil(DAYS / 7);
+  const cells = [];
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date(today + "T12:00");
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    cells.push({ dateStr, s: getScore(dateStr) });
+  }
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <svg width={cols * STEP} height={7 * STEP} style={{ display: "block" }}>
+        {cells.map(({ dateStr, s }, i) => {
+          const col = Math.floor(i / 7);
+          const row = i % 7;
+          const fill = s == null ? "#161618" : scoreColor(s);
+          return (
+            <rect key={dateStr} x={col * STEP} y={row * STEP}
+              width={CELL} height={CELL} rx={2} fill={fill} opacity={s == null ? 0.35 : 0.85}>
+              <title>{dateStr}{s != null ? `: ${Math.round(s)}` : " — no data"}</title>
+            </rect>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function LineChart({ data, height = 90 }) {
+  if (!data || data.length < 2) return (
+    <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: "#333", fontSize: 12 }}>
+      Not enough data
+    </div>
+  );
+  const W = 280, H = height - 22;
+  const allVals = data.flatMap(d => [d.actual, d.target].filter(v => v != null));
+  if (!allVals.length) return null;
+  const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+  const range = maxV - minV || 1;
+  const xS = i => (i / (data.length - 1)) * W;
+  const yS = v => H - 4 - ((v - minV) / range) * (H - 12);
+
+  const linePath = (key, col, dashed) => {
+    let path = "";
+    data.forEach((p, i) => {
+      if (p[key] == null) return;
+      path += (path ? "L" : "M") + `${xS(i).toFixed(1)},${yS(p[key]).toFixed(1)}`;
+    });
+    return path ? (
+      <path d={path} fill="none" stroke={col} strokeWidth={1.5}
+        strokeDasharray={dashed ? "4 3" : undefined}
+        strokeLinecap="round" strokeLinejoin="round" />
+    ) : null;
+  };
+
+  const labelIdxs = [0, Math.floor((data.length - 1) / 2), data.length - 1];
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H + 22}`} style={{ width: "100%", display: "block", overflow: "visible" }}>
+        {linePath("target", "#333", true)}
+        {linePath("actual", "#60a5fa", false)}
+        {data.map((p, i) => p.actual != null && (
+          <circle key={i} cx={xS(i)} cy={yS(p.actual)} r={2.5} fill="#60a5fa" />
+        ))}
+        {labelIdxs.map(i => (
+          <text key={i} x={xS(i)} y={H + 16} textAnchor="middle"
+            fill="#444" fontSize={9} fontFamily="monospace">
+            {data[i]?.label || ""}
+          </text>
+        ))}
+      </svg>
+      <div style={{ display: "flex", gap: 14, marginTop: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 14, height: 2, background: "#60a5fa" }} />
+          <span style={{ fontSize: 10, color: "#555" }}>Actual</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 14, height: 2, background: "#333" }} />
+          <span style={{ fontSize: 10, color: "#555" }}>Target</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function App() {
   const [root, setRoot] = useState(loadRoot);
   const [view, setView] = useState("dashboard");
   const [modal, setModal] = useState(null);
-  // modal values: null | "addAccount" | "switchAccount" | "sleepLog" | "panic" | "relapseLog" | "postRelapse"
   const [panicStep, setPanicStep] = useState(0);
-  // post-relapse state
-  const [postRelapseId, setPostRelapseId] = useState(null); // relapse entry id
-  const [checkedPost, setCheckedPost] = useState([]); // ticked action ids
-  // Add account form
+  const [postRelapseId, setPostRelapseId] = useState(null);
+  const [checkedPost, setCheckedPost] = useState([]);
   const [newAccName, setNewAccName] = useState("");
   const [newAccSub, setNewAccSub] = useState("");
   const [newAccDate, setNewAccDate] = useState(getTodayStr());
   const [newAccColor, setNewAccColor] = useState(ACCOUNT_COLORS[0]);
   const [accSetupStep, setAccSetupStep] = useState(0);
-  // Sleep log
   const [logBed, setLogBed] = useState("");
   const [logWake, setLogWake] = useState("");
-  // Routine
   const [editRt, setEditRt] = useState(false);
   const [rtDraft, setRtDraft] = useState(null);
-  // Habits
   const [newHabitName, setNHN] = useState("");
   const [newHabitCat, setNHC] = useState("custom");
   const [newHabitTime, setNHT] = useState("");
-  // Goals
   const [newGoalText, setNGT] = useState("");
   const [newGoalPeriod, setNGP] = useState(null);
-  // Reminders
   const [newRem, setNewRem] = useState("");
-  // Post-relapse config
   const [newPostAction, setNewPostAction] = useState("");
   const [newPostReminder, setNewPostReminder] = useState("");
-  // Relapse log
   const [relapseNote, setRN] = useState("");
   const [checkedTools, setCheckedTools] = useState([]);
-  // Journal
   const [journalText, setJT] = useState("");
-  // Rewards
   const [newRewName, setNRN] = useState("");
   const [newRewDays, setNRD] = useState(30);
+  const [routineTab, setRoutineTab] = useState("sleep");
+  const [editPrayerTargets, setEditPrayerTargets] = useState(false);
+  const [prayerTargetsDraft, setPrayerTargetsDraft] = useState(null);
 
   const notifRef = useRef([]);
 
-  // ── Root updater ──────────────────────────────────────────────────────────
   const updateRoot = useCallback(patch => {
     setRoot(prev => { const next = { ...prev, ...patch }; saveRoot(next); return next; });
   }, []);
@@ -187,32 +314,83 @@ export default function App() {
     });
   }, []);
 
-  // Active account
   const activeId = root.activeId;
   const account = activeId ? (root.accounts[activeId] || null) : null;
   const accounts = Object.values(root.accounts);
-
   const upd = useCallback(patch => { if (activeId) updateAccount(activeId, patch); }, [activeId, updateAccount]);
 
   // ── Derived state ─────────────────────────────────────────────────────────
-  const routine = account?.routine || accountDefaults().routine;
+  const routineTargets = account?.routineTargets || DEFAULT_ROUTINE_TARGETS();
   const sleepLogs = account?.sleepLogs || [];
+  const prayerLogs = account?.prayerLogs || [];
   const habits = account?.habits || [];
   const goals = account?.goals || [];
   const reminders = account?.reminders || [];
   const postRelapseActions = account?.postRelapseActions || [];
   const postRelapseReminders = account?.postRelapseReminders || [];
   const daysSober = getDaysSince(account?.sobrietyStart);
-  const goodStreak = account ? goodNightStreak(sleepLogs, routine) : 0;
   const todayLog = sleepLogs.find(l => l.date === getTodayStr());
+  const todaySleepScore = todayLog
+    ? (todayLog.score ?? calcSleepScore(todayLog.bedtime, todayLog.waketime, todayLog.durationMins, routineTargets))
+    : null;
   const last7 = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
   const avgSleep = last7.length ? Math.round(last7.reduce((s, l) => s + l.durationMins, 0) / last7.length) : null;
+  const avg7Score = last7.length ? Math.round(last7.reduce((s, l) => s + (l.score ?? calcSleepScore(l.bedtime, l.waketime, l.durationMins, routineTargets)), 0) / last7.length) : null;
   const todayDone = habits.filter(h => (h.completions || []).includes(getTodayStr())).length;
   const habitPct = habits.length ? Math.round(todayDone / habits.length * 100) : 0;
   const claimed = account?.claimedRewards || [];
-  const claimedSl = account?.claimedSleepRewards || [];
   const availRew = (account?.rewards || []).filter(r => daysSober >= r.days && !claimed.includes(r.id));
-  const availSlRew = SLEEP_MS.filter(m => goodStreak >= m.nights && !claimedSl.includes(m.nights));
+
+  const sleepScoreMap = {};
+  sleepLogs.forEach(l => {
+    sleepScoreMap[l.date] = l.score ?? calcSleepScore(l.bedtime, l.waketime, l.durationMins, routineTargets);
+  });
+  const prayerScoreMap = {};
+  prayerLogs.forEach(l => {
+    prayerScoreMap[l.date] = calcPrayerScore(l.prayers, routineTargets.prayerTargets).total;
+  });
+
+  const tbm = timeToMins(routineTargets.bedtime);
+  const ntbm = tbm < 300 ? tbm + 1440 : tbm;
+  const ntwm = timeToMins(routineTargets.waketime);
+  const last14Days = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (13 - i)); return d.toISOString().split("T")[0];
+  });
+  const bedtimeChartData = last14Days.map(date => {
+    const log = sleepLogs.find(l => l.date === date);
+    const bm = log ? timeToMins(log.bedtime) : null;
+    return { actual: bm != null ? (bm < 300 ? bm + 1440 : bm) : null, target: ntbm, label: new Date(date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" }) };
+  });
+  const wakeChartData = last14Days.map(date => {
+    const log = sleepLogs.find(l => l.date === date);
+    return { actual: log ? timeToMins(log.waketime) : null, target: ntwm, label: new Date(date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" }) };
+  });
+
+  const todayPrayerLog = prayerLogs.find(l => l.date === getTodayStr());
+  const todayPrayers = todayPrayerLog?.prayers || {};
+  const todayPrayerScore = todayPrayerLog ? calcPrayerScore(todayPrayers, routineTargets.prayerTargets).total : null;
+  const avg7PrayerScore = (() => {
+    const recent = [...prayerLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+    return recent.length ? Math.round(recent.reduce((s, l) => s + calcPrayerScore(l.prayers, routineTargets.prayerTargets).total, 0) / recent.length) : null;
+  })();
+  const todayCombinedScore = (() => {
+    if (todaySleepScore != null && todayPrayerScore != null) return Math.round((todaySleepScore + todayPrayerScore) / 2);
+    return todaySleepScore ?? todayPrayerScore ?? null;
+  })();
+  const routineStreak = (() => {
+    let streak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const date = d.toISOString().split("T")[0];
+      const ss = sleepScoreMap[date] ?? null;
+      const ps = prayerScoreMap[date] ?? null;
+      if (ss == null && ps == null) break;
+      const combined = ss != null && ps != null ? (ss + ps) / 2 : (ss ?? ps);
+      if (combined > 70) streak++;
+      else break;
+    }
+    return streak;
+  })();
 
   // ── Notification scheduler ────────────────────────────────────────────────
   useEffect(() => {
@@ -226,14 +404,12 @@ export default function App() {
       if (t < new Date()) t.setDate(t.getDate() + 1);
       notifRef.current.push(setTimeout(() => sendNotif(`⏰ ${h.name}`, "Your scheduled habit is due."), t - new Date()));
     });
-    if (routine.reminderEnabled) {
-      const [bh, bm] = routine.bedtimeTarget.split(":").map(Number);
-      const bt = new Date(); bt.setHours(bh, bm - (routine.reminderMinsBefore || 30), 0, 0);
-      if (bt < new Date()) bt.setDate(bt.getDate() + 1);
-      notifRef.current.push(setTimeout(() => sendNotif("🌙 Bedtime", `Wind down — target: ${fmtTime(routine.bedtimeTarget)}`), bt - new Date()));
-    }
+    const [bh, bm] = routineTargets.bedtime.split(":").map(Number);
+    const bt = new Date(); bt.setHours(bh, bm - 30, 0, 0);
+    if (bt < new Date()) bt.setDate(bt.getDate() + 1);
+    notifRef.current.push(setTimeout(() => sendNotif("🌙 Bedtime", `Wind down — target: ${fmtTime(routineTargets.bedtime)}`), bt - new Date()));
     return () => notifRef.current.forEach(clearTimeout);
-  }, [habits, routine, account?.id]);
+  }, [habits, routineTargets, account?.id]);
 
   // ── Actions ───────────────────────────────────────────────────────────────
   function createAccount() {
@@ -285,7 +461,8 @@ export default function App() {
   function submitSleepLog() {
     if (!logBed || !logWake) return;
     const dur = sleepDur(logBed, logWake);
-    upd({ sleepLogs: [...sleepLogs.filter(l => l.date !== getTodayStr()), { date: getTodayStr(), bedtime: logBed, waketime: logWake, durationMins: dur }] });
+    const score = calcSleepScore(logBed, logWake, dur, routineTargets);
+    upd({ sleepLogs: [...sleepLogs.filter(l => l.date !== getTodayStr()), { date: getTodayStr(), bedtime: logBed, waketime: logWake, durationMins: dur, score }] });
     setModal(null); setLogBed(""); setLogWake("");
   }
 
@@ -301,10 +478,28 @@ export default function App() {
   function addJournal() { if (!journalText.trim()) return; upd({ journal: [{ id: Date.now(), date: new Date().toISOString(), text: journalText.trim() }, ...(account?.journal || [])] }); setJT(""); }
   function addReward() { if (!newRewName.trim()) return; upd({ rewards: [...(account?.rewards || []), { id: "rw" + Date.now(), days: Number(newRewDays), name: newRewName.trim() }] }); setNRN(""); setNRD(30); }
   const claimReward = id => upd({ claimedRewards: [...claimed, id] });
-  const claimSlRew = n => upd({ claimedSleepRewards: [...claimedSl, n] });
-  function saveRoutine() { upd({ routine: { ...routine, ...rtDraft } }); setEditRt(false); }
+  function saveRoutine() { upd({ routineTargets: { ...routineTargets, ...rtDraft } }); setEditRt(false); }
+  function updatePrayer(prayerName, patch) {
+    const today = getTodayStr();
+    const existing = prayerLogs.find(l => l.date === today);
+    const prayers = { ...(existing?.prayers || {}) };
+    prayers[prayerName] = { time: null, missed: false, score: 0, ...(prayers[prayerName] || {}), ...patch };
+    const entry = prayers[prayerName];
+    if (!entry.missed && entry.time) {
+      const t = timeToMins(entry.time);
+      const range = routineTargets.prayerTargets[prayerName];
+      entry.score = t >= timeToMins(range.earliest) && t <= timeToMins(range.latest) ? 20 : 10;
+    } else {
+      entry.score = 0;
+    }
+    upd({ prayerLogs: [...prayerLogs.filter(l => l.date !== today), { date: today, prayers }] });
+  }
+  function savePrayerTargets() {
+    upd({ routineTargets: { ...routineTargets, prayerTargets: prayerTargetsDraft } });
+    setEditPrayerTargets(false);
+  }
 
-  // ── No accounts yet → show onboarding ─────────────────────────────────────
+  // ── No accounts yet ───────────────────────────────────────────────────────
   if (!accounts.length || !activeId) {
     return (
       <div style={S.setupWrap}>
@@ -344,7 +539,6 @@ export default function App() {
       <aside style={S.sidebar}>
         <div style={S.sidebarTop}>
           <div style={S.logo}>🌿 Recover</div>
-          {/* Account switcher */}
           <button style={{ ...S.accSwitcher, borderColor: accentColor + "55" }} onClick={() => setModal("switchAccount")}>
             <div style={{ ...S.accDot, background: accentColor }} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -353,7 +547,6 @@ export default function App() {
             </div>
             <span style={{ fontSize: 10, color: "#444" }}>▾</span>
           </button>
-          {/* Sobriety counter */}
           <div style={{ ...S.sobrietyBadge, borderColor: accentColor + "33" }}>
             <div style={{ ...S.sobrietyDays, color: accentColor }}>{daysSober}</div>
             <div style={S.sobrietyLabel}>days sober</div>
@@ -379,7 +572,6 @@ export default function App() {
         {view === "dashboard" && (
           <div style={S.content}>
             <h2 style={S.pageTitle}>Your journey</h2>
-            {/* Panic button */}
             <div style={S.panicBtn} onClick={() => { setPanicStep(0); setModal("panic"); }}>
               <span style={{ fontSize: 20 }}>🆘</span>
               <div>
@@ -390,66 +582,354 @@ export default function App() {
             </div>
             <div style={S.statGrid}>
               <StatCard value={daysSober} label="Days sober" accent={accentColor} />
-              <StatCard value={goodStreak} label="Sleep streak" accent="#60a5fa" />
+              <StatCard value={todaySleepScore !== null ? todaySleepScore : "—"} label="Sleep score" accent="#60a5fa" />
               <StatCard value={`${habitPct}%`} label="Today's habits" accent="#a78bfa" />
               <StatCard value={avgSleep ? fmtDur(avgSleep) : "—"} label="Avg sleep (7d)" accent="#f97316" />
             </div>
-            {/* Next milestone */}
             {(() => { const nm = MILESTONES.find(m => m.days > daysSober); return nm && (<div style={S.card}><div style={S.cardLabel}>Next milestone — {nm.emoji} {nm.label}</div><div style={S.progressWrap}><div style={S.progressBg}><div style={{ ...S.progressBar, width: `${Math.min(100, daysSober / nm.days * 100)}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div><div style={S.progressText}>{nm.days - daysSober}d to go</div></div></div>); })()}
-            {/* Sleep */}
-            {todayLog ? (<div style={{ ...S.card, borderColor: "rgba(96,165,250,0.2)" }}><div style={S.cardLabel}>🌙 Last night</div><div style={{ display: "flex", alignItems: "center", gap: 16 }}><div><div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div><div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div></div>{(() => { const q = sleepQuality(todayLog, routine); return <span style={{ ...S.qualBadge, background: q.color + "22", color: q.color, border: `1px solid ${q.color}44`, marginLeft: "auto" }}>{q.label}</span>; })()}</div></div>) : (<div style={{ ...S.card, cursor: "pointer", borderStyle: "dashed" }} onClick={() => setModal("sleepLog")}><div style={S.cardLabel}>🌙 Sleep</div><div style={{ fontSize: 13, color: "#444" }}>Log last night's sleep →</div></div>)}
-            {/* Available rewards */}
-            {(availRew.length > 0 || availSlRew.length > 0) && (<div style={{ ...S.card, borderColor: "rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.04)" }}><div style={S.cardLabel}>🎁 Rewards unlocked!</div>{availRew.map(r => (<div key={r.id} style={S.rewardRow}><span style={{ fontSize: 13 }}>{r.name} <span style={{ color: "#555", fontSize: 11 }}>({r.days}d)</span></span><button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button></div>))}{availSlRew.map(r => (<div key={r.nights} style={S.rewardRow}><span style={{ fontSize: 13 }}>{r.emoji} {r.reward}</span><button style={S.claimBtn} onClick={() => claimSlRew(r.nights)}>Claim ✓</button></div>))}</div>)}
-            {/* Today's daily goals snapshot */}
-            {goals.filter(g => g.period === "daily").length > 0 && (<div style={S.card}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}><div style={S.cardLabel}>Today's goals</div><button style={S.linkBtn} onClick={() => setView("goals")}>All →</button></div>{goals.filter(g => g.period === "daily").slice(0, 4).map(g => { const done = isGoalDone(g); return (<div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}><div style={{ ...S.habitDot, background: done ? accentColor : "transparent", borderColor: accentColor, cursor: "pointer" }} onClick={() => toggleGoal(g.id)} /><span style={{ fontSize: 13, textDecoration: done ? "line-through" : "none", opacity: done ? 0.4 : 1 }}>{g.text}</span></div>); })}</div>)}
-            {/* Milestones */}
-            <div style={S.card}><div style={S.cardLabel}>Milestones reached</div><div style={S.milestonesGrid}>{MILESTONES.map(m => { const ok = daysSober >= m.days; return (<div key={m.days} style={{ ...S.milestoneChip, opacity: ok ? 1 : 0.2, background: ok ? accentColor + "18" : "transparent", borderColor: ok ? accentColor : "#222" }}><span style={{ fontSize: 16 }}>{m.emoji}</span><span style={S.mLabel}>{m.label}</span></div>); })}</div></div>
+            {todayLog ? (
+              <div style={{ ...S.card, borderColor: "rgba(96,165,250,0.2)" }}>
+                <div style={S.cardLabel}>🌙 Last night</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div>
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
+                  </div>
+                  <div style={{ marginLeft: "auto" }}>
+                    <CircleRing value={todaySleepScore} size={56} strokeWidth={6} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ ...S.card, cursor: "pointer", borderStyle: "dashed" }} onClick={() => setModal("sleepLog")}>
+                <div style={S.cardLabel}>🌙 Sleep</div>
+                <div style={{ fontSize: 13, color: "#444" }}>Log last night's sleep →</div>
+              </div>
+            )}
+            {availRew.length > 0 && (
+              <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.04)" }}>
+                <div style={S.cardLabel}>🎁 Rewards unlocked!</div>
+                {availRew.map(r => (
+                  <div key={r.id} style={S.rewardRow}>
+                    <span style={{ fontSize: 13 }}>{r.name} <span style={{ color: "#555", fontSize: 11 }}>({r.days}d)</span></span>
+                    <button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {goals.filter(g => g.period === "daily").length > 0 && (
+              <div style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={S.cardLabel}>Today's goals</div>
+                  <button style={S.linkBtn} onClick={() => setView("goals")}>All →</button>
+                </div>
+                {goals.filter(g => g.period === "daily").slice(0, 4).map(g => { const done = isGoalDone(g); return (<div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}><div style={{ ...S.habitDot, background: done ? accentColor : "transparent", borderColor: accentColor, cursor: "pointer" }} onClick={() => toggleGoal(g.id)} /><span style={{ fontSize: 13, textDecoration: done ? "line-through" : "none", opacity: done ? 0.4 : 1 }}>{g.text}</span></div>); })}
+              </div>
+            )}
+            <div style={S.card}>
+              <div style={S.cardLabel}>Milestones reached</div>
+              <div style={S.milestonesGrid}>
+                {MILESTONES.map(m => { const ok = daysSober >= m.days; return (<div key={m.days} style={{ ...S.milestoneChip, opacity: ok ? 1 : 0.2, background: ok ? accentColor + "18" : "transparent", borderColor: ok ? accentColor : "#222" }}><span style={{ fontSize: 16 }}>{m.emoji}</span><span style={S.mLabel}>{m.label}</span></div>); })}
+              </div>
+            </div>
           </div>
         )}
 
         {/* ════ ROUTINE ════ */}
         {view === "routine" && (
           <div style={S.content}>
-            <h2 style={S.pageTitle}>Sleep &amp; routine</h2>
+            <h2 style={S.pageTitle}>Routine</h2>
+
+            {/* ── Combined Dashboard ── */}
             <div style={S.card}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <div style={S.cardLabel}>Sleep targets</div>
-                <button style={S.linkBtn} onClick={() => { setRtDraft({ ...routine }); setEditRt(!editRt); }}>{editRt ? "Cancel" : "Edit"}</button>
-              </div>
-              {!editRt ? (<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Bedtime</div><div style={{ ...S.sleepTargetVal, color: accentColor }}>{fmtTime(routine.bedtimeTarget)}</div></div>
-                <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Wake</div><div style={{ ...S.sleepTargetVal, color: accentColor }}>{fmtTime(routine.wakeTarget)}</div></div>
-                <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Target</div><div style={{ ...S.sleepTargetVal, color: accentColor }}>{fmtDur(sleepDur(routine.bedtimeTarget, routine.wakeTarget))}</div></div>
-              </div>) : (<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={S.formRow}><label style={S.formLabel}>Bedtime</label><input type="time" style={{ ...S.input, width: 160 }} value={rtDraft.bedtimeTarget} onChange={e => setRtDraft({ ...rtDraft, bedtimeTarget: e.target.value })} /></div>
-                <div style={S.formRow}><label style={S.formLabel}>Wake time</label><input type="time" style={{ ...S.input, width: 160 }} value={rtDraft.wakeTarget} onChange={e => setRtDraft({ ...rtDraft, wakeTarget: e.target.value })} /></div>
-                <div style={S.formRow}><label style={S.formLabel}>Reminder before bedtime</label><select style={{ ...S.input, width: 180 }} value={rtDraft.reminderMinsBefore} onChange={e => setRtDraft({ ...rtDraft, reminderMinsBefore: Number(e.target.value) })}><option value={15}>15 min before</option><option value={30}>30 min before</option><option value={45}>45 min before</option><option value={60}>1 hour before</option></select></div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}><input type="checkbox" id="ren" checked={rtDraft.reminderEnabled} onChange={e => setRtDraft({ ...rtDraft, reminderEnabled: e.target.checked })} /><label htmlFor="ren" style={{ fontSize: 12, color: "#888", cursor: "pointer" }}>Enable notifications</label>{rtDraft.reminderEnabled && <button style={{ ...S.linkBtn, fontSize: 11 }} onClick={reqNotif}>Allow</button>}</div>
-                <button style={S.primaryBtn} onClick={saveRoutine}>Save</button>
-              </div>)}
-            </div>
-            <div style={S.statGrid}>
-              <StatCard value={goodStreak} label="Good night streak" accent="#60a5fa" />
-              <StatCard value={avgSleep ? fmtDur(avgSleep) : "—"} label="Avg sleep (7d)" accent="#a78bfa" />
-            </div>
-            <div style={{ ...S.card, borderColor: "rgba(96,165,250,0.15)" }}>
-              <div style={S.cardLabel}>Log sleep</div>
-              {todayLog ? (<div>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
-                  <div><div style={{ fontSize: 26, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div><div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div></div>
-                  {(() => { const q = sleepQuality(todayLog, routine); return (<div style={{ marginLeft: "auto", textAlign: "right" }}><span style={{ ...S.qualBadge, background: q.color + "22", color: q.color, border: `1px solid ${q.color}44` }}>{q.label}</span><div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>{q.score}/{q.max} pts</div></div>); })()}
+              <div style={S.cardLabel}>Today</div>
+              <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 12, padding: "6px 0 12px" }}>
+                <div style={{ textAlign: "center" }}>
+                  <CircleRing value={todaySleepScore ?? 0} size={80} strokeWidth={7} />
+                  <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>Sleep</div>
                 </div>
-                <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666" }} onClick={() => { setLogBed(todayLog.bedtime); setLogWake(todayLog.waketime); setModal("sleepLog"); }}>Edit</button>
-              </div>) : (<button style={S.primaryBtn} onClick={() => { setLogBed(routine.bedtimeTarget); setLogWake(routine.wakeTarget); setModal("sleepLog"); }}>Log last night's sleep</button>)}
+                <div style={{ textAlign: "center" }}>
+                  <CircleRing value={todayCombinedScore ?? 0} size={96} strokeWidth={8} />
+                  <div style={{ fontSize: 11, color: "#aaa", fontWeight: 600, marginTop: 5 }}>Routine</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <CircleRing value={todayPrayerScore ?? 0} size={80} strokeWidth={7} />
+                  <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>Prayer</div>
+                </div>
+              </div>
+              <div style={{ height: "0.5px", background: "#161618", margin: "2px 0 14px" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={S.cardLabel}>7-day avg</div>
+                  <div style={{ display: "flex", gap: 20, marginTop: 6 }}>
+                    <div style={{ textAlign: "center" }}>
+                      <CircleRing value={avg7Score ?? 0} size={56} strokeWidth={5} />
+                      <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>Sleep</div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <CircleRing value={avg7PrayerScore ?? 0} size={56} strokeWidth={5} />
+                      <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>Prayer</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Streak</div>
+                  <div style={{ fontSize: 34, fontWeight: 700, fontFamily: "monospace", lineHeight: 1, color: routineStreak >= 7 ? "#34d399" : routineStreak >= 3 ? "#f59e0b" : "#60a5fa" }}>
+                    {routineStreak}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#333", marginTop: 3 }}>day{routineStreak !== 1 ? "s" : ""} · score &gt; 70</div>
+                </div>
+              </div>
             </div>
-            {/* Scoring key */}
-            <div style={S.card}><div style={S.cardLabel}>Scoring (out of 7)</div>{[{ pts: "3", rule: "Duration: 7–9h ideal, 6–7h or 8–10h = 2, 5h = 1" }, { pts: "2", rule: "Bedtime: within 30min = 2, within 90min = 1" }, { pts: "2", rule: "Wake time: within 30min = 2, within 90min = 1" }, { pts: "−4", rule: "Penalty: sleeping during daytime hours (inverted schedule)" }].map(r => (<div key={r.rule} style={{ display: "flex", gap: 10, fontSize: 12, marginBottom: 6 }}><span style={{ color: accentColor, fontWeight: 700, minWidth: 32, fontFamily: "monospace" }}>{r.pts}</span><span style={{ color: "#666" }}>{r.rule}</span></div>))}</div>
-            {/* Sleep milestone progress */}
-            <div style={S.card}><div style={S.cardLabel}>Sleep reward milestones</div>{SLEEP_MS.map(m => { const isCl = claimedSl.includes(m.nights); const isAv = goodStreak >= m.nights && !isCl; return (<div key={m.nights} style={{ marginBottom: 14 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}><div style={{ fontSize: 13 }}>{m.emoji} {m.reward}</div>{isCl && <span style={{ fontSize: 11, color: "#34d399" }}>✓ Claimed</span>}{isAv && <button style={S.claimBtn} onClick={() => claimSlRew(m.nights)}>Claim ✓</button>}{!isCl && !isAv && <span style={{ fontSize: 11, color: "#444" }}>{m.nights - goodStreak} nights to go</span>}</div><div style={S.progressBg}><div style={{ ...S.progressBar, width: `${isCl ? 100 : Math.min(100, goodStreak / m.nights * 100)}%`, background: isCl ? "#34d399" : "linear-gradient(90deg,#60a5fa,#a78bfa)" }} /></div></div>); })}</div>
-            {/* Bar chart */}
-            {last7.length > 0 && (<div style={S.card}><div style={S.cardLabel}>Last 7 nights</div><div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 100, marginBottom: 8 }}>{last7.map(log => { const mxM = Math.max(...last7.map(l => l.durationMins), 480); const q = sleepQuality(log, routine); const day = new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short" }); return (<div key={log.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, height: "100%", justifyContent: "flex-end" }}><div style={{ fontSize: 8, color: "#444" }}>{fmtDur(log.durationMins)}</div><div style={{ width: "100%", height: `${Math.min(100, log.durationMins / mxM * 100)}%`, background: q.color + "bb", borderRadius: "3px 3px 0 0", minHeight: 4 }} /><div style={{ fontSize: 9, color: "#555" }}>{day}</div></div>); })}</div></div>)}
-            {/* History */}
-            <div style={S.card}><div style={S.cardLabel}>Sleep history</div>{sleepLogs.length === 0 ? <div style={S.empty}>No sleep logs yet.</div> : [...sleepLogs].reverse().slice(0, 14).map(log => { const q = sleepQuality(log, routine); const t = sleepDur(routine.bedtimeTarget, routine.wakeTarget); const vs = log.durationMins - t; return (<div key={log.date} style={S.sleepLogRow}><div style={{ fontSize: 11, color: "#444", width: 64, flexShrink: 0 }}>{new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</div><div style={{ flex: 1 }}><span style={{ fontSize: 12, color: "#777" }}>{fmtTime(log.bedtime)} → {fmtTime(log.waketime)}</span><span style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", marginLeft: 6 }}>{fmtDur(log.durationMins)}</span><span style={{ fontSize: 10, color: vs >= 0 ? "#34d399" : "#f87171", marginLeft: 5 }}>{vs >= 0 ? "+" : "-"}{fmtDur(Math.abs(vs))}</span></div><span style={{ ...S.qualBadge, background: q.color + "22", color: q.color, border: `1px solid ${q.color}44`, flexShrink: 0 }}>{q.label}</span></div>); })}</div>
+
+            {/* ── Sub-navigation ── */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              {[["sleep", "🌙 Sleep"], ["prayer", "🕌 Prayer"]].map(([tab, label]) => (
+                <button key={tab} onClick={() => setRoutineTab(tab)} style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "none", borderBottom: `2px solid ${routineTab === tab ? (tab === "sleep" ? "#60a5fa" : "#a78bfa") : "transparent"}`, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "Georgia,serif", background: routineTab === tab ? (tab === "sleep" ? "rgba(96,165,250,0.1)" : "rgba(167,139,250,0.1)") : "#0a0a0c", color: routineTab === tab ? (tab === "sleep" ? "#60a5fa" : "#a78bfa") : "#444" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* ══ Sleep tab ══ */}
+            {routineTab === "sleep" && (<>
+              <div style={S.card}>
+                <div style={S.cardLabel}>Sleep score</div>
+                <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 16, padding: "8px 0" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <CircleRing value={todaySleepScore ?? 0} size={88} strokeWidth={8} />
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>Today</div>
+                    {todaySleepScore === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>not logged</div>}
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <CircleRing value={avg7Score ?? 0} size={88} strokeWidth={8} />
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>7-day avg</div>
+                    {avg7Score === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>no data</div>}
+                  </div>
+                </div>
+              </div>
+              <div style={{ ...S.card, borderColor: "rgba(96,165,250,0.18)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={S.cardLabel}>Log sleep</div>
+                  {todayLog && !logBed && !logWake && <button style={S.linkBtn} onClick={() => { setLogBed(todayLog.bedtime); setLogWake(todayLog.waketime); }}>Edit</button>}
+                </div>
+                {todayLog && !logBed && !logWake ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 3 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
+                    </div>
+                    <div style={{ marginLeft: "auto" }}><CircleRing value={todaySleepScore ?? 0} size={52} strokeWidth={5} /></div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div style={S.formRow}><label style={S.formLabel}>Bedtime</label><input type="time" style={S.input} value={logBed} onChange={e => setLogBed(e.target.value)} /></div>
+                      <div style={S.formRow}><label style={S.formLabel}>Wake time</label><input type="time" style={S.input} value={logWake} onChange={e => setLogWake(e.target.value)} /></div>
+                    </div>
+                    {logBed && logWake && (() => {
+                      const dur = sleepDur(logBed, logWake);
+                      const score = calcSleepScore(logBed, logWake, dur, routineTargets);
+                      const vs = dur - sleepDur(routineTargets.bedtime, routineTargets.waketime);
+                      return (
+                        <div style={{ background: "#060608", borderRadius: 9, padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", border: "0.5px solid #161618" }}>
+                          <div>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(dur)}</div>
+                            <div style={{ fontSize: 11, color: vs >= 0 ? "#34d399" : "#f87171", marginTop: 3 }}>{vs >= 0 ? "+" : "−"}{fmtDur(Math.abs(vs))} vs target</div>
+                          </div>
+                          <CircleRing value={score} size={54} strokeWidth={5} />
+                        </div>
+                      );
+                    })()}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button style={{ ...S.primaryBtn, flex: 1 }} onClick={submitSleepLog} disabled={!logBed || !logWake}>Save</button>
+                      {todayLog && <button style={{ ...S.primaryBtn, flex: 1, background: "#1a1a1e", color: "#666" }} onClick={() => { setLogBed(""); setLogWake(""); }}>Cancel</button>}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <div style={S.cardLabel}>Targets</div>
+                  <button style={S.linkBtn} onClick={() => { setRtDraft({ bedtime: routineTargets.bedtime, waketime: routineTargets.waketime }); setEditRt(!editRt); }}>{editRt ? "Cancel" : "Edit"}</button>
+                </div>
+                {!editRt ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Bedtime</div><div style={{ ...S.sleepTargetVal, color: accentColor }}>{fmtTime(routineTargets.bedtime)}</div></div>
+                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Wake</div><div style={{ ...S.sleepTargetVal, color: accentColor }}>{fmtTime(routineTargets.waketime)}</div></div>
+                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Duration</div><div style={{ ...S.sleepTargetVal, color: accentColor }}>{fmtDur(sleepDur(routineTargets.bedtime, routineTargets.waketime))}</div></div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={S.formRow}><label style={S.formLabel}>Target bedtime</label><input type="time" style={S.input} value={rtDraft?.bedtime ?? routineTargets.bedtime} onChange={e => setRtDraft(d => ({ ...d, bedtime: e.target.value }))} /></div>
+                    <div style={S.formRow}><label style={S.formLabel}>Target wake time</label><input type="time" style={S.input} value={rtDraft?.waketime ?? routineTargets.waketime} onChange={e => setRtDraft(d => ({ ...d, waketime: e.target.value }))} /></div>
+                    <button style={S.primaryBtn} onClick={saveRoutine}>Save targets</button>
+                  </div>
+                )}
+              </div>
+              <div style={S.card}><div style={S.cardLabel}>Bedtime — last 14 days</div><LineChart data={bedtimeChartData} height={110} /></div>
+              <div style={S.card}><div style={S.cardLabel}>Wake time — last 14 days</div><LineChart data={wakeChartData} height={110} /></div>
+              <div style={S.card}><div style={S.cardLabel}>Consistency — last 3 months</div><HeatmapGrid getScore={d => sleepScoreMap[d] ?? null} /></div>
+              <div style={S.card}>
+                <div style={S.cardLabel}>History</div>
+                {sleepLogs.length === 0 ? <div style={S.empty}>No sleep logs yet.</div> : [...sleepLogs].sort((a, b) => b.date.localeCompare(a.date)).map(log => {
+                  const s = log.score ?? calcSleepScore(log.bedtime, log.waketime, log.durationMins, routineTargets);
+                  const vs = log.durationMins - sleepDur(routineTargets.bedtime, routineTargets.waketime);
+                  return (
+                    <div key={log.date} style={S.sleepLogRow}>
+                      <div style={{ fontSize: 11, color: "#444", width: 64, flexShrink: 0 }}>{new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, color: "#777" }}>{fmtTime(log.bedtime)} → {fmtTime(log.waketime)}</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(log.durationMins)}<span style={{ fontSize: 10, fontWeight: 400, color: vs >= 0 ? "#34d399" : "#f87171", marginLeft: 5 }}>{vs >= 0 ? "+" : "−"}{fmtDur(Math.abs(vs))}</span></div>
+                      </div>
+                      <div style={{ flexShrink: 0 }}><CircleRing value={s} size={36} strokeWidth={4} /></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>)}
+
+            {/* ══ Prayer tab ══ */}
+            {routineTab === "prayer" && (<>
+              <div style={S.card}>
+                <div style={S.cardLabel}>Prayer score</div>
+                <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 16, padding: "8px 0" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <CircleRing value={todayPrayerScore ?? 0} size={88} strokeWidth={8} />
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>Today</div>
+                    {todayPrayerScore === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>not logged</div>}
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <CircleRing value={avg7PrayerScore ?? 0} size={88} strokeWidth={8} />
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>7-day avg</div>
+                    {avg7PrayerScore === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>no data</div>}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ ...S.card, borderColor: "rgba(167,139,250,0.18)" }}>
+                <div style={S.cardLabel}>Today's prayers</div>
+                {PRAYER_NAMES.map((p, idx) => {
+                  const prayer = todayPrayers[p];
+                  const target = routineTargets.prayerTargets[p];
+                  const statusIcon = prayer?.missed
+                    ? <span style={{ color: "#f87171", fontSize: 15 }}>✗</span>
+                    : prayer?.score === 20 ? <span style={{ color: "#34d399", fontSize: 15 }}>✓</span>
+                    : prayer?.score === 10 ? <span style={{ color: "#f59e0b", fontSize: 15 }}>~</span>
+                    : <span style={{ color: "#2a2a2a", fontSize: 15 }}>—</span>;
+                  return (
+                    <div key={p} style={{ padding: "10px 0", borderBottom: idx < PRAYER_NAMES.length - 1 ? "0.5px solid #111" : "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                        <div>
+                          <span style={{ fontSize: 13, fontWeight: 600 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
+                          <span style={{ fontSize: 10, color: "#444", marginLeft: 8 }}>{fmtTime(target.earliest)} – {fmtTime(target.latest)}</span>
+                        </div>
+                        {statusIcon}
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input type="time" style={{ ...S.input, flex: 1, opacity: prayer?.missed ? 0.3 : 1, pointerEvents: prayer?.missed ? "none" : "auto" }} value={prayer?.time || ""} onChange={e => updatePrayer(p, { time: e.target.value, missed: false })} />
+                        <button style={{ ...S.catBtn, borderColor: prayer?.missed ? "#f87171" : "#2a2a2a", color: prayer?.missed ? "#f87171" : "#555", background: prayer?.missed ? "rgba(248,113,113,0.08)" : "transparent", padding: "7px 10px", fontSize: 11, whiteSpace: "nowrap" }} onClick={() => updatePrayer(p, { time: null, missed: !prayer?.missed })}>
+                          {prayer?.missed ? "Unmark" : "Missed"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={S.cardLabel}>Prayer targets</div>
+                  <button style={S.linkBtn} onClick={() => { setPrayerTargetsDraft({ ...routineTargets.prayerTargets }); setEditPrayerTargets(!editPrayerTargets); }}>{editPrayerTargets ? "Cancel" : "Edit"}</button>
+                </div>
+                {!editPrayerTargets ? (
+                  <div>
+                    {PRAYER_NAMES.map((p, idx) => {
+                      const t = routineTargets.prayerTargets[p];
+                      return <div key={p} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: idx < PRAYER_NAMES.length - 1 ? "0.5px solid #111" : "none" }}>
+                        <span style={{ fontSize: 12, color: "#888" }}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
+                        <span style={{ fontSize: 12, fontFamily: "monospace", color: accentColor }}>{fmtTime(t.earliest)} – {fmtTime(t.latest)}</span>
+                      </div>;
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {PRAYER_NAMES.map(p => (
+                      <div key={p}>
+                        <div style={{ fontSize: 12, color: "#888", fontWeight: 600, marginBottom: 7 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <div style={S.formRow}><label style={S.formLabel}>Earliest</label><input type="time" style={S.input} value={prayerTargetsDraft?.[p]?.earliest || ""} onChange={e => setPrayerTargetsDraft(d => ({ ...d, [p]: { ...d[p], earliest: e.target.value } }))} /></div>
+                          <div style={S.formRow}><label style={S.formLabel}>Latest</label><input type="time" style={S.input} value={prayerTargetsDraft?.[p]?.latest || ""} onChange={e => setPrayerTargetsDraft(d => ({ ...d, [p]: { ...d[p], latest: e.target.value } }))} /></div>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button style={{ ...S.primaryBtn, flex: 1 }} onClick={savePrayerTargets}>Save</button>
+                      <button style={{ ...S.primaryBtn, flex: 1, background: "#1a1a1e", color: "#666" }} onClick={() => setEditPrayerTargets(false)}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={S.card}><div style={S.cardLabel}>Consistency — last 3 months</div><HeatmapGrid getScore={d => prayerScoreMap[d] ?? null} /></div>
+
+              <div style={S.card}>
+                <div style={S.cardLabel}>Prayer breakdown — all time</div>
+                {prayerLogs.length === 0 ? <div style={S.empty}>No prayer logs yet.</div> : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {PRAYER_NAMES.map(p => {
+                      const total = prayerLogs.length;
+                      const onTime = prayerLogs.filter(l => l.prayers?.[p]?.score === 20).length;
+                      const late = prayerLogs.filter(l => !l.prayers?.[p]?.missed && l.prayers?.[p]?.score === 10).length;
+                      const missed = total - onTime - late;
+                      return (
+                        <div key={p}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ fontSize: 12 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
+                            <span style={{ fontSize: 10, color: "#555" }}>{onTime}/{total} on time</span>
+                          </div>
+                          <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", background: "#161618" }}>
+                            {onTime > 0 && <div style={{ width: `${(onTime / total) * 100}%`, background: "#34d399" }} />}
+                            {late > 0 && <div style={{ width: `${(late / total) * 100}%`, background: "#f59e0b" }} />}
+                            {missed > 0 && <div style={{ width: `${(missed / total) * 100}%`, background: "#f87171", opacity: 0.6 }} />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div style={{ display: "flex", gap: 16, marginTop: 2 }}>
+                      {[["#34d399", "On time"], ["#f59e0b", "Late"], ["#f87171", "Missed"]].map(([col, label]) => (
+                        <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: 2, background: col }} />
+                          <span style={{ fontSize: 10, color: "#555" }}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={S.card}>
+                <div style={S.cardLabel}>History</div>
+                {prayerLogs.length === 0 ? <div style={S.empty}>No prayer logs yet.</div> : (
+                  [...prayerLogs].sort((a, b) => b.date.localeCompare(a.date)).map(log => {
+                    const { total } = calcPrayerScore(log.prayers, routineTargets.prayerTargets);
+                    return (
+                      <div key={log.date} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "0.5px solid #111" }}>
+                        <div style={{ fontSize: 11, color: "#444", width: 70, flexShrink: 0 }}>{new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</div>
+                        <div style={{ display: "flex", gap: 6, flex: 1, alignItems: "center" }}>
+                          {PRAYER_NAMES.map(p => {
+                            const prayer = log.prayers?.[p];
+                            const col = !prayer ? "#1e1e20" : prayer.missed ? "#f87171" : prayer.score === 20 ? "#34d399" : "#f59e0b";
+                            return <div key={p} title={p.charAt(0).toUpperCase() + p.slice(1)} style={{ width: 9, height: 9, borderRadius: "50%", background: col }} />;
+                          })}
+                        </div>
+                        <div style={{ flexShrink: 0 }}><CircleRing value={total} size={32} strokeWidth={3} /></div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>)}
           </div>
         )}
 
@@ -467,14 +947,12 @@ export default function App() {
         {view === "goals" && (
           <div style={S.content}>
             <h2 style={S.pageTitle}>Goals &amp; reminders</h2>
-            {/* Reminders */}
             <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.03)" }}>
               <div style={S.cardLabel}>💛 My reminders &amp; motivation</div>
               {reminders.length === 0 && <div style={{ ...S.empty, marginBottom: 10 }}>Add things that keep you going — quotes, reasons, names of people you're doing this for.</div>}
               {reminders.map(r => (<div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #1a1a1a" }}><span style={{ fontSize: 13, color: "#f59e0b", fontStyle: "italic", lineHeight: 1.6, flex: 1 }}>"{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ reminders: reminders.filter(x => x.id !== r.id) })}>×</button></div>))}
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input style={{ ...S.input, flex: 1 }} placeholder="Add a reminder or quote…" value={newRem} onChange={e => setNewRem(e.target.value)} onKeyDown={e => e.key === "Enter" && addReminder()} /><button style={{ ...S.primaryBtn, width: "auto", padding: "9px 14px" }} onClick={addReminder}>Add</button></div>
             </div>
-            {/* Goal periods */}
             {GOAL_PERIODS.map(period => {
               const pg = goals.filter(g => g.period === period);
               const dc = pg.filter(isGoalDone).length;
@@ -500,7 +978,6 @@ export default function App() {
               <p style={{ color: "#f97316", fontSize: 13, lineHeight: 1.65, margin: 0 }}>Cravings peak within 20 min then fall. Use these right now.</p>
             </div>
             {BUILTIN_RELAPSE_TOOLS.map(a => (<div key={a.id} style={S.actionCard}><div style={{ fontSize: 20, flexShrink: 0 }}>{a.icon}</div><div><div style={S.actionTitle}>{a.title}</div><div style={S.actionDesc}>{a.desc}</div></div></div>))}
-            {/* Post-relapse protocol config */}
             <div style={{ ...S.card, borderColor: "rgba(167,139,250,0.25)", marginTop: 8 }}>
               <div style={S.cardLabel}>⚙ My post-relapse protocol</div>
               <p style={{ fontSize: 12, color: "#555", marginBottom: 12, lineHeight: 1.6 }}>These actions and reminders will be shown immediately after you log a relapse.</p>
@@ -511,7 +988,6 @@ export default function App() {
               {postRelapseReminders.map(r => (<div key={r.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8, fontSize: 13, color: "#aaa", fontStyle: "italic" }}><span style={{ color: "#f59e0b" }}>"</span><span style={{ flex: 1, lineHeight: 1.55 }}>{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ postRelapseReminders: postRelapseReminders.filter(x => x.id !== r.id) })}>×</button></div>))}
               <div style={{ display: "flex", gap: 8 }}><input style={{ ...S.input, flex: 1, fontSize: 12 }} placeholder="Add an affirmation or reminder…" value={newPostReminder} onChange={e => setNewPostReminder(e.target.value)} onKeyDown={e => e.key === "Enter" && addPostReminder()} /><button style={{ ...S.primaryBtn, width: "auto", padding: "8px 12px" }} onClick={addPostReminder}>Add</button></div>
             </div>
-            {/* History */}
             <div style={S.card}><div style={S.cardLabel}>Relapse history</div>{!(account?.relapses?.length) ? <div style={S.empty}>No relapses recorded. Keep going 💪</div> : [...(account.relapses || [])].reverse().map((r, i) => (<div key={i} style={{ padding: "10px 0", borderBottom: "0.5px solid #161616" }}><div style={{ fontSize: 11, color: "#f97316", marginBottom: 3 }}>{new Date(r.date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</div>{r.note && <div style={{ fontSize: 12, color: "#888", lineHeight: 1.55 }}>{r.note}</div>}{r.tools?.length > 0 && <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>Tools used: {r.tools.join(", ")}</div>}</div>))}</div>
           </div>
         )}
@@ -520,7 +996,6 @@ export default function App() {
         {view === "rewards" && (
           <div style={S.content}>
             <h2 style={S.pageTitle}>Rewards</h2>
-            <div style={S.card}><div style={S.cardLabel}>🌙 Sleep rewards — {goodStreak} night streak</div>{SLEEP_MS.map(m => { const isCl = claimedSl.includes(m.nights); const isAv = goodStreak >= m.nights && !isCl; return (<div key={m.nights} style={{ ...S.rewardCard, opacity: isCl ? 0.5 : 1 }}><div><div style={S.rewardCardName}>{m.emoji} {m.reward}</div><div style={{ fontSize: 11, color: "#444" }}>{m.nights} consecutive good nights</div></div>{isCl && <div style={{ color: "#34d399", fontSize: 12 }}>✓ Claimed</div>}{isAv && <button style={S.claimBtn} onClick={() => claimSlRew(m.nights)}>Claim ✓</button>}{!isCl && !isAv && <div style={{ fontSize: 14, opacity: .4 }}>🔒</div>}</div>); })}</div>
             <div style={S.card}><div style={S.cardLabel}>Sobriety rewards</div>{availRew.length === 0 ? <div style={S.empty}>No new rewards yet.</div> : availRew.map(r => (<div key={r.id} style={S.rewardCard}><div><div style={S.rewardCardName}>{r.name}</div><div style={{ fontSize: 11, color: "#444" }}>{r.days} day milestone</div></div><button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button></div>))}</div>
             <div style={S.card}><div style={S.cardLabel}>Upcoming</div>{(account?.rewards || []).filter(r => daysSober < r.days && !claimed.includes(r.id)).sort((a, b) => a.days - b.days).map(r => (<div key={r.id} style={{ ...S.rewardCard, opacity: 0.35 }}><div><div style={S.rewardCardName}>{r.name}</div><div style={{ fontSize: 11, color: "#444" }}>Unlocks at {r.days}d — {r.days - daysSober}d to go</div></div><div style={{ fontSize: 14, opacity: .5 }}>🔒</div></div>))}</div>
             <div style={S.card}><div style={S.cardLabel}>Add a custom reward</div><input style={S.input} placeholder="Reward name…" value={newRewName} onChange={e => setNRN(e.target.value)} /><div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}><label style={{ color: "#666", fontSize: 12 }}>Unlock at</label><input type="number" style={{ ...S.input, width: 70 }} value={newRewDays} onChange={e => setNRD(e.target.value)} /><label style={{ color: "#666", fontSize: 12 }}>days sober</label></div><button style={{ ...S.primaryBtn, marginTop: 12 }} onClick={addReward}>Add reward</button></div>
@@ -539,7 +1014,6 @@ export default function App() {
 
       {/* ══════════════════ MODALS ══════════════════ */}
 
-      {/* Switch / manage accounts */}
       {modal === "switchAccount" && (
         <div style={S.overlay} onClick={() => setModal(null)}>
           <div style={S.modalBox} onClick={e => e.stopPropagation()}>
@@ -560,99 +1034,120 @@ export default function App() {
         </div>
       )}
 
-      {/* Add account */}
       {modal === "addAccount" && (
         <AddAccountModal step={accSetupStep} setStep={setAccSetupStep} name={newAccName} setName={setNewAccName} sub={newAccSub} setSub={setNewAccSub} date={newAccDate} setDate={setNewAccDate} color={newAccColor} setColor={setNewAccColor} onDone={createAccount} onClose={() => { setModal(accounts.length ? "switchAccount" : null); setAccSetupStep(0); }} />
       )}
 
-      {/* Sleep log */}
-      {modal === "sleepLog" && (<div style={S.overlay} onClick={() => setModal(null)}><div style={S.modalBox} onClick={e => e.stopPropagation()}>
-        <div style={S.modalTitle}>🌙 Log your sleep</div>
-        <p style={S.modalSub}>Scored on duration AND alignment with your {fmtTime(routine.bedtimeTarget)} → {fmtTime(routine.wakeTarget)} target.</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={S.formRow}><label style={S.formLabel}>Bedtime</label><input type="time" style={S.input} value={logBed} onChange={e => setLogBed(e.target.value)} /></div>
-          <div style={S.formRow}><label style={S.formLabel}>Wake time</label><input type="time" style={S.input} value={logWake} onChange={e => setLogWake(e.target.value)} /></div>
-          {logBed && logWake && (() => { const dur = sleepDur(logBed, logWake); const q = sleepQuality({ bedtime: logBed, waketime: logWake, durationMins: dur }, routine); const vs = dur - sleepDur(routine.bedtimeTarget, routine.wakeTarget); return (<div style={{ background: "#0a0a0c", borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ fontSize: 22, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(dur)}</div><div style={{ fontSize: 11, color: vs >= 0 ? "#34d399" : "#f87171", marginTop: 3 }}>{vs >= 0 ? "+" : "-"}{fmtDur(Math.abs(vs))} vs target</div></div><div style={{ textAlign: "right" }}><span style={{ ...S.qualBadge, background: q.color + "22", color: q.color, border: `1px solid ${q.color}55`, fontSize: 13, padding: "4px 12px" }}>{q.label}</span><div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>{q.score}/{q.max} pts</div></div></div>); })()}
-        </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-          <button style={{ ...S.primaryBtn, flex: 1 }} onClick={submitSleepLog} disabled={!logBed || !logWake}>Save</button>
-          <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setModal(null)}>Cancel</button>
-        </div>
-      </div></div>)}
-
-      {/* Panic modal */}
-      {modal === "panic" && (<div style={S.overlay} onClick={() => setModal(null)}><div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
-          {["Crisis tools", "My reminders"].map((label, i) => (<div key={i} style={{ flex: 1, padding: "5px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, textAlign: "center", background: panicStep === i ? (i === 0 ? "#f87171" : "#f59e0b") : "#1a1a1e", color: panicStep === i ? (i === 0 ? "#fff" : "#0d0d0f") : "#444" }}>{i + 1} — {label}</div>))}
-        </div>
-        {panicStep === 0 && (<>
-          <div style={S.modalTitle}>🆘 You are stronger than this craving</div>
-          <p style={S.modalSub}>Cravings peak within 20 minutes then drop. Try one of these right now:</p>
-          {BUILTIN_RELAPSE_TOOLS.slice(0, 4).map(a => (<div key={a.id} style={{ ...S.actionCard, marginBottom: 8 }}><div style={{ fontSize: 20 }}>{a.icon}</div><div><div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{a.title}</div><div style={{ fontSize: 12, color: "#666", lineHeight: 1.5 }}>{a.desc}</div></div></div>))}
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <button style={{ ...S.primaryBtn, background: "#f59e0b", color: "#0d0d0f", flex: 1 }} onClick={() => setPanicStep(1)}>Read my reminders →</button>
-            <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setModal(null)}>I'm okay now</button>
+      {modal === "sleepLog" && (
+        <div style={S.overlay} onClick={() => setModal(null)}>
+          <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>🌙 Log your sleep</div>
+            <p style={S.modalSub}>Scored on duration and alignment with your {fmtTime(routineTargets.bedtime)} → {fmtTime(routineTargets.waketime)} target.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={S.formRow}><label style={S.formLabel}>Bedtime</label><input type="time" style={S.input} value={logBed} onChange={e => setLogBed(e.target.value)} /></div>
+              <div style={S.formRow}><label style={S.formLabel}>Wake time</label><input type="time" style={S.input} value={logWake} onChange={e => setLogWake(e.target.value)} /></div>
+              {logBed && logWake && (() => {
+                const dur = sleepDur(logBed, logWake);
+                const score = calcSleepScore(logBed, logWake, dur, routineTargets);
+                const vs = dur - sleepDur(routineTargets.bedtime, routineTargets.waketime);
+                return (
+                  <div style={{ background: "#0a0a0c", borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(dur)}</div>
+                      <div style={{ fontSize: 11, color: vs >= 0 ? "#34d399" : "#f87171", marginTop: 3 }}>{vs >= 0 ? "+" : "-"}{fmtDur(Math.abs(vs))} vs target</div>
+                    </div>
+                    <CircleRing value={score} size={60} strokeWidth={6} />
+                  </div>
+                );
+              })()}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button style={{ ...S.primaryBtn, flex: 1 }} onClick={submitSleepLog} disabled={!logBed || !logWake}>Save</button>
+              <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setModal(null)}>Cancel</button>
+            </div>
           </div>
-        </>)}
-        {panicStep === 1 && (<>
-          <div style={S.modalTitle}>💛 Remember why you started</div>
-          {reminders.length === 0 ? (<div style={{ ...S.card, textAlign: "center" }}><p style={{ color: "#444", fontSize: 13 }}>No reminders saved yet.</p><button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => { setModal(null); setView("goals"); }}>Add reminders in Goals →</button></div>) : reminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.07)", border: "0.5px solid rgba(245,158,11,0.2)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "#f59e0b", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setPanicStep(0)}>← Back</button>
-            <button style={{ ...S.primaryBtn, background: "#dc2626", flex: 1 }} onClick={() => { setModal("relapseLog"); }}>Log relapse</button>
-            <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17", flex: 1 }} onClick={() => setModal(null)}>I made it ✓</button>
+        </div>
+      )}
+
+      {modal === "panic" && (
+        <div style={S.overlay} onClick={() => setModal(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
+              {["Crisis tools", "My reminders"].map((label, i) => (<div key={i} style={{ flex: 1, padding: "5px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, textAlign: "center", background: panicStep === i ? (i === 0 ? "#f87171" : "#f59e0b") : "#1a1a1e", color: panicStep === i ? (i === 0 ? "#fff" : "#0d0d0f") : "#444" }}>{i + 1} — {label}</div>))}
+            </div>
+            {panicStep === 0 && (<>
+              <div style={S.modalTitle}>🆘 You are stronger than this craving</div>
+              <p style={S.modalSub}>Cravings peak within 20 minutes then drop. Try one of these right now:</p>
+              {BUILTIN_RELAPSE_TOOLS.slice(0, 4).map(a => (<div key={a.id} style={{ ...S.actionCard, marginBottom: 8 }}><div style={{ fontSize: 20 }}>{a.icon}</div><div><div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{a.title}</div><div style={{ fontSize: 12, color: "#666", lineHeight: 1.5 }}>{a.desc}</div></div></div>))}
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <button style={{ ...S.primaryBtn, background: "#f59e0b", color: "#0d0d0f", flex: 1 }} onClick={() => setPanicStep(1)}>Read my reminders →</button>
+                <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setModal(null)}>I'm okay now</button>
+              </div>
+            </>)}
+            {panicStep === 1 && (<>
+              <div style={S.modalTitle}>💛 Remember why you started</div>
+              {reminders.length === 0 ? (<div style={{ ...S.card, textAlign: "center" }}><p style={{ color: "#444", fontSize: 13 }}>No reminders saved yet.</p><button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => { setModal(null); setView("goals"); }}>Add reminders in Goals →</button></div>) : reminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.07)", border: "0.5px solid rgba(245,158,11,0.2)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "#f59e0b", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setPanicStep(0)}>← Back</button>
+                <button style={{ ...S.primaryBtn, background: "#dc2626", flex: 1 }} onClick={() => setModal("relapseLog")}>Log relapse</button>
+                <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17", flex: 1 }} onClick={() => setModal(null)}>I made it ✓</button>
+              </div>
+            </>)}
           </div>
-        </>)}
-      </div></div>)}
+        </div>
+      )}
 
-      {/* Relapse log modal */}
-      {modal === "relapseLog" && (<div style={S.overlay} onClick={() => setModal(null)}><div style={S.modalBox} onClick={e => e.stopPropagation()}>
-        <div style={S.modalTitle}>⚠ Log a relapse</div>
-        <p style={S.modalSub}>This resets your counter. Every relapse teaches something — you'll be taken through your post-relapse protocol next.</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-          {BUILTIN_RELAPSE_TOOLS.map(a => (<label key={a.id} style={{ display: "flex", alignItems: "center", cursor: "pointer", color: "#bbb", fontSize: 13 }}><input type="checkbox" checked={checkedTools.includes(a.title)} onChange={e => setCheckedTools(e.target.checked ? [...checkedTools, a.title] : checkedTools.filter(x => x !== a.title))} style={{ marginRight: 8 }} />{a.icon} {a.title}</label>))}
+      {modal === "relapseLog" && (
+        <div style={S.overlay} onClick={() => setModal(null)}>
+          <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>⚠ Log a relapse</div>
+            <p style={S.modalSub}>This resets your counter. Every relapse teaches something — you'll be taken through your post-relapse protocol next.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              {BUILTIN_RELAPSE_TOOLS.map(a => (<label key={a.id} style={{ display: "flex", alignItems: "center", cursor: "pointer", color: "#bbb", fontSize: 13 }}><input type="checkbox" checked={checkedTools.includes(a.title)} onChange={e => setCheckedTools(e.target.checked ? [...checkedTools, a.title] : checkedTools.filter(x => x !== a.title))} style={{ marginRight: 8 }} />{a.icon} {a.title}</label>))}
+            </div>
+            <textarea style={S.textarea} placeholder="What happened? (optional)" value={relapseNote} onChange={e => setRN(e.target.value)} rows={3} />
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button style={{ ...S.primaryBtn, background: "#dc2626", flex: 1 }} onClick={logRelapse}>Record &amp; start protocol</button>
+              <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setModal(null)}>Cancel</button>
+            </div>
+          </div>
         </div>
-        <textarea style={S.textarea} placeholder="What happened? (optional)" value={relapseNote} onChange={e => setRN(e.target.value)} rows={3} />
-        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          <button style={{ ...S.primaryBtn, background: "#dc2626", flex: 1 }} onClick={logRelapse}>Record &amp; start protocol</button>
-          <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => setModal(null)}>Cancel</button>
-        </div>
-      </div></div>)}
+      )}
 
-      {/* Post-relapse protocol modal */}
-      {modal === "postRelapse" && (<div style={S.overlay}><div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 11, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Post-relapse protocol</div>
-        <div style={S.modalTitle}>What to do right now</div>
-        <p style={S.modalSub}>Work through each action below. Take your time — there's no rush. Tick each one off as you complete it.</p>
-        {/* Immediate actions checklist */}
-        <div style={{ fontSize: 11, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Immediate actions</div>
-        {postRelapseActions.length === 0 && (<div style={{ ...S.empty, marginBottom: 12 }}>No custom actions set. <button style={S.linkBtn} onClick={() => { setModal(null); setView("relapse"); }}>Add them in the Relapse tab →</button></div>)}
-        {postRelapseActions.map(a => {
-          const done = checkedPost.includes(a.id);
-          return (<div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, padding: "12px 14px", borderRadius: 10, background: done ? "rgba(52,211,153,0.07)" : "#0f0f11", border: `0.5px solid ${done ? "#34d39944" : "#1a1a1e"}`, cursor: "pointer", transition: "all .2s" }} onClick={() => setCheckedPost(prev => prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id])}>
-            <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${done ? "#34d399" : "#333"}`, background: done ? "#34d399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{done && <span style={{ color: "#0d0d0f", fontSize: 13, fontWeight: 700 }}>✓</span>}</div>
-            <span style={{ fontSize: 14, lineHeight: 1.55, textDecoration: done ? "line-through" : "none", opacity: done ? 0.5 : 1, color: done ? "#666" : "#ddd" }}>{a.text}</span>
-          </div>);
-        })}
-        {/* Post-relapse reminders */}
-        {postRelapseReminders.length > 0 && (<>
-          <div style={{ fontSize: 11, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.07em", margin: "16px 0 10px" }}>Remember this</div>
-          {postRelapseReminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.06)", border: "0.5px solid rgba(245,158,11,0.18)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "#f59e0b", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
-        </>)}
-        {/* Progress indicator */}
-        <div style={{ marginTop: 16, marginBottom: 8 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#555", marginBottom: 4 }}><span>Actions completed</span><span>{checkedPost.length}/{postRelapseActions.length}</span></div>
-          <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${postRelapseActions.length ? Math.round(checkedPost.length / postRelapseActions.length * 100) : 0}%`, background: "linear-gradient(90deg,#a78bfa,#34d399)" }} /></div>
+      {modal === "postRelapse" && (
+        <div style={S.overlay}>
+          <div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 11, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Post-relapse protocol</div>
+            <div style={S.modalTitle}>What to do right now</div>
+            <p style={S.modalSub}>Work through each action below. Take your time — there's no rush. Tick each one off as you complete it.</p>
+            <div style={{ fontSize: 11, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Immediate actions</div>
+            {postRelapseActions.length === 0 && (<div style={{ ...S.empty, marginBottom: 12 }}>No custom actions set. <button style={S.linkBtn} onClick={() => { setModal(null); setView("relapse"); }}>Add them in the Relapse tab →</button></div>)}
+            {postRelapseActions.map(a => {
+              const done = checkedPost.includes(a.id);
+              return (<div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, padding: "12px 14px", borderRadius: 10, background: done ? "rgba(52,211,153,0.07)" : "#0f0f11", border: `0.5px solid ${done ? "#34d39944" : "#1a1a1e"}`, cursor: "pointer" }} onClick={() => setCheckedPost(prev => prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id])}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${done ? "#34d399" : "#333"}`, background: done ? "#34d399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{done && <span style={{ color: "#0d0d0f", fontSize: 13, fontWeight: 700 }}>✓</span>}</div>
+                <span style={{ fontSize: 14, lineHeight: 1.55, textDecoration: done ? "line-through" : "none", opacity: done ? 0.5 : 1, color: done ? "#666" : "#ddd" }}>{a.text}</span>
+              </div>);
+            })}
+            {postRelapseReminders.length > 0 && (<>
+              <div style={{ fontSize: 11, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.07em", margin: "16px 0 10px" }}>Remember this</div>
+              {postRelapseReminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.06)", border: "0.5px solid rgba(245,158,11,0.18)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "#f59e0b", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
+            </>)}
+            <div style={{ marginTop: 16, marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#555", marginBottom: 4 }}><span>Actions completed</span><span>{checkedPost.length}/{postRelapseActions.length}</span></div>
+              <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${postRelapseActions.length ? Math.round(checkedPost.length / postRelapseActions.length * 100) : 0}%`, background: "linear-gradient(90deg,#a78bfa,#34d399)" }} /></div>
+            </div>
+            <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17", marginTop: 8 }} onClick={() => { setModal(null); setCheckedPost([]); setView("dashboard"); }}>
+              {checkedPost.length >= postRelapseActions.length ? "Protocol complete — back to dashboard ✓" : "I'm done for now"}
+            </button>
+          </div>
         </div>
-        <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17", marginTop: 8 }} onClick={() => { setModal(null); setCheckedPost([]); setView("dashboard"); }}>
-          {checkedPost.length >= postRelapseActions.length ? "Protocol complete — back to dashboard ✓" : "I'm done for now"}
-        </button>
-      </div></div>)}
+      )}
     </div>
   );
 }
 
-// ── AddAccount sub-component ───────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────────
 function AddAccountModal({ step, setStep, name, setName, sub, setSub, date, setDate, color, setColor, onDone, onClose }) {
   return (
     <div style={S.overlay} onClick={onClose}>
@@ -664,7 +1159,7 @@ function AddAccountModal({ step, setStep, name, setName, sub, setSub, date, setD
           <input style={S.input} placeholder='e.g. "My alcohol journey", "Quit smoking"' value={name} onChange={e => setName(e.target.value)} />
           <div style={{ fontSize: 10, color: "#444", margin: "12px 0 6px" }}>Pick a colour</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-            {ACCOUNT_COLORS.map(c => (<div key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", border: color === c ? "3px solid #fff" : "3px solid transparent", transition: "border .15s" }} />))}
+            {ACCOUNT_COLORS.map(c => (<div key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", border: color === c ? "3px solid #fff" : "3px solid transparent" }} />))}
           </div>
           <button style={{ ...S.primaryBtn, background: color, color: "#0d0d0f" }} onClick={() => setStep(1)} disabled={!name.trim()}>Next →</button>
         </>)}
@@ -690,7 +1185,12 @@ function AddAccountModal({ step, setStep, name, setName, sub, setSub, date, setD
 }
 
 function StatCard({ value, label, accent }) {
-  return (<div style={{ ...S.statCard, borderTopColor: accent }}><div style={{ ...S.statValue, color: accent }}>{value}</div><div style={S.statLabel}>{label}</div></div>);
+  return (
+    <div style={{ ...S.statCard, borderTopColor: accent }}>
+      <div style={{ ...S.statValue, color: accent }}>{value}</div>
+      <div style={S.statLabel}>{label}</div>
+    </div>
+  );
 }
 
 const S = {
@@ -746,7 +1246,6 @@ const S = {
   sleepTarget: { background: "#060608", borderRadius: 8, padding: "10px 12px", textAlign: "center" },
   sleepTargetLabel: { fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 },
   sleepTargetVal: { fontSize: 17, fontWeight: 700, fontFamily: "monospace" },
-  qualBadge: { display: "inline-block", fontSize: 11, padding: "2px 8px", borderRadius: 16, fontWeight: 500 },
   sleepLogRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #111" },
   journalEntry: { background: "#0a0a0c", border: "0.5px solid #161618", borderRadius: 9, padding: "12px 16px", marginBottom: 9 },
   journalDate: { fontSize: 10, color: "#444", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" },
