@@ -752,71 +752,155 @@ export default function App() {
       <main style={S.main}>
 
         {/* ════ DASHBOARD ════ */}
-        {view === "dashboard" && (
-          <div style={S.content}>
-            <h2 style={S.pageTitle}>Your journey</h2>
-            <div style={S.panicBtn} onClick={() => { setPanicStep(0); setModal("panic"); }}>
-              <span style={{ fontSize: 20 }}>🆘</span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#f87171" }}>Panic button</div>
-                <div style={{ fontSize: 11, color: "#7a2020", marginTop: 1 }}>Feeling like you might relapse? Tap here now.</div>
+        {view === "dashboard" && (() => {
+          const today = getTodayStr();
+          const todaySchedComps = scheduleCompletions[today] || {};
+          const todayActDone = todayActivities.filter(a => todaySchedComps[a.id]).length;
+          const schedTotal = todayHabits.length + todayActivities.length;
+          const schedDone = todayDone + todayActDone;
+          const schedPct = schedTotal ? Math.round(schedDone / schedTotal * 100) : 0;
+          const PRIORITY_ORD = { high: 0, med: 1, low: 2 };
+          const activeGoals = normalizedGoals
+            .filter(g => !g.archived)
+            .sort((a, b) => {
+              const pd = PRIORITY_ORD[a.priority || "med"] - PRIORITY_ORD[b.priority || "med"];
+              if (pd !== 0) return pd;
+              return PERIOD_ORDER.indexOf(a.period || "daily") - PERIOD_ORDER.indexOf(b.period || "daily");
+            });
+          const topGoals = activeGoals.slice(0, 3);
+          const lifeAreasArr = LIFE_AREAS.map(la => ({ ...la, value: (vision.lifeAreas?.[la.key] ?? 5) * 10 }));
+          const nm = MILESTONES.find(m => m.days > daysSober);
+          return (
+            <div style={S.content}>
+              <h2 style={S.pageTitle}>Your journey</h2>
+              <div style={S.panicBtn} onClick={() => { setPanicStep(0); setModal("panic"); }}>
+                <span style={{ fontSize: 20 }}>🆘</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#f87171" }}>Panic button</div>
+                  <div style={{ fontSize: 11, color: "#7a2020", marginTop: 1 }}>Feeling like you might relapse? Tap here now.</div>
+                </div>
+                <span style={{ marginLeft: "auto", color: "#f87171" }}>→</span>
               </div>
-              <span style={{ marginLeft: "auto", color: "#f87171" }}>→</span>
-            </div>
-            <div style={S.statGrid}>
-              <StatCard value={daysSober} label="Days sober" accent={accentColor} />
-              <StatCard value={todaySleepScore !== null ? todaySleepScore : "—"} label="Sleep score" accent="#60a5fa" />
-              <StatCard value={`${habitPct}%`} label="Today's habits" accent="#a78bfa" />
-              <StatCard value={avgSleep ? fmtDur(avgSleep) : "—"} label="Avg sleep (7d)" accent="#f97316" />
-            </div>
-            {(() => { const nm = MILESTONES.find(m => m.days > daysSober); return nm && (<div style={S.card}><div style={S.cardLabel}>Next milestone — {nm.emoji} {nm.label}</div><div style={S.progressWrap}><div style={S.progressBg}><div style={{ ...S.progressBar, width: `${Math.min(100, daysSober / nm.days * 100)}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div><div style={S.progressText}>{nm.days - daysSober}d to go</div></div></div>); })()}
-            {todayLog ? (
-              <div style={{ ...S.card, borderColor: "rgba(96,165,250,0.2)" }}>
-                <div style={S.cardLabel}>🌙 Last night</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div>
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
-                  </div>
-                  <div style={{ marginLeft: "auto" }}>
-                    <CircleRing value={todaySleepScore} size={56} strokeWidth={6} />
+              <div style={S.statGrid}>
+                <StatCard value={daysSober} label="Days sober" accent={accentColor} />
+                <StatCard value={todayCombinedScore !== null ? todayCombinedScore : "—"} label="Routine score" accent="#60a5fa" />
+                <StatCard value={schedTotal ? `${schedDone}/${schedTotal}` : "—"} label="Today's schedule" accent="#a78bfa" />
+                <StatCard value={activeGoals.length || "—"} label="Active goals" accent="#f59e0b" />
+              </div>
+              {nm && (
+                <div style={S.card}>
+                  <div style={S.cardLabel}>Next milestone — {nm.emoji} {nm.label}</div>
+                  <div style={S.progressWrap}>
+                    <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${Math.min(100, daysSober / nm.days * 100)}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
+                    <div style={S.progressText}>{nm.days - daysSober}d to go</div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div style={{ ...S.card, cursor: "pointer", borderStyle: "dashed" }} onClick={() => setModal("sleepLog")}>
-                <div style={S.cardLabel}>🌙 Sleep</div>
-                <div style={{ fontSize: 13, color: "#444" }}>Log last night's sleep →</div>
-              </div>
-            )}
-            {availRew.length > 0 && (
-              <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.04)" }}>
-                <div style={S.cardLabel}>🎁 Rewards unlocked!</div>
-                {availRew.map(r => (
-                  <div key={r.id} style={S.rewardRow}>
-                    <span style={{ fontSize: 13 }}>{r.name} <span style={{ color: "#555", fontSize: 11 }}>({r.days}d)</span></span>
-                    <button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button>
+              )}
+              {todayLog ? (
+                <div style={{ ...S.card, borderColor: "rgba(96,165,250,0.2)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={S.cardLabel}>🌙 Last night</div>
+                    <button style={S.linkBtn} onClick={() => setView("routine")}>Routine →</button>
                   </div>
-                ))}
-              </div>
-            )}
-            {goals.filter(g => g.period === "daily").length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
+                    </div>
+                    <div style={{ marginLeft: "auto" }}><CircleRing value={todaySleepScore} size={56} strokeWidth={6} /></div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ ...S.card, cursor: "pointer", borderStyle: "dashed" }} onClick={() => setModal("sleepLog")}>
+                  <div style={S.cardLabel}>🌙 Sleep</div>
+                  <div style={{ fontSize: 13, color: "#444" }}>Log last night's sleep →</div>
+                </div>
+              )}
+              {schedTotal > 0 && (
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={S.cardLabel}>📅 Today's schedule</div>
+                    <button style={S.linkBtn} onClick={() => setView("schedule")}>View →</button>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${schedPct}%`, background: `linear-gradient(90deg,#a78bfa,#60a5fa)` }} /></div>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>{schedDone}/{schedTotal}</div>
+                  </div>
+                  {sortedTodayHabits.slice(0, 3).map(h => {
+                    const done = h.completions.includes(today);
+                    return (
+                      <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: done ? "#a78bfa" : "#1a1a1e", border: `1px solid ${done ? "#a78bfa" : "#333"}`, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: done ? "#444" : "#aaa", textDecoration: done ? "line-through" : "none", flex: 1 }}>{h.name}</span>
+                        {h.scheduledTimes[0] && <span style={{ fontSize: 10, color: "#333" }}>{fmtTime(h.scheduledTimes[0])}</span>}
+                      </div>
+                    );
+                  })}
+                  {schedTotal > 3 && <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>+{schedTotal - 3} more</div>}
+                </div>
+              )}
+              {topGoals.length > 0 && (
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={S.cardLabel}>◎ Active goals</div>
+                    <button style={S.linkBtn} onClick={() => setView("goals")}>All →</button>
+                  </div>
+                  {topGoals.map(g => {
+                    const priColor = g.priority === "high" ? "#f87171" : g.priority === "low" ? "#444" : "#f59e0b";
+                    return (
+                      <div key={g.id} style={{ marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                          <div style={{ width: 6, height: 6, borderRadius: 1, background: priColor, flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, flex: 1, color: "#ccc" }}>{g.title}</span>
+                          <span style={{ fontSize: 10, color: GOAL_COLORS[g.period] || "#555", fontFamily: "monospace" }}>{g.period}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ flex: 1, height: 3, background: "#161618", borderRadius: 2 }}>
+                            <div style={{ height: "100%", width: `${g.progress || 0}%`, background: GOAL_COLORS[g.period] || accentColor, borderRadius: 2 }} />
+                          </div>
+                          <span style={{ fontSize: 10, color: "#444", fontFamily: "monospace" }}>{g.progress || 0}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <div style={S.card}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={S.cardLabel}>Today's goals</div>
-                  <button style={S.linkBtn} onClick={() => setView("goals")}>All →</button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={S.cardLabel}>Life areas</div>
+                  <button style={S.linkBtn} onClick={() => { setView("goals"); setGoalsTab("vision"); }}>Edit →</button>
                 </div>
-                {goals.filter(g => g.period === "daily").slice(0, 4).map(g => { const done = isGoalDone(g); return (<div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}><div style={{ ...S.habitDot, background: done ? accentColor : "transparent", borderColor: accentColor, cursor: "pointer" }} onClick={() => toggleGoal(g.id)} /><span style={{ fontSize: 13, textDecoration: done ? "line-through" : "none", opacity: done ? 0.4 : 1 }}>{g.text}</span></div>); })}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
+                  {lifeAreasArr.map(la => (
+                    <div key={la.key} style={{ textAlign: "center", flex: "0 0 calc(14.28% - 8px)", minWidth: 42 }}>
+                      <CircleRing value={la.value} size={42} strokeWidth={4} />
+                      <div style={{ fontSize: 9, color: "#444", marginTop: 3 }}>{la.label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-            <div style={S.card}>
-              <div style={S.cardLabel}>Milestones reached</div>
-              <div style={S.milestonesGrid}>
-                {MILESTONES.map(m => { const ok = daysSober >= m.days; return (<div key={m.days} style={{ ...S.milestoneChip, opacity: ok ? 1 : 0.2, background: ok ? accentColor + "18" : "transparent", borderColor: ok ? accentColor : "#222" }}><span style={{ fontSize: 16 }}>{m.emoji}</span><span style={S.mLabel}>{m.label}</span></div>); })}
+              {availRew.length > 0 && (
+                <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.04)" }}>
+                  <div style={S.cardLabel}>🎁 Rewards unlocked!</div>
+                  {availRew.map(r => (
+                    <div key={r.id} style={S.rewardRow}>
+                      <span style={{ fontSize: 13 }}>{r.name} <span style={{ color: "#555", fontSize: 11 }}>({r.days}d)</span></span>
+                      <button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={S.card}>
+                <div style={S.cardLabel}>Milestones reached</div>
+                <div style={S.milestonesGrid}>
+                  {MILESTONES.map(m => { const ok = daysSober >= m.days; return (<div key={m.days} style={{ ...S.milestoneChip, opacity: ok ? 1 : 0.2, background: ok ? accentColor + "18" : "transparent", borderColor: ok ? accentColor : "#222" }}><span style={{ fontSize: 16 }}>{m.emoji}</span><span style={S.mLabel}>{m.label}</span></div>); })}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ════ ROUTINE ════ */}
         {view === "routine" && (
