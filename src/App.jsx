@@ -420,6 +420,8 @@ export default function App() {
   const [exerciseDraft, setExerciseDraft] = useState(null);
   const [metricDraft, setMetricDraft] = useState(null);
   const [scheduleViewDate, setScheduleViewDate] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const notifRef = useRef([]);
 
@@ -564,6 +566,12 @@ export default function App() {
     notifRef.current.push(setTimeout(() => sendNotif("🌙 Bedtime", `Wind down — target: ${fmtTime(routineTargets.bedtime)}`), bt - new Date()));
     return () => notifRef.current.forEach(clearTimeout);
   }, [habits, routineTargets, account?.id]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // ── Actions ───────────────────────────────────────────────────────────────
   function createAccount() {
@@ -782,10 +790,28 @@ export default function App() {
 
   return (
     <div style={S.app}>
+      {/* ── Mobile top bar ── */}
+      {isMobile && (
+        <div style={S.mobileHeader}>
+          <button style={S.hamburger} onClick={() => setSidebarOpen(o => !o)}>☰</button>
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.02em" }}>🌿 Recover</span>
+          <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "monospace", color: accentColor }}>{daysSober}d</div>
+        </div>
+      )}
+
+      {/* ── Sidebar backdrop ── */}
+      {isMobile && sidebarOpen && <div style={S.sidebarBackdrop} onClick={() => setSidebarOpen(false)} />}
+
       {/* ── Sidebar ── */}
-      <aside style={S.sidebar}>
-        <div style={S.sidebarTop}>
-          <div style={S.logo}>🌿 Recover</div>
+      <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.7)", width: 260 } : {}) }}>
+        {isMobile && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 14px 0" }}>
+            <div style={S.logo}>🌿 Recover</div>
+            <button style={{ background: "none", border: "none", color: "#555", fontSize: 22, cursor: "pointer", lineHeight: 1, padding: "0 2px" }} onClick={() => setSidebarOpen(false)}>×</button>
+          </div>
+        )}
+        <div style={{ ...S.sidebarTop, ...(isMobile ? { paddingTop: 10 } : {}) }}>
+          {!isMobile && <div style={S.logo}>🌿 Recover</div>}
           <button style={{ ...S.accSwitcher, borderColor: accentColor + "55" }} onClick={() => setModal("switchAccount")}>
             <div style={{ ...S.accDot, background: accentColor }} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -801,19 +827,19 @@ export default function App() {
         </div>
         <nav style={S.nav}>
           {navItems.map(n => (
-            <button key={n.id} style={{ ...S.navBtn, ...(view === n.id ? { ...S.navBtnActive, borderLeft: `3px solid ${accentColor}` } : {}) }} onClick={() => setView(n.id)}>
+            <button key={n.id} style={{ ...S.navBtn, ...(view === n.id ? { ...S.navBtnActive, borderLeft: `3px solid ${accentColor}` } : {}) }} onClick={() => { setView(n.id); if (isMobile) setSidebarOpen(false); }}>
               <span style={S.navIcon}>{n.icon}</span><span>{n.label}</span>
             </button>
           ))}
         </nav>
         <div style={S.sidebarBottom}>
-          <button style={S.relapseBtn} onClick={() => setModal("relapseLog")}>⚠ Log a relapse</button>
+          <button style={S.relapseBtn} onClick={() => { setModal("relapseLog"); if (isMobile) setSidebarOpen(false); }}>⚠ Log a relapse</button>
           <button style={S.resetLink} onClick={() => { if (window.confirm("Delete ALL data for all accounts?")) { localStorage.removeItem(ROOT_KEY); window.location.reload(); } }}>reset all data</button>
         </div>
       </aside>
 
       {/* ── Main ── */}
-      <main style={S.main}>
+      <main style={{ ...S.main, ...(isMobile ? { marginTop: 52 } : {}) }}>
 
         {/* ════ DASHBOARD ════ */}
         {view === "dashboard" && (() => {
@@ -845,7 +871,7 @@ export default function App() {
                 </div>
                 <span style={{ marginLeft: "auto", color: "#f87171" }}>→</span>
               </div>
-              <div style={S.statGrid}>
+              <div style={{ ...S.statGrid, gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
                 <StatCard value={daysSober} label="Days sober" accent={accentColor} />
                 <StatCard value={todayCombinedScore !== null ? todayCombinedScore : "—"} label="Routine score" accent="#60a5fa" />
                 <StatCard value={schedTotal ? `${schedDone}/${schedTotal}` : "—"} label="Today's schedule" accent="#a78bfa" />
@@ -2490,7 +2516,10 @@ function StatCard({ value, label, accent }) {
 
 const S = {
   app: { display: "flex", minHeight: "100vh", background: "#0d0d0f", color: "#e8e8e8", fontFamily: "'Georgia',serif" },
-  sidebar: { width: 210, background: "#0a0a0c", borderRight: "1px solid #161618", display: "flex", flexDirection: "column", padding: "20px 0", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
+  mobileHeader: { position: "fixed", top: 0, left: 0, right: 0, height: 52, background: "#0a0a0c", borderBottom: "1px solid #161618", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", zIndex: 100 },
+  hamburger: { background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", padding: "4px 6px", lineHeight: 1 },
+  sidebarBackdrop: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 150 },
+  sidebar: { width: 220, background: "#0a0a0c", borderRight: "1px solid #161618", display: "flex", flexDirection: "column", padding: "20px 0", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
   sidebarTop: { padding: "0 14px 18px", borderBottom: "1px solid #161618" },
   logo: { fontSize: 16, fontWeight: 700, marginBottom: 12, letterSpacing: "-0.02em" },
   accSwitcher: { display: "flex", alignItems: "center", gap: 8, width: "100%", background: "#111113", border: "0.5px solid", borderRadius: 8, padding: "8px 10px", cursor: "pointer", marginBottom: 10, color: "#e8e8e8", textAlign: "left" },
@@ -2505,8 +2534,8 @@ const S = {
   sidebarBottom: { padding: "12px 8px", borderTop: "1px solid #161618" },
   relapseBtn: { width: "100%", padding: "8px", borderRadius: 7, border: "1px solid #3a1212", background: "#160c0c", color: "#f87171", fontSize: 12, cursor: "pointer", marginBottom: 6 },
   resetLink: { background: "none", border: "none", color: "#252525", fontSize: 10, cursor: "pointer", width: "100%", textAlign: "center" },
-  main: { flex: 1, overflow: "auto" },
-  content: { maxWidth: 640, margin: "0 auto", padding: "24px 20px" },
+  main: { flex: 1, overflow: "auto", minWidth: 0 },
+  content: { maxWidth: 1100, margin: "0 auto", padding: "24px 20px" },
   pageTitle: { fontSize: 22, fontWeight: 700, marginBottom: 20, letterSpacing: "-0.02em" },
   panicBtn: { display: "flex", alignItems: "center", gap: 12, background: "rgba(239,68,68,0.07)", border: "1.5px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, cursor: "pointer" },
   statGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 },
