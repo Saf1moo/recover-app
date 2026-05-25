@@ -1,6 +1,6 @@
 {
-  "name": "Niyyah",
-  "short_name": "نيّة",
+  "name": "Recover — Recovery Companion",
+  "short_name": "Recover",
   "description": "Your private recovery companion",
   "start_url": "/",
   "display": "standalone",

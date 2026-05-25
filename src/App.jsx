@@ -999,18 +999,7 @@ export default function App() {
       {isMobile && (
         <div style={S.mobileHeader}>
           <button style={S.hamburger} onClick={() => setSidebarOpen(o => !o)}>☰</button>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="20" height="20" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg">
-              <path d="M 260 210 C 260 285, 308 330, 340 330 C 372 330, 420 285, 420 210 C 420 178, 408 158, 390 145" fill="none" stroke="#2d7a5a" strokeWidth="16" strokeLinecap="round"/>
-              <path d="M 278 210 C 278 272, 310 308, 340 308 C 370 308, 402 272, 402 210" fill="none" stroke="#2d7a5a" strokeWidth="5" strokeLinecap="round" opacity="0.3"/>
-              <circle cx="340" cy="360" r="11" fill="#2d7a5a"/>
-              <line x1="340" y1="306" x2="340" y2="148" stroke="#34d399" strokeWidth="6" strokeLinecap="round"/>
-              <path d="M 340 228 C 305 210, 288 184, 300 162 C 312 156, 328 172, 340 194" fill="#34d399" opacity="0.9"/>
-              <path d="M 340 200 C 375 182, 396 155, 384 134 C 372 128, 355 144, 340 166" fill="#34d399" opacity="0.7"/>
-              <ellipse cx="340" cy="136" rx="9" ry="14" fill="#34d399"/>
-            </svg>
-            <span style={{ fontSize: 19, fontFamily: "Georgia, serif", color: "#34d399" }}>نيّة</span>
-          </div>
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.02em" }}>🌿 Recover</span>
           <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "monospace", color: accentColor }}>{daysSober}d</div>
         </div>
       )}
@@ -1022,18 +1011,7 @@ export default function App() {
       <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, height: "auto", transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.8)", width: 240 } : {}) }}>
         {/* Logo */}
         <div style={{ padding: "20px 16px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <svg width="56" height="56" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-              <path d="M 260 210 C 260 285, 308 330, 340 330 C 372 330, 420 285, 420 210 C 420 178, 408 158, 390 145" fill="none" stroke="#2d7a5a" strokeWidth="16" strokeLinecap="round"/>
-              <path d="M 278 210 C 278 272, 310 308, 340 308 C 370 308, 402 272, 402 210" fill="none" stroke="#2d7a5a" strokeWidth="5" strokeLinecap="round" opacity="0.3"/>
-              <circle cx="340" cy="360" r="11" fill="#2d7a5a"/>
-              <line x1="340" y1="306" x2="340" y2="148" stroke="#34d399" strokeWidth="6" strokeLinecap="round"/>
-              <path d="M 340 228 C 305 210, 288 184, 300 162 C 312 156, 328 172, 340 194" fill="#34d399" opacity="0.9"/>
-              <path d="M 340 200 C 375 182, 396 155, 384 134 C 372 128, 355 144, 340 166" fill="#34d399" opacity="0.7"/>
-              <ellipse cx="340" cy="136" rx="9" ry="14" fill="#34d399"/>
-            </svg>
-            <span style={{ fontSize: 28, fontFamily: "Georgia, serif", color: "#34d399", letterSpacing: "0.02em", lineHeight: 1 }}>نيّة</span>
-          </div>
+          <div style={S.logo}>🌿 Recover</div>
           {isMobile && <button style={{ background: "none", border: "none", color: "var(--r-fg2)", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 0 }} onClick={() => setSidebarOpen(false)}>×</button>}
         </div>
 
