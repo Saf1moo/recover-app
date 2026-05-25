@@ -27,6 +27,8 @@ const accountDefaults = () => ({
   postRelapseReminders: [],
   scheduleActivities: [],
   scheduleCompletions: {},
+  vision: DEFAULT_VISION(),
+  accountability: DEFAULT_ACCOUNTABILITY(),
 });
 
 function loadRoot() {
@@ -82,6 +84,18 @@ const DEFAULT_POST_REMINDERS = () => [
 const CAT_HEX = { mental: "#a78bfa", physical: "#34d399", sleep: "#60a5fa", social: "#f97316", custom: "#f472b6" };
 const GOAL_PERIODS = ["daily", "weekly", "monthly", "yearly"];
 const GOAL_COLORS = { daily: "#34d399", weekly: "#60a5fa", monthly: "#a78bfa", yearly: "#f59e0b" };
+const LIFE_AREAS = [
+  { key: "health", label: "Health", color: "#34d399" },
+  { key: "faith", label: "Faith", color: "#a78bfa" },
+  { key: "relationships", label: "Relationships", color: "#f97316" },
+  { key: "career", label: "Career", color: "#60a5fa" },
+  { key: "finances", label: "Finances", color: "#f59e0b" },
+  { key: "personalGrowth", label: "Growth", color: "#f472b6" },
+  { key: "fun", label: "Fun", color: "#2dd4bf" },
+];
+const PERIOD_ORDER = ["yearly", "monthly", "weekly", "daily"];
+const DEFAULT_VISION = () => ({ myWhy: "", lifeVision: "", lifeAreas: { health: 5, faith: 5, relationships: 5, career: 5, finances: 5, personalGrowth: 5, fun: 5 } });
+const DEFAULT_ACCOUNTABILITY = () => ({ contract: null, futureLetters: [], weeklyReviews: [], wins: [], gratitude: [] });
 const ACCOUNT_COLORS = ["#34d399", "#60a5fa", "#a78bfa", "#f97316", "#f472b6", "#f59e0b", "#f87171", "#2dd4bf"];
 const PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -112,6 +126,53 @@ const normalizeHabit = h => ({
   levels: h.levels || [],
   completions: h.completions || [],
 });
+const normalizeGoal = g => ({
+  ...g,
+  title: g.title || g.text || "",
+  parentId: g.parentId || null,
+  dueDate: g.dueDate || "",
+  priority: g.priority || "med",
+  notes: g.notes || "",
+  progress: g.progress !== undefined ? g.progress : 0,
+  lifeArea: g.lifeArea || "",
+  archived: g.archived || false,
+});
+function calcStreak(completions) {
+  if (!completions || !completions.length) return 0;
+  const set = new Set(completions);
+  let streak = 0;
+  const d = new Date(); d.setHours(12, 0, 0, 0);
+  while (set.has(d.toISOString().split("T")[0])) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+function calcLongestStreak(completions) {
+  if (!completions || !completions.length) return 0;
+  const sorted = [...new Set(completions)].sort();
+  let longest = 1, current = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = (new Date(sorted[i] + "T12:00") - new Date(sorted[i - 1] + "T12:00")) / 86400000;
+    if (diff === 1) { current++; if (current > longest) longest = current; }
+    else current = 1;
+  }
+  return longest;
+}
+function calcHabitRate(habit, days) {
+  const norm = normalizeHabit(habit);
+  let sched = 0, done = 0;
+  for (let i = 0; i < days; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split("T")[0];
+    const dn = DAY_NAMES[d.getDay()];
+    if (norm.days.length === 0 || norm.days.includes(dn)) {
+      sched++;
+      if (norm.completions.includes(ds)) done++;
+    }
+  }
+  return sched ? Math.round(done / sched * 100) : 0;
+}
 function recalcHabitLevel(habit) {
   if (!habit.levelsEnabled || !habit.levels || !habit.levels.length) return habit;
   const weekStart = getWeekStr();
@@ -317,8 +378,20 @@ export default function App() {
   const [habitDraft, setHabitDraft] = useState(null);
   const [schedActModal, setSchedActModal] = useState(false);
   const [schedActDraft, setSchedActDraft] = useState(null);
-  const [newGoalText, setNGT] = useState("");
-  const [newGoalPeriod, setNGP] = useState(null);
+  const [goalsTab, setGoalsTab] = useState("goals");
+  const [goalsPeriod, setGoalsPeriod] = useState("yearly");
+  const [goalsAreaFilter, setGoalsAreaFilter] = useState("");
+  const [goalsShowArchived, setGoalsShowArchived] = useState(false);
+  const [goalDraft, setGoalDraft] = useState(null);
+  const [editGoalId, setEditGoalId] = useState(null);
+  const [editingVision, setEditingVision] = useState(null); // null | "why" | "vision" | "areas"
+  const [visionDraft, setVisionDraft] = useState(null);
+  const [lifeAreasDraft, setLifeAreasDraft] = useState(null);
+  const [contractDraft, setContractDraft] = useState(null);
+  const [letterDraft, setLetterDraft] = useState(null);
+  const [weeklyReviewDraft, setWRD] = useState(null);
+  const [winText, setWinText] = useState("");
+  const [gratitudeDraft, setGratitudeDraft] = useState(["", "", ""]);
   const [newRem, setNewRem] = useState("");
   const [newPostAction, setNewPostAction] = useState("");
   const [newPostReminder, setNewPostReminder] = useState("");
@@ -366,6 +439,9 @@ export default function App() {
     a.type === "oneTime" ? a.date === getTodayStr() : (a.days.length === 0 || a.days.includes(todayDay))
   );
   const goals = account?.goals || [];
+  const normalizedGoals = goals.map(normalizeGoal);
+  const vision = account?.vision || DEFAULT_VISION();
+  const accountability = account?.accountability || DEFAULT_ACCOUNTABILITY();
   const reminders = account?.reminders || [];
   const postRelapseActions = account?.postRelapseActions || [];
   const postRelapseReminders = account?.postRelapseReminders || [];
@@ -569,7 +645,6 @@ export default function App() {
     setModal(null); setLogBed(""); setLogWake("");
   }
 
-  function addGoal() { if (!newGoalText.trim()) return; upd({ goals: [...goals, { id: "g" + Date.now(), text: newGoalText.trim(), period: newGoalPeriod, done: [], createdAt: new Date().toISOString() }] }); setNGT(""); setNGP(null); }
   function addReminder() { if (!newRem.trim()) return; upd({ reminders: [...reminders, { id: "rem" + Date.now(), text: newRem.trim() }] }); setNewRem(""); }
   function addPostAction() { if (!newPostAction.trim()) return; upd({ postRelapseActions: [...postRelapseActions, { id: "pa" + Date.now(), text: newPostAction.trim() }] }); setNewPostAction(""); }
   function addPostReminder() { if (!newPostReminder.trim()) return; upd({ postRelapseReminders: [...postRelapseReminders, { id: "pr" + Date.now(), text: newPostReminder.trim() }] }); setNewPostReminder(""); }
@@ -1206,31 +1281,446 @@ export default function App() {
           );
         })()}
 
-        {/* ════ GOALS ════ */}
-        {view === "goals" && (
-          <div style={S.content}>
-            <h2 style={S.pageTitle}>Goals &amp; reminders</h2>
-            <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.03)" }}>
-              <div style={S.cardLabel}>💛 My reminders &amp; motivation</div>
-              {reminders.length === 0 && <div style={{ ...S.empty, marginBottom: 10 }}>Add things that keep you going — quotes, reasons, names of people you're doing this for.</div>}
-              {reminders.map(r => (<div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #1a1a1a" }}><span style={{ fontSize: 13, color: "#f59e0b", fontStyle: "italic", lineHeight: 1.6, flex: 1 }}>"{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ reminders: reminders.filter(x => x.id !== r.id) })}>×</button></div>))}
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input style={{ ...S.input, flex: 1 }} placeholder="Add a reminder or quote…" value={newRem} onChange={e => setNewRem(e.target.value)} onKeyDown={e => e.key === "Enter" && addReminder()} /><button style={{ ...S.primaryBtn, width: "auto", padding: "9px 14px" }} onClick={addReminder}>Add</button></div>
-            </div>
-            {GOAL_PERIODS.map(period => {
-              const pg = goals.filter(g => g.period === period);
-              const dc = pg.filter(isGoalDone).length;
-              return (<div key={period} style={S.card}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ ...S.goalBadge, background: GOAL_COLORS[period] + "22", color: GOAL_COLORS[period], border: `1px solid ${GOAL_COLORS[period]}44` }}>{period}</span>
-                  {pg.length > 0 && <span style={{ fontSize: 11, color: "#444" }}>{dc}/{pg.length} done</span>}
+        {/* ════ GOALS & ACCOUNTABILITY ════ */}
+        {view === "goals" && (() => {
+          const priColors = { high: "#f87171", med: "#f59e0b", low: "#34d399" };
+          const thisWeekStr = getWeekStr();
+          const contract = accountability.contract;
+          const thisWeekReview = (accountability.weeklyReviews || []).find(r => r.weekStr === thisWeekStr);
+          const todayGratitude = (accountability.gratitude || []).find(g => g.date === getTodayStr());
+          const normGoals = normalizedGoals;
+          const parentPeriodIdx = PERIOD_ORDER.indexOf(goalsPeriod) - 1;
+          const parentCandidates = parentPeriodIdx >= 0 ? normGoals.filter(g => g.period === PERIOD_ORDER[parentPeriodIdx] && !g.archived) : [];
+          const filteredGoals = normGoals.filter(g => !g.archived && g.period === goalsPeriod && (goalsAreaFilter === "" || g.lifeArea === goalsAreaFilter));
+          return (
+            <div style={S.content}>
+              <h2 style={S.pageTitle}>Goals &amp; Accountability</h2>
+
+              {/* My Why — always visible when set */}
+              {vision.myWhy && (
+                <div style={{ ...S.card, borderColor: accentColor + "33", background: accentColor + "08", marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: accentColor, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>My Why</div>
+                  <div style={{ fontSize: 13, fontStyle: "italic", color: "#ddd", lineHeight: 1.65 }}>"{vision.myWhy}"</div>
                 </div>
-                {pg.length === 0 && <div style={S.empty}>No {period} goals yet.</div>}
-                {pg.map(g => { const done = isGoalDone(g); return (<div key={g.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: "0.5px solid #161616" }}><div style={{ ...S.goalCheck, background: done ? GOAL_COLORS[period] : "transparent", borderColor: GOAL_COLORS[period], cursor: "pointer", flexShrink: 0 }} onClick={() => toggleGoal(g.id)}>{done && <span style={{ color: "#0d0d0f", fontSize: 11 }}>✓</span>}</div><span style={{ fontSize: 13, flex: 1, lineHeight: 1.5, textDecoration: done ? "line-through" : "none", opacity: done ? 0.4 : 1 }}>{g.text}</span><button style={S.deleteBtn} onClick={() => upd({ goals: goals.filter(x => x.id !== g.id) })}>×</button></div>); })}
-                {newGoalPeriod === period ? (<div style={{ display: "flex", gap: 8 }}><input style={{ ...S.input, flex: 1, fontSize: 13 }} placeholder={`Add ${period} goal…`} value={newGoalText} onChange={e => setNGT(e.target.value)} onKeyDown={e => e.key === "Enter" && addGoal()} autoFocus /><button style={{ ...S.primaryBtn, width: "auto", padding: "8px 12px", background: GOAL_COLORS[period], color: "#0d0d0f" }} onClick={addGoal}>Add</button><button style={{ ...S.primaryBtn, width: "auto", padding: "8px 10px", background: "#1a1a1e", color: "#666" }} onClick={() => setNGP(null)}>✕</button></div>) : (<button style={{ ...S.linkBtn, fontSize: 12 }} onClick={() => { setNGP(period); setNGT(""); }}>+ Add {period} goal</button>)}
-              </div>);
-            })}
-          </div>
-        )}
+              )}
+
+              {/* Sub-tab nav */}
+              <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+                {[["vision","Vision"],["goals","Goals"],["streaks","Streaks"],["accountability","Accountability"]].map(([t, label]) => (
+                  <button key={t} onClick={() => setGoalsTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${goalsTab === t ? accentColor : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "Georgia,serif", background: goalsTab === t ? accentColor + "18" : "#0a0a0c", color: goalsTab === t ? accentColor : "#444", whiteSpace: "nowrap" }}>{label}</button>
+                ))}
+              </div>
+
+              {/* ── Vision tab ── */}
+              {goalsTab === "vision" && (<>
+                {/* My Why */}
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={S.cardLabel}>My Why</div>
+                    <button style={S.linkBtn} onClick={() => { if (editingVision === "why") { setEditingVision(null); } else { setVisionDraft({ myWhy: vision.myWhy }); setEditingVision("why"); } }}>{editingVision === "why" ? "Cancel" : "Edit"}</button>
+                  </div>
+                  {editingVision === "why" ? (
+                    <>
+                      <textarea style={S.textarea} placeholder="Why are you doing all this? Your core reason." rows={3} value={visionDraft?.myWhy || ""} onChange={e => setVisionDraft(d => ({ ...d, myWhy: e.target.value }))} autoFocus />
+                      <button style={{ ...S.primaryBtn, marginTop: 8 }} onClick={() => { upd({ vision: { ...vision, myWhy: visionDraft.myWhy } }); setEditingVision(null); }}>Save</button>
+                    </>
+                  ) : vision.myWhy ? (
+                    <p style={{ fontSize: 14, fontStyle: "italic", color: "#ddd", lineHeight: 1.65, margin: 0 }}>"{vision.myWhy}"</p>
+                  ) : (
+                    <div style={S.empty}>Set your core reason. What is driving all of this?</div>
+                  )}
+                </div>
+
+                {/* Life Vision */}
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={S.cardLabel}>Life vision — 1–3 years</div>
+                    <button style={S.linkBtn} onClick={() => { if (editingVision === "vision") { setEditingVision(null); } else { setVisionDraft({ lifeVision: vision.lifeVision }); setEditingVision("vision"); } }}>{editingVision === "vision" ? "Cancel" : "Edit"}</button>
+                  </div>
+                  {editingVision === "vision" ? (
+                    <>
+                      <textarea style={S.textarea} placeholder="Describe your ideal life in 1–3 years. Be specific and vivid." rows={6} value={visionDraft?.lifeVision || ""} onChange={e => setVisionDraft(d => ({ ...d, lifeVision: e.target.value }))} autoFocus />
+                      <button style={{ ...S.primaryBtn, marginTop: 8 }} onClick={() => { upd({ vision: { ...vision, lifeVision: visionDraft.lifeVision } }); setEditingVision(null); }}>Save</button>
+                    </>
+                  ) : vision.lifeVision ? (
+                    <p style={{ fontSize: 13, color: "#aaa", lineHeight: 1.8, margin: 0 }}>{vision.lifeVision}</p>
+                  ) : (
+                    <div style={S.empty}>Paint your ideal life in words. What does it look like in 1–3 years?</div>
+                  )}
+                </div>
+
+                {/* Life Areas */}
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div style={S.cardLabel}>Life areas — satisfaction (1–10)</div>
+                    <button style={S.linkBtn} onClick={() => { if (editingVision === "areas") { setEditingVision(null); } else { setLifeAreasDraft({ ...vision.lifeAreas }); setEditingVision("areas"); } }}>{editingVision === "areas" ? "Done" : "Rate"}</button>
+                  </div>
+                  {editingVision !== "areas" ? (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                      {LIFE_AREAS.map(area => (
+                        <div key={area.key} style={{ textAlign: "center" }}>
+                          <CircleRing value={(vision.lifeAreas[area.key] || 0) * 10} size={56} strokeWidth={5} />
+                          <div style={{ fontSize: 9, color: "#555", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{area.label}</div>
+                          <div style={{ fontSize: 11, fontFamily: "monospace", color: area.color, marginTop: 1 }}>{vision.lifeAreas[area.key] || 0}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {LIFE_AREAS.map(area => (
+                        <div key={area.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ width: 76, fontSize: 12, color: area.color }}>{area.label}</div>
+                          <input type="range" min="1" max="10" value={lifeAreasDraft?.[area.key] || 5} onChange={e => setLifeAreasDraft(d => ({ ...d, [area.key]: Number(e.target.value) }))} style={{ flex: 1, accentColor: area.color }} />
+                          <div style={{ width: 18, fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: area.color, textAlign: "right" }}>{lifeAreasDraft?.[area.key] || 5}</div>
+                        </div>
+                      ))}
+                      <button style={S.primaryBtn} onClick={() => { upd({ vision: { ...vision, lifeAreas: lifeAreasDraft } }); setEditingVision(null); }}>Save ratings</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Motivation & reminders */}
+                <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.03)" }}>
+                  <div style={S.cardLabel}>Motivation &amp; reminders</div>
+                  {reminders.length === 0 && <div style={{ ...S.empty, marginBottom: 10 }}>Add quotes, reasons, names of people you're doing this for.</div>}
+                  {reminders.map(r => (<div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #1a1a1a" }}><span style={{ fontSize: 13, color: "#f59e0b", fontStyle: "italic", lineHeight: 1.6, flex: 1 }}>"{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ reminders: reminders.filter(x => x.id !== r.id) })}>×</button></div>))}
+                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input style={{ ...S.input, flex: 1 }} placeholder="Add a reminder or quote…" value={newRem} onChange={e => setNewRem(e.target.value)} onKeyDown={e => e.key === "Enter" && addReminder()} /><button style={{ ...S.primaryBtn, width: "auto", padding: "9px 14px" }} onClick={addReminder}>Add</button></div>
+                </div>
+              </>)}
+
+              {/* ── Goals tab ── */}
+              {goalsTab === "goals" && (<>
+                {/* Period filter */}
+                <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                  {PERIOD_ORDER.map(p => (
+                    <button key={p} onClick={() => { setGoalsPeriod(p); setGoalDraft(null); setEditGoalId(null); }} style={{ flex: 1, padding: "7px 4px", borderRadius: 6, border: `1px solid ${goalsPeriod === p ? GOAL_COLORS[p] + "66" : "#161618"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "Georgia,serif", background: goalsPeriod === p ? GOAL_COLORS[p] + "18" : "transparent", color: goalsPeriod === p ? GOAL_COLORS[p] : "#444" }}>{p}</button>
+                  ))}
+                </div>
+                {/* Area filter */}
+                <div style={{ display: "flex", gap: 4, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>
+                  <button style={{ ...S.catBtn, borderColor: !goalsAreaFilter ? accentColor : "#222", color: !goalsAreaFilter ? accentColor : "#444", background: !goalsAreaFilter ? accentColor + "18" : "transparent", whiteSpace: "nowrap" }} onClick={() => setGoalsAreaFilter("")}>All</button>
+                  {LIFE_AREAS.map(a => (<button key={a.key} style={{ ...S.catBtn, borderColor: goalsAreaFilter === a.key ? a.color : "#222", color: goalsAreaFilter === a.key ? a.color : "#444", background: goalsAreaFilter === a.key ? a.color + "18" : "transparent", whiteSpace: "nowrap" }} onClick={() => setGoalsAreaFilter(goalsAreaFilter === a.key ? "" : a.key)}>{a.label}</button>))}
+                </div>
+                {/* Goals list */}
+                {filteredGoals.length === 0 && <div style={S.card}><div style={S.empty}>No {goalsPeriod} goals{goalsAreaFilter ? ` in ${LIFE_AREAS.find(a => a.key === goalsAreaFilter)?.label}` : ""}.</div></div>}
+                {filteredGoals.map(g => {
+                  const done = isGoalDone(g);
+                  const pc = GOAL_COLORS[g.period];
+                  const areaInfo = LIFE_AREAS.find(a => a.key === g.lifeArea);
+                  const parentGoal = g.parentId ? normGoals.find(x => x.id === g.parentId) : null;
+                  return (
+                    <div key={g.id} style={{ ...S.card, borderLeft: `3px solid ${pc}`, opacity: done ? 0.7 : 1 }}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ ...S.goalCheck, background: done ? pc : "transparent", borderColor: pc, flexShrink: 0, marginTop: 2 }} onClick={() => toggleGoal(g.id)}>{done && <span style={{ color: "#0d0d0f", fontSize: 11 }}>✓</span>}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, textDecoration: done ? "line-through" : "none", lineHeight: 1.4 }}>{g.title}</div>
+                          <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
+                            <span style={{ fontSize: 10, color: priColors[g.priority], background: priColors[g.priority] + "18", padding: "1px 7px", borderRadius: 10, border: `0.5px solid ${priColors[g.priority]}44` }}>{g.priority}</span>
+                            {areaInfo && <span style={{ fontSize: 10, color: areaInfo.color }}>{areaInfo.label}</span>}
+                            {g.dueDate && <span style={{ fontSize: 10, color: "#444" }}>due {g.dueDate}</span>}
+                            {parentGoal && <span style={{ fontSize: 10, color: "#333" }}>↑ {parentGoal.title}</span>}
+                          </div>
+                          {g.notes && <div style={{ fontSize: 11, color: "#444", marginTop: 5, lineHeight: 1.5 }}>{g.notes}</div>}
+                          <div style={{ marginTop: 8 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#444", marginBottom: 3 }}><span>Progress</span><span style={{ color: g.progress >= 100 ? "#34d399" : "#aaa" }}>{g.progress}%</span></div>
+                            <input type="range" min="0" max="100" value={g.progress} onChange={e => upd({ goals: goals.map(x => x.id === g.id ? { ...x, progress: Number(e.target.value) } : x) })} style={{ width: "100%", accentColor: pc, cursor: "pointer" }} />
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                          <button style={{ ...S.linkBtn, fontSize: 11 }} onClick={() => { setGoalDraft({ title: g.title, priority: g.priority, dueDate: g.dueDate, notes: g.notes, lifeArea: g.lifeArea, parentId: g.parentId }); setEditGoalId(g.id); }}>Edit</button>
+                          <button style={{ ...S.linkBtn, fontSize: 11, color: "#444" }} onClick={() => upd({ goals: goals.map(x => x.id === g.id ? { ...x, archived: true } : x) })}>Archive</button>
+                          <button style={S.deleteBtn} onClick={() => upd({ goals: goals.filter(x => x.id !== g.id) })}>×</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Add / Edit form */}
+                {goalDraft ? (
+                  <div style={{ ...S.card, borderColor: GOAL_COLORS[goalsPeriod] + "44" }}>
+                    <div style={{ fontSize: 12, color: GOAL_COLORS[goalsPeriod], fontWeight: 600, marginBottom: 12 }}>{editGoalId ? "Edit goal" : `New ${goalsPeriod} goal`}</div>
+                    <input style={S.input} placeholder="Goal title…" value={goalDraft.title || ""} onChange={e => setGoalDraft(d => ({ ...d, title: e.target.value }))} autoFocus />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+                      <div style={S.formRow}>
+                        <label style={S.formLabel}>Priority</label>
+                        <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                          {["high","med","low"].map(p => <button key={p} style={{ ...S.catBtn, flex: 1, borderColor: goalDraft.priority === p ? priColors[p] : "#222", color: goalDraft.priority === p ? priColors[p] : "#444", background: goalDraft.priority === p ? priColors[p] + "18" : "transparent" }} onClick={() => setGoalDraft(d => ({ ...d, priority: p }))}>{p}</button>)}
+                        </div>
+                      </div>
+                      <div style={S.formRow}>
+                        <label style={S.formLabel}>Due date</label>
+                        <input type="date" style={{ ...S.input, marginTop: 4 }} value={goalDraft.dueDate || ""} onChange={e => setGoalDraft(d => ({ ...d, dueDate: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 10, ...S.formRow }}>
+                      <label style={S.formLabel}>Life area</label>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+                        <button style={{ ...S.catBtn, borderColor: !goalDraft.lifeArea ? accentColor : "#222", color: !goalDraft.lifeArea ? accentColor : "#444" }} onClick={() => setGoalDraft(d => ({ ...d, lifeArea: "" }))}>None</button>
+                        {LIFE_AREAS.map(a => <button key={a.key} style={{ ...S.catBtn, borderColor: goalDraft.lifeArea === a.key ? a.color : "#222", color: goalDraft.lifeArea === a.key ? a.color : "#444", background: goalDraft.lifeArea === a.key ? a.color + "18" : "transparent" }} onClick={() => setGoalDraft(d => ({ ...d, lifeArea: a.key }))}>{a.label}</button>)}
+                      </div>
+                    </div>
+                    {parentCandidates.length > 0 && (
+                      <div style={{ marginTop: 10, ...S.formRow }}>
+                        <label style={S.formLabel}>Part of ({PERIOD_ORDER[parentPeriodIdx]} goal)</label>
+                        <select style={{ ...S.input, marginTop: 4 }} value={goalDraft.parentId || ""} onChange={e => setGoalDraft(d => ({ ...d, parentId: e.target.value || null }))}>
+                          <option value="">— none —</option>
+                          {parentCandidates.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    <div style={{ marginTop: 10, ...S.formRow }}>
+                      <label style={S.formLabel}>Notes (optional)</label>
+                      <textarea style={{ ...S.textarea, marginTop: 4, minHeight: 56 }} value={goalDraft.notes || ""} onChange={e => setGoalDraft(d => ({ ...d, notes: e.target.value }))} />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                      <button style={{ ...S.primaryBtn, flex: 1, background: GOAL_COLORS[goalsPeriod], color: "#0d0d0f" }} onClick={() => {
+                        if (!goalDraft.title?.trim()) return;
+                        const existing = editGoalId ? goals.find(x => x.id === editGoalId) : null;
+                        const g = { id: editGoalId || "g" + Date.now(), title: goalDraft.title.trim(), text: goalDraft.title.trim(), period: goalsPeriod, parentId: goalDraft.parentId || null, dueDate: goalDraft.dueDate || "", priority: goalDraft.priority || "med", notes: goalDraft.notes || "", progress: existing?.progress || 0, lifeArea: goalDraft.lifeArea || "", done: existing?.done || [], archived: false, createdAt: existing?.createdAt || new Date().toISOString() };
+                        upd({ goals: editGoalId ? goals.map(x => x.id === editGoalId ? g : x) : [...goals, g] });
+                        setGoalDraft(null); setEditGoalId(null);
+                      }}>{editGoalId ? "Save changes" : `Add ${goalsPeriod} goal`}</button>
+                      <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666", flex: 1 }} onClick={() => { setGoalDraft(null); setEditGoalId(null); }}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button style={{ ...S.primaryBtn, background: "transparent", border: `1px dashed ${GOAL_COLORS[goalsPeriod]}55`, color: GOAL_COLORS[goalsPeriod], marginTop: 4 }} onClick={() => setGoalDraft({ title: "", priority: "med", dueDate: "", notes: "", lifeArea: "", parentId: null })}>+ Add {goalsPeriod} goal</button>
+                )}
+                {/* Archived */}
+                {normGoals.filter(g => g.archived && g.period === goalsPeriod).length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <button style={S.linkBtn} onClick={() => setGoalsShowArchived(a => !a)}>{goalsShowArchived ? "Hide" : "Show"} archived ({normGoals.filter(g => g.archived && g.period === goalsPeriod).length})</button>
+                    {goalsShowArchived && normGoals.filter(g => g.archived && g.period === goalsPeriod).map(g => (
+                      <div key={g.id} style={{ ...S.card, opacity: 0.4, marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 13 }}>{g.title}</span>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button style={{ ...S.linkBtn, fontSize: 11 }} onClick={() => upd({ goals: goals.map(x => x.id === g.id ? { ...x, archived: false } : x) })}>Restore</button>
+                          <button style={S.deleteBtn} onClick={() => upd({ goals: goals.filter(x => x.id !== g.id) })}>×</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>)}
+
+              {/* ── Streaks tab ── */}
+              {goalsTab === "streaks" && (() => {
+                const withRates = normalizedHabits.map(h => ({ h, rate: calcHabitRate(h, 30) }));
+                const sorted = [...withRates].sort((a, b) => a.rate - b.rate);
+                const weakest = sorted[0]?.h;
+                return (<>
+                  {weakest && normalizedHabits.length > 0 && (
+                    <div style={{ ...S.card, borderColor: "rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.04)" }}>
+                      <div style={{ fontSize: 10, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Needs most attention</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{weakest.name}</div>
+                      <div style={{ fontSize: 11, color: "#f87171" }}>{calcHabitRate(weakest, 30)}% completion last 30 days</div>
+                    </div>
+                  )}
+                  {normalizedHabits.length === 0 ? (
+                    <div style={S.card}><div style={S.empty}>No habits yet. <button style={S.linkBtn} onClick={() => setView("habits")}>Add habits →</button></div></div>
+                  ) : normalizedHabits.map(h => {
+                    const streak = calcStreak(h.completions);
+                    const longest = calcLongestStreak(h.completions);
+                    const weekRate = calcHabitRate(h, 7);
+                    const monthRate = calcHabitRate(h, 30);
+                    const col = CAT_HEX[h.category] || "#a78bfa";
+                    return (
+                      <div key={h.id} style={{ ...S.card, borderLeft: `3px solid ${col}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{h.name}</div>
+                            <div style={{ fontSize: 10, color: col, textTransform: "uppercase", marginTop: 2 }}>{h.category}</div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: streak >= 7 ? "#34d399" : streak >= 3 ? "#f59e0b" : "#aaa", lineHeight: 1 }}>{streak}</div>
+                            <div style={{ fontSize: 9, color: "#444" }}>day streak</div>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Longest</div><div style={{ ...S.sleepTargetVal, color: "#a78bfa" }}>{longest}d</div></div>
+                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>This week</div><div style={{ ...S.sleepTargetVal, color: weekRate >= 80 ? "#34d399" : weekRate >= 50 ? "#f59e0b" : "#f87171" }}>{weekRate}%</div></div>
+                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>This month</div><div style={{ ...S.sleepTargetVal, color: monthRate >= 80 ? "#34d399" : monthRate >= 50 ? "#f59e0b" : "#f87171" }}>{monthRate}%</div></div>
+                        </div>
+                        <HeatmapGrid getScore={d => h.completions.includes(d) ? 100 : (h.completions.length ? 0 : null)} />
+                      </div>
+                    );
+                  })}
+                </>);
+              })()}
+
+              {/* ── Accountability tab ── */}
+              {goalsTab === "accountability" && (<>
+                {/* Commitment contract */}
+                <div style={S.card}>
+                  <div style={S.cardLabel}>Commitment contract</div>
+                  {contract?.locked ? (
+                    <div style={{ background: "#060608", border: "0.5px solid rgba(52,211,153,0.3)", borderRadius: 10, padding: "16px" }}>
+                      <div style={{ fontSize: 13, lineHeight: 1.75, color: "#ddd", marginBottom: 14 }}>{contract.text}</div>
+                      <div style={{ height: "0.5px", background: "#1a1a1e", marginBottom: 12 }} />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                        <div>
+                          <div style={{ fontSize: 13, color: "#34d399", fontStyle: "italic" }}>— {contract.signature}</div>
+                          <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{contract.signedDate}</div>
+                        </div>
+                        <div style={{ fontSize: 22 }}>✍</div>
+                      </div>
+                    </div>
+                  ) : contractDraft ? (
+                    <>
+                      <textarea style={{ ...S.textarea, marginBottom: 8 }} placeholder="Write your commitment. What are you promising yourself?" rows={4} value={contractDraft.text || ""} onChange={e => setContractDraft(d => ({ ...d, text: e.target.value }))} />
+                      <input style={{ ...S.input, marginBottom: 8 }} placeholder="Sign with your name" value={contractDraft.signature || ""} onChange={e => setContractDraft(d => ({ ...d, signature: e.target.value }))} />
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button style={{ ...S.primaryBtn, flex: 1, background: "#34d399", color: "#0d1f17" }} onClick={() => { if (!contractDraft.text?.trim() || !contractDraft.signature?.trim()) return; upd({ accountability: { ...accountability, contract: { ...contractDraft, locked: true, signedDate: getTodayStr() } } }); setContractDraft(null); }}>Sign &amp; lock permanently</button>
+                        <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666" }} onClick={() => setContractDraft(null)}>Cancel</button>
+                      </div>
+                    </>
+                  ) : (
+                    <><div style={S.empty}>Write a contract with yourself. Once signed it cannot be changed.</div>
+                    <button style={{ ...S.primaryBtn, marginTop: 10 }} onClick={() => setContractDraft({ text: "", signature: "" })}>Write contract</button></>
+                  )}
+                </div>
+
+                {/* Letter to future self */}
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={S.cardLabel}>Letter to future self</div>
+                    <button style={S.linkBtn} onClick={() => setLetterDraft(letterDraft ? null : { text: "", unlockDate: "" })}>{letterDraft ? "Cancel" : "+ Write"}</button>
+                  </div>
+                  {letterDraft && (
+                    <div style={{ marginBottom: 14 }}>
+                      <textarea style={{ ...S.textarea, marginBottom: 8 }} placeholder="Dear future me…" rows={5} value={letterDraft.text} onChange={e => setLetterDraft(d => ({ ...d, text: e.target.value }))} autoFocus />
+                      <div style={{ ...S.formRow, marginBottom: 8 }}>
+                        <label style={S.formLabel}>Unlock date (when you can read this)</label>
+                        <input type="date" style={{ ...S.input, marginTop: 4 }} value={letterDraft.unlockDate} min={getTodayStr()} onChange={e => setLetterDraft(d => ({ ...d, unlockDate: e.target.value }))} />
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button style={{ ...S.primaryBtn, flex: 1 }} onClick={() => { if (!letterDraft.text.trim() || !letterDraft.unlockDate) return; upd({ accountability: { ...accountability, futureLetters: [...(accountability.futureLetters || []), { id: "fl" + Date.now(), text: letterDraft.text, writtenDate: getTodayStr(), unlockDate: letterDraft.unlockDate }] } }); setLetterDraft(null); }}>Seal letter</button>
+                        <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666" }} onClick={() => setLetterDraft(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                  {(accountability.futureLetters || []).length === 0 && !letterDraft ? (
+                    <div style={S.empty}>No letters yet. Write one to your future self.</div>
+                  ) : [...(accountability.futureLetters || [])].reverse().map(letter => {
+                    const unlocked = letter.unlockDate <= getTodayStr();
+                    return (
+                      <div key={letter.id} style={{ padding: "10px 0", borderBottom: "0.5px solid #111" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                          <span style={{ fontSize: 11, color: unlocked ? "#34d399" : "#555" }}>{unlocked ? "Unlocked" : `Sealed until ${letter.unlockDate}`}</span>
+                          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            <span style={{ fontSize: 10, color: "#333" }}>Written {letter.writtenDate}</span>
+                            <button style={S.deleteBtn} onClick={() => upd({ accountability: { ...accountability, futureLetters: (accountability.futureLetters || []).filter(l => l.id !== letter.id) } })}>×</button>
+                          </div>
+                        </div>
+                        {unlocked ? <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.75 }}>{letter.text}</div> : <div style={{ fontSize: 12, color: "#2a2a2a", fontStyle: "italic" }}>This letter is sealed.</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Weekly review */}
+                <div style={S.card}>
+                  <div style={S.cardLabel}>Weekly review</div>
+                  {thisWeekReview && !weeklyReviewDraft ? (
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <span style={{ fontSize: 11, color: "#34d399" }}>This week completed ✓</span>
+                        <button style={S.linkBtn} onClick={() => setWRD({ wentWell: thisWeekReview.wentWell, didntGo: thisWeekReview.didntGo, focus: thisWeekReview.focus })}>Edit</button>
+                      </div>
+                      {[["Went well", thisWeekReview.wentWell], ["Didn't go well", thisWeekReview.didntGo], ["Focus next week", thisWeekReview.focus]].map(([label, val]) => (
+                        <div key={label} style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>{label}</div>
+                          <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.6 }}>{val || "—"}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : weeklyReviewDraft ? (
+                    <div>
+                      {[["What went well this week?", "wentWell", "#34d399"], ["What didn't go well?", "didntGo", "#f87171"], ["Focus for next week?", "focus", "#60a5fa"]].map(([q, key, col]) => (
+                        <div key={key} style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 12, color: col, marginBottom: 5 }}>{q}</div>
+                          <textarea style={{ ...S.textarea, minHeight: 60 }} value={weeklyReviewDraft[key] || ""} onChange={e => setWRD(d => ({ ...d, [key]: e.target.value }))} />
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button style={{ ...S.primaryBtn, flex: 1 }} onClick={() => { const rev = { id: (thisWeekReview?.id || "wr" + Date.now()), weekStr: thisWeekStr, ...weeklyReviewDraft, completedAt: new Date().toISOString() }; upd({ accountability: { ...accountability, weeklyReviews: [...(accountability.weeklyReviews || []).filter(r => r.weekStr !== thisWeekStr), rev] } }); setWRD(null); }}>Save review</button>
+                        <button style={{ ...S.primaryBtn, background: "#1a1a1e", color: "#666" }} onClick={() => setWRD(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <><div style={S.empty}>Reflect on this week — what worked, what didn't, what's next.</div>
+                    <button style={{ ...S.primaryBtn, marginTop: 10 }} onClick={() => setWRD({ wentWell: "", didntGo: "", focus: "" })}>Start this week's review</button></>
+                  )}
+                  {(accountability.weeklyReviews || []).filter(r => r.weekStr !== thisWeekStr).length > 0 && (
+                    <div style={{ marginTop: 14 }}>
+                      <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Past reviews</div>
+                      {[...(accountability.weeklyReviews || [])].filter(r => r.weekStr !== thisWeekStr).sort((a, b) => b.weekStr.localeCompare(a.weekStr)).slice(0, 5).map(r => (
+                        <div key={r.id} style={{ padding: "7px 0", borderBottom: "0.5px solid #111", fontSize: 11, color: "#444" }}>
+                          Week of {r.weekStr} — <span style={{ color: "#aaa" }}>{r.focus || r.wentWell || "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Wins board */}
+                <div style={S.card}>
+                  <div style={S.cardLabel}>Wins board</div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                    <input style={{ ...S.input, flex: 1 }} placeholder="Log a win — any size…" value={winText} onChange={e => setWinText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && winText.trim()) { upd({ accountability: { ...accountability, wins: [{ id: "w" + Date.now(), text: winText.trim(), date: getTodayStr() }, ...(accountability.wins || [])] } }); setWinText(""); } }} />
+                    <button style={{ ...S.primaryBtn, width: "auto", padding: "9px 14px" }} onClick={() => { if (!winText.trim()) return; upd({ accountability: { ...accountability, wins: [{ id: "w" + Date.now(), text: winText.trim(), date: getTodayStr() }, ...(accountability.wins || [])] } }); setWinText(""); }}>Add</button>
+                  </div>
+                  {(accountability.wins || []).length === 0 ? <div style={S.empty}>No wins yet. Every step counts.</div> : (accountability.wins || []).slice(0, 30).map(w => (
+                    <div key={w.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #111" }}>
+                      <span style={{ color: "#f59e0b", fontSize: 14, flexShrink: 0 }}>★</span>
+                      <span style={{ fontSize: 13, flex: 1, lineHeight: 1.5 }}>{w.text}</span>
+                      <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
+                        <span style={{ fontSize: 10, color: "#333" }}>{w.date}</span>
+                        <button style={S.deleteBtn} onClick={() => upd({ accountability: { ...accountability, wins: (accountability.wins || []).filter(x => x.id !== w.id) } })}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gratitude log */}
+                <div style={S.card}>
+                  <div style={S.cardLabel}>Gratitude log</div>
+                  {todayGratitude ? (
+                    <div>
+                      <div style={{ fontSize: 11, color: "#34d399", marginBottom: 8 }}>Today logged ✓</div>
+                      {todayGratitude.items.map((item, i) => <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0" }}><span style={{ color: "#a78bfa", fontSize: 12, flexShrink: 0 }}>{i + 1}.</span><span style={{ fontSize: 13, color: "#aaa" }}>{item}</span></div>)}
+                      <button style={{ ...S.linkBtn, marginTop: 8, fontSize: 12 }} onClick={() => setGratitudeDraft(todayGratitude.items.length >= 3 ? todayGratitude.items : [...todayGratitude.items, ...["","",""].slice(0, 3 - todayGratitude.items.length)])}>Update today</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: 12, color: "#555", marginBottom: 10 }}>3 things you're grateful for today</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                        {[0,1,2].map(i => (
+                          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <span style={{ color: "#a78bfa", fontSize: 12, width: 16, flexShrink: 0 }}>{i + 1}.</span>
+                            <input style={{ ...S.input, flex: 1 }} placeholder="Grateful for…" value={gratitudeDraft[i] || ""} onChange={e => setGratitudeDraft(d => d.map((x, j) => j === i ? e.target.value : x))} />
+                          </div>
+                        ))}
+                      </div>
+                      <button style={S.primaryBtn} onClick={() => { const items = gratitudeDraft.filter(x => x.trim()); if (!items.length) return; const today = getTodayStr(); upd({ accountability: { ...accountability, gratitude: [{ id: "gr" + Date.now(), date: today, items }, ...(accountability.gratitude || []).filter(g => g.date !== today)] } }); setGratitudeDraft(["","",""]); }}>Save gratitude</button>
+                    </div>
+                  )}
+                  {(accountability.gratitude || []).filter(g => g.date !== getTodayStr()).slice(0, 7).length > 0 && (
+                    <div style={{ marginTop: 14 }}>
+                      <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Recent</div>
+                      {[...(accountability.gratitude || [])].filter(g => g.date !== getTodayStr()).slice(0, 7).map(g => (
+                        <div key={g.id} style={{ padding: "8px 0", borderBottom: "0.5px solid #111" }}>
+                          <div style={{ fontSize: 10, color: "#444", marginBottom: 4 }}>{g.date}</div>
+                          {g.items.map((item, i) => <div key={i} style={{ fontSize: 12, color: "#666", lineHeight: 1.5 }}>{i + 1}. {item}</div>)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>)}
+            </div>
+          );
+        })()}
 
         {/* ════ RELAPSE TOOLKIT ════ */}
         {view === "relapse" && (
