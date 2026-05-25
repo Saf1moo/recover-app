@@ -431,6 +431,8 @@ export default function App() {
   const [journalText, setJT] = useState("");
   const [newRewName, setNRN] = useState("");
   const [newRewDays, setNRD] = useState(30);
+  const [editRewId, setEditRewId] = useState(null);
+  const [editRewDraft, setEditRewDraft] = useState(null);
   const [routineTab, setRoutineTab] = useState("sleep");
   const [editPrayerTargets, setEditPrayerTargets] = useState(false);
   const [prayerTargetsDraft, setPrayerTargetsDraft] = useState(null);
@@ -800,6 +802,8 @@ export default function App() {
   function addJournal() { if (!journalText.trim()) return; upd({ journal: [{ id: Date.now(), date: new Date().toISOString(), text: journalText.trim() }, ...(account?.journal || [])] }); setJT(""); }
   function addReward() { if (!newRewName.trim()) return; upd({ rewards: [...(account?.rewards || []), { id: "rw" + Date.now(), days: Number(newRewDays), name: newRewName.trim() }] }); setNRN(""); setNRD(30); }
   const claimReward = id => upd({ claimedRewards: [...claimed, id] });
+  const deleteReward = id => upd({ rewards: (account?.rewards || []).filter(r => r.id !== id), claimedRewards: claimed.filter(c => c !== id) });
+  function saveEditReward() { if (!editRewDraft?.name?.trim()) return; upd({ rewards: (account?.rewards || []).map(r => r.id === editRewId ? { ...r, name: editRewDraft.name.trim(), days: Number(editRewDraft.days) } : r) }); setEditRewId(null); setEditRewDraft(null); }
   function logWater(delta) {
     const today = getTodayStr();
     upd({ waterLogs: { ...waterLogs, [today]: Math.max(0, (waterLogs[today] || 0) + delta) } });
@@ -2396,9 +2400,62 @@ export default function App() {
         {view === "rewards" && (
           <div style={S.content}>
             <h2 style={S.pageTitle}>Rewards</h2>
-            <div style={S.card}><div style={S.cardLabel}>Sobriety rewards</div>{availRew.length === 0 ? <div style={S.empty}>No new rewards yet.</div> : availRew.map(r => (<div key={r.id} style={S.rewardCard}><div><div style={S.rewardCardName}>{r.name}</div><div style={{ fontSize: 11, color: "#444" }}>{r.days} day milestone</div></div><button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button></div>))}</div>
-            <div style={S.card}><div style={S.cardLabel}>Upcoming</div>{(account?.rewards || []).filter(r => daysSober < r.days && !claimed.includes(r.id)).sort((a, b) => a.days - b.days).map(r => (<div key={r.id} style={{ ...S.rewardCard, opacity: 0.35 }}><div><div style={S.rewardCardName}>{r.name}</div><div style={{ fontSize: 11, color: "#444" }}>Unlocks at {r.days}d — {r.days - daysSober}d to go</div></div><div style={{ fontSize: 14, opacity: .5 }}>🔒</div></div>))}</div>
-            <div style={S.card}><div style={S.cardLabel}>Add a custom reward</div><input style={S.input} placeholder="Reward name…" value={newRewName} onChange={e => setNRN(e.target.value)} /><div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}><label style={{ color: "#666", fontSize: 12 }}>Unlock at</label><input type="number" style={{ ...S.input, width: 70 }} value={newRewDays} onChange={e => setNRD(e.target.value)} /><label style={{ color: "#666", fontSize: 12 }}>days sober</label></div><button style={{ ...S.primaryBtn, marginTop: 12 }} onClick={addReward}>Add reward</button></div>
+
+            {/* ── All rewards list ── */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>All rewards</div>
+              {(account?.rewards || []).length === 0 && <div style={S.empty}>No rewards yet. Add one below.</div>}
+              {[...(account?.rewards || [])].sort((a, b) => a.days - b.days).map(r => {
+                const isClaimed = claimed.includes(r.id);
+                const isUnlocked = daysSober >= r.days && !isClaimed;
+                const isLocked = daysSober < r.days && !isClaimed;
+                const isEditing = editRewId === r.id;
+                return (
+                  <div key={r.id}>
+                    {isEditing ? (
+                      <div style={{ padding: "10px 0", borderBottom: "0.5px solid var(--r-bord)" }}>
+                        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                          <input style={{ ...S.input, flex: 1 }} value={editRewDraft.name} onChange={e => setEditRewDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
+                          <input type="number" min="1" style={{ ...S.input, width: 70 }} value={editRewDraft.days} onChange={e => setEditRewDraft(d => ({ ...d, days: e.target.value }))} />
+                          <span style={{ display: "flex", alignItems: "center", fontSize: 12, color: "var(--r-fg2)", whiteSpace: "nowrap" }}>days</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button style={{ ...S.primaryBtn, flex: 1, padding: "7px 12px" }} onClick={saveEditReward}>Save</button>
+                          <button style={{ ...S.primaryBtn, flex: 1, padding: "7px 12px", background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={() => { setEditRewId(null); setEditRewDraft(null); }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "0.5px solid var(--r-bord)" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: isClaimed ? "var(--r-fg2)" : "var(--r-fg)", textDecoration: isClaimed ? "line-through" : "none" }}>{r.name}</div>
+                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 2 }}>
+                            {r.days}d milestone
+                            {isLocked && <span style={{ marginLeft: 6, color: "#60a5fa" }}>· {r.days - daysSober}d to go</span>}
+                            {isClaimed && <span style={{ marginLeft: 6, color: "#34d399" }}>· claimed</span>}
+                          </div>
+                        </div>
+                        {isUnlocked && <button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button>}
+                        {isLocked && <div style={{ fontSize: 13, opacity: 0.3 }}>🔒</div>}
+                        {isClaimed && <div style={{ fontSize: 13 }}>✅</div>}
+                        <button style={{ ...S.deleteBtn, color: "var(--r-fg2)", fontSize: 13, padding: "2px 6px" }} onClick={() => { setEditRewId(r.id); setEditRewDraft({ name: r.name, days: r.days }); }}>✎</button>
+                        <button style={{ ...S.deleteBtn, color: "#f87171", fontSize: 13, padding: "2px 6px" }} onClick={() => { if (window.confirm(`Delete "${r.name}"?`)) deleteReward(r.id); }}>✕</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Add reward ── */}
+            <div style={S.card}>
+              <div style={S.cardLabel}>Add reward</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                <input style={{ ...S.input, flex: 1, minWidth: 140 }} placeholder="Reward name…" value={newRewName} onChange={e => setNRN(e.target.value)} onKeyDown={e => e.key === "Enter" && addReward()} />
+                <input type="number" min="1" style={{ ...S.input, width: 70 }} value={newRewDays} onChange={e => setNRD(e.target.value)} />
+                <span style={{ display: "flex", alignItems: "center", fontSize: 12, color: "var(--r-fg2)" }}>days</span>
+              </div>
+              <button style={{ ...S.primaryBtn, marginTop: 10 }} onClick={addReward} disabled={!newRewName.trim()}>Add reward</button>
+            </div>
           </div>
         )}
 
