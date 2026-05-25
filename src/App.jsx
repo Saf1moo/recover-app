@@ -821,17 +821,22 @@ export default function App() {
     return ta.localeCompare(tb);
   });
 
-  const navItems = [
-    { id: "dashboard", icon: "◉", label: "Dashboard" },
-    { id: "routine", icon: "🌙", label: "Routine" },
-    { id: "habits", icon: "☑", label: "Habits" },
-    { id: "schedule", icon: "📅", label: "Schedule" },
-    { id: "health", icon: "💧", label: "Health" },
-    { id: "goals", icon: "◎", label: "Goals" },
-    { id: "relapse", icon: "⚡", label: "Relapse" },
-    { id: "rewards", icon: "★", label: "Rewards" },
-    { id: "journal", icon: "✎", label: "Journal" },
-    { id: "settings", icon: "⚙", label: "Settings" },
+  const navGroups = [
+    { label: null, items: [{ id: "dashboard", icon: "◉", label: "Dashboard" }] },
+    { label: "DAILY", items: [
+      { id: "routine", icon: "🌙", label: "Routine" },
+      { id: "habits", icon: "☑", label: "Habits" },
+      { id: "schedule", icon: "📅", label: "Schedule" },
+      { id: "health", icon: "💧", label: "Health" },
+    ]},
+    { label: "PROGRESS", items: [
+      { id: "goals", icon: "◎", label: "Goals" },
+      { id: "rewards", icon: "★", label: "Rewards" },
+      { id: "journal", icon: "✎", label: "Journal" },
+    ]},
+    { label: "SUPPORT", items: [
+      { id: "relapse", icon: "⚡", label: "Relapse" },
+    ]},
   ];
 
   return (
@@ -849,37 +854,56 @@ export default function App() {
       {isMobile && sidebarOpen && <div style={S.sidebarBackdrop} onClick={() => setSidebarOpen(false)} />}
 
       {/* ── Sidebar ── */}
-      <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.7)", width: 260 } : {}) }}>
-        {isMobile && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 14px 0" }}>
-            <div style={S.logo}>🌿 Recover</div>
-            <button style={{ background: "none", border: "none", color: "#555", fontSize: 22, cursor: "pointer", lineHeight: 1, padding: "0 2px" }} onClick={() => setSidebarOpen(false)}>×</button>
-          </div>
-        )}
-        <div style={{ ...S.sidebarTop, ...(isMobile ? { paddingTop: 10 } : {}) }}>
-          {!isMobile && <div style={S.logo}>🌿 Recover</div>}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <div style={{ ...S.accDot, background: accentColor }} />
+      <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.8)", width: 240 } : {}) }}>
+        {/* Logo */}
+        <div style={{ padding: "20px 16px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={S.logo}>🌿 Recover</div>
+          {isMobile && <button style={{ background: "none", border: "none", color: "var(--r-fg2)", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 0 }} onClick={() => setSidebarOpen(false)}>×</button>}
+        </div>
+
+        {/* Account profile */}
+        <div style={{ padding: "0 12px 14px", borderBottom: "1px solid var(--r-bord)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 9, background: "var(--r-surf2)" }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: accentColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#0d1f17", flexShrink: 0 }}>
+              {(account.name || "R").charAt(0).toUpperCase()}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{account.name}</div>
-              <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 1 }}>{account.substance}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>{account.name}</div>
+              <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 1 }}>{daysSober}d sober · {account.substance}</div>
             </div>
           </div>
-          <div style={{ ...S.sobrietyBadge, borderColor: accentColor + "33" }}>
-            <div style={{ ...S.sobrietyDays, color: accentColor }}>{daysSober}</div>
-            <div style={S.sobrietyLabel}>days sober</div>
-          </div>
         </div>
-        <nav style={S.nav}>
-          {navItems.map(n => (
-            <button key={n.id} style={{ ...S.navBtn, ...(view === n.id ? { ...S.navBtnActive, borderLeft: `3px solid ${accentColor}` } : {}) }} onClick={() => { setView(n.id); if (isMobile) setSidebarOpen(false); }}>
-              <span style={S.navIcon}>{n.icon}</span><span>{n.label}</span>
-            </button>
+
+        {/* Nav groups */}
+        <nav style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0" }}>
+          {navGroups.map((group, gi) => (
+            <div key={gi} style={{ marginBottom: 4 }}>
+              {group.label && <div style={{ fontSize: 10, fontWeight: 600, color: "var(--r-fg2)", letterSpacing: "0.1em", padding: "10px 8px 4px", opacity: 0.6 }}>{group.label}</div>}
+              {group.items.map(n => {
+                const active = view === n.id;
+                return (
+                  <button key={n.id} style={{ ...S.navBtn, ...(active ? { background: accentColor + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }} onClick={() => { setView(n.id); if (isMobile) setSidebarOpen(false); }}>
+                    <span style={{ ...S.navIcon, color: active ? accentColor : "var(--r-fg2)" }}>{n.icon}</span>
+                    <span style={{ color: active ? "var(--r-fg)" : "var(--r-fg2)" }}>{n.label}</span>
+                    {active && <div style={{ width: 3, height: 16, background: accentColor, borderRadius: 2, marginLeft: "auto" }} />}
+                  </button>
+                );
+              })}
+            </div>
           ))}
         </nav>
-        <div style={S.sidebarBottom}>
-          <button style={S.relapseBtn} onClick={() => { setModal("relapseLog"); if (isMobile) setSidebarOpen(false); }}>⚠ Log a relapse</button>
-          <button style={S.resetLink} onClick={() => { if (window.confirm("Delete ALL data for all accounts?")) { localStorage.removeItem(ROOT_KEY); window.location.reload(); } }}>reset all data</button>
+
+        {/* Bottom actions */}
+        <div style={{ padding: "12px 10px", borderTop: "1px solid var(--r-bord)", marginTop: "auto" }}>
+          <button style={{ ...S.navBtn, color: "#f87171", marginBottom: 2 }} onClick={() => { setModal("relapseLog"); if (isMobile) setSidebarOpen(false); }}>
+            <span style={{ ...S.navIcon, color: "#f87171" }}>⚠</span>
+            <span>Log a relapse</span>
+          </button>
+          <button style={{ ...S.navBtn, ...(view === "settings" ? { background: accentColor + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }} onClick={() => { setView("settings"); if (isMobile) setSidebarOpen(false); }}>
+            <span style={{ ...S.navIcon, color: view === "settings" ? accentColor : "var(--r-fg2)" }}>⚙</span>
+            <span style={{ color: view === "settings" ? "var(--r-fg)" : "var(--r-fg2)" }}>Settings</span>
+            {view === "settings" && <div style={{ width: 3, height: 16, background: accentColor, borderRadius: 2, marginLeft: "auto" }} />}
+          </button>
         </div>
       </aside>
 
@@ -907,115 +931,135 @@ export default function App() {
           const nm = MILESTONES.find(m => m.days > daysSober);
           return (
             <div style={S.content}>
-              <h2 style={S.pageTitle}>Your journey</h2>
-              <div style={S.panicBtn} onClick={() => { setPanicStep(0); setModal("panic"); }}>
-                <span style={{ fontSize: 20 }}>🆘</span>
+              {/* Header row */}
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#f87171" }}>Panic button</div>
-                  <div style={{ fontSize: 11, color: "#7a2020", marginTop: 1 }}>Feeling like you might relapse? Tap here now.</div>
+                  <h2 style={{ ...S.pageTitle, marginBottom: 2 }}>Overview</h2>
+                  <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>{new Date().toLocaleDateString("en-AU", { month: "long" })} snapshot</div>
                 </div>
-                <span style={{ marginLeft: "auto", color: "#f87171" }}>→</span>
+                <button style={{ ...S.panicBtn, margin: 0, padding: "9px 14px", borderRadius: 8 }} onClick={() => { setPanicStep(0); setModal("panic"); }}>
+                  <span style={{ fontSize: 16 }}>🆘</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#f87171" }}>Panic</span>
+                </button>
               </div>
-              <div style={{ ...S.statGrid, gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
+
+              {/* KPI row */}
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
                 <StatCard value={daysSober} label="Days sober" accent={accentColor} />
                 <StatCard value={todayCombinedScore !== null ? todayCombinedScore : "—"} label="Routine score" accent="#60a5fa" />
                 <StatCard value={schedTotal ? `${schedDone}/${schedTotal}` : "—"} label="Today's schedule" accent="#a78bfa" />
                 <StatCard value={activeGoals.length || "—"} label="Active goals" accent="#f59e0b" />
               </div>
-              {nm && (
-                <div style={S.card}>
-                  <div style={S.cardLabel}>Next milestone — {nm.emoji} {nm.label}</div>
-                  <div style={S.progressWrap}>
-                    <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${Math.min(100, daysSober / nm.days * 100)}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
-                    <div style={S.progressText}>{nm.days - daysSober}d to go</div>
-                  </div>
-                </div>
-              )}
-              {todayLog ? (
-                <div style={{ ...S.card, borderColor: "rgba(96,165,250,0.2)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={S.cardLabel}>🌙 Last night</div>
-                    <button style={S.linkBtn} onClick={() => setView("routine")}>Routine →</button>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <div>
-                      <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div>
-                      <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
-                    </div>
-                    <div style={{ marginLeft: "auto" }}><CircleRing value={todaySleepScore} size={56} strokeWidth={6} /></div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ ...S.card, cursor: "pointer", borderStyle: "dashed" }} onClick={() => setModal("sleepLog")}>
-                  <div style={S.cardLabel}>🌙 Sleep</div>
-                  <div style={{ fontSize: 13, color: "#444" }}>Log last night's sleep →</div>
-                </div>
-              )}
-              {schedTotal > 0 && (
-                <div style={S.card}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={S.cardLabel}>📅 Today's schedule</div>
-                    <button style={S.linkBtn} onClick={() => setView("schedule")}>View →</button>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${schedPct}%`, background: `linear-gradient(90deg,#a78bfa,#60a5fa)` }} /></div>
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>{schedDone}/{schedTotal}</div>
-                  </div>
-                  {sortedTodayHabits.slice(0, 3).map(h => {
-                    const done = h.completions.includes(today);
-                    return (
-                      <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: done ? "#a78bfa" : "#1a1a1e", border: `1px solid ${done ? "#a78bfa" : "#333"}`, flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: done ? "#444" : "#aaa", textDecoration: done ? "line-through" : "none", flex: 1 }}>{h.name}</span>
-                        {h.scheduledTimes[0] && <span style={{ fontSize: 10, color: "#333" }}>{fmtTime(h.scheduledTimes[0])}</span>}
+
+              {/* 2-column body */}
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, alignItems: "start" }}>
+                {/* Left column */}
+                <div>
+                  {nm && (
+                    <div style={S.card}>
+                      <div style={S.cardLabel}>Next milestone — {nm.emoji} {nm.label}</div>
+                      <div style={S.progressWrap}>
+                        <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${Math.min(100, daysSober / nm.days * 100)}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
+                        <div style={S.progressText}>{nm.days - daysSober}d to go</div>
                       </div>
-                    );
-                  })}
-                  {schedTotal > 3 && <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>+{schedTotal - 3} more</div>}
-                </div>
-              )}
-              {topGoals.length > 0 && (
-                <div style={S.card}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={S.cardLabel}>◎ Active goals</div>
-                    <button style={S.linkBtn} onClick={() => setView("goals")}>All →</button>
-                  </div>
-                  {topGoals.map(g => {
-                    const priColor = g.priority === "high" ? "#f87171" : g.priority === "low" ? "#444" : "#f59e0b";
-                    return (
-                      <div key={g.id} style={{ marginBottom: 12 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                          <div style={{ width: 6, height: 6, borderRadius: 1, background: priColor, flexShrink: 0 }} />
-                          <span style={{ fontSize: 13, flex: 1, color: "#ccc" }}>{g.title}</span>
-                          <span style={{ fontSize: 10, color: GOAL_COLORS[g.period] || "#555", fontFamily: "monospace" }}>{g.period}</span>
+                    </div>
+                  )}
+                  {todayLog ? (
+                    <div style={{ ...S.card, borderLeft: "3px solid #60a5fa" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <div style={S.cardLabel}>Last night's sleep</div>
+                        <button style={S.linkBtn} onClick={() => setView("routine")}>View →</button>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <div>
+                          <div style={{ fontSize: 28, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", letterSpacing: "-0.02em" }}>{fmtDur(todayLog.durationMins)}</div>
+                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 3 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ flex: 1, height: 3, background: "#161618", borderRadius: 2 }}>
-                            <div style={{ height: "100%", width: `${g.progress || 0}%`, background: GOAL_COLORS[g.period] || accentColor, borderRadius: 2 }} />
+                        <div style={{ marginLeft: "auto" }}><CircleRing value={todaySleepScore} size={56} strokeWidth={5} /></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ ...S.card, cursor: "pointer", borderStyle: "dashed", borderLeft: "3px dashed #60a5fa44" }} onClick={() => setModal("sleepLog")}>
+                      <div style={S.cardLabel}>Sleep</div>
+                      <div style={{ fontSize: 13, color: "var(--r-fg2)" }}>Log last night's sleep →</div>
+                    </div>
+                  )}
+                  {schedTotal > 0 && (
+                    <div style={{ ...S.card, borderLeft: "3px solid #a78bfa" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                        <div style={S.cardLabel}>Today's schedule</div>
+                        <button style={S.linkBtn} onClick={() => setView("schedule")}>View all →</button>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                        <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${schedPct}%`, background: `linear-gradient(90deg,#a78bfa,#60a5fa)` }} /></div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>{schedDone}/{schedTotal}</span>
+                      </div>
+                      {sortedTodayHabits.slice(0, 4).map(h => {
+                        const done = h.completions.includes(today);
+                        return (
+                          <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "5px 0", borderBottom: "0.5px solid var(--r-bord)" }}>
+                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "#a78bfa" : "transparent", border: `1.5px solid ${done ? "#a78bfa" : "#444"}`, flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: done ? "var(--r-fg2)" : "var(--r-fg)", textDecoration: done ? "line-through" : "none", flex: 1 }}>{h.name}</span>
+                            {h.scheduledTimes[0] && <span style={{ fontSize: 10, color: "var(--r-fg2)", fontFamily: "monospace" }}>{fmtTime(h.scheduledTimes[0])}</span>}
                           </div>
-                          <span style={{ fontSize: 10, color: "#444", fontFamily: "monospace" }}>{g.progress || 0}%</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div style={S.card}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div style={S.cardLabel}>Life areas</div>
-                  <button style={S.linkBtn} onClick={() => { setView("goals"); setGoalsTab("vision"); }}>Edit →</button>
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
-                  {lifeAreasArr.map(la => (
-                    <div key={la.key} style={{ textAlign: "center", flex: "0 0 calc(14.28% - 8px)", minWidth: 42 }}>
-                      <CircleRing value={la.value} size={42} strokeWidth={4} />
-                      <div style={{ fontSize: 9, color: "#444", marginTop: 3 }}>{la.label}</div>
+                        );
+                      })}
+                      {schedTotal > 4 && <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 8 }}>+{schedTotal - 4} more items</div>}
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                {/* Right column */}
+                <div>
+                  {topGoals.length > 0 && (
+                    <div style={{ ...S.card, borderLeft: "3px solid #f59e0b" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                        <div style={S.cardLabel}>Active goals</div>
+                        <button style={S.linkBtn} onClick={() => setView("goals")}>All →</button>
+                      </div>
+                      {topGoals.map(g => {
+                        const priColor = g.priority === "high" ? "#f87171" : g.priority === "low" ? "#555" : "#f59e0b";
+                        return (
+                          <div key={g.id} style={{ padding: "8px 0", borderBottom: "0.5px solid var(--r-bord)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+                              <div style={{ width: 5, height: 5, borderRadius: 1, background: priColor, flexShrink: 0 }} />
+                              <span style={{ fontSize: 13, flex: 1, fontWeight: 500 }}>{g.title}</span>
+                              <span style={{ fontSize: 10, color: GOAL_COLORS[g.period] || "var(--r-fg2)", background: (GOAL_COLORS[g.period] || accentColor) + "18", padding: "1px 7px", borderRadius: 10 }}>{g.period}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ flex: 1, height: 3, background: "var(--r-bord)", borderRadius: 2 }}>
+                                <div style={{ height: "100%", width: `${g.progress || 0}%`, background: GOAL_COLORS[g.period] || accentColor, borderRadius: 2 }} />
+                              </div>
+                              <span style={{ fontSize: 10, color: "var(--r-fg2)", fontFamily: "monospace" }}>{g.progress || 0}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div style={S.card}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                      <div style={S.cardLabel}>Life areas</div>
+                      <button style={S.linkBtn} onClick={() => { setView("goals"); setGoalsTab("vision"); }}>Edit →</button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+                      {lifeAreasArr.map(la => (
+                        <div key={la.key} style={{ textAlign: "center" }}>
+                          <CircleRing value={la.value} size={44} strokeWidth={4} />
+                          <div style={{ fontSize: 9, color: "var(--r-fg2)", marginTop: 4, letterSpacing: "0.02em" }}>{la.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>Milestones</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 5 }}>
+                      {MILESTONES.map(m => { const ok = daysSober >= m.days; return (<div key={m.days} style={{ ...S.milestoneChip, opacity: ok ? 1 : 0.18, background: ok ? accentColor + "14" : "transparent", borderColor: ok ? accentColor + "55" : "var(--r-bord)" }}><span style={{ fontSize: 14 }}>{m.emoji}</span><span style={S.mLabel}>{m.label}</span></div>); })}
+                    </div>
+                  </div>
                 </div>
               </div>
+
               {availRew.length > 0 && (
                 <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.04)" }}>
                   <div style={S.cardLabel}>🎁 Rewards unlocked!</div>
@@ -1027,12 +1071,6 @@ export default function App() {
                   ))}
                 </div>
               )}
-              <div style={S.card}>
-                <div style={S.cardLabel}>Milestones reached</div>
-                <div style={S.milestonesGrid}>
-                  {MILESTONES.map(m => { const ok = daysSober >= m.days; return (<div key={m.days} style={{ ...S.milestoneChip, opacity: ok ? 1 : 0.2, background: ok ? accentColor + "18" : "transparent", borderColor: ok ? accentColor : "#222" }}><span style={{ fontSize: 16 }}>{m.emoji}</span><span style={S.mLabel}>{m.label}</span></div>); })}
-                </div>
-              </div>
             </div>
           );
         })()}
@@ -2614,8 +2652,8 @@ export default function App() {
 function StatCard({ value, label, accent }) {
   return (
     <div style={{ ...S.statCard, borderTopColor: accent }}>
-      <div style={{ ...S.statValue, color: accent }}>{value}</div>
-      <div style={S.statLabel}>{label}</div>
+      <div style={{ fontSize: 10, color: "var(--r-fg2,#555)", textTransform: "uppercase", letterSpacing: "0.09em", fontWeight: 600, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: accent, fontFamily: "monospace", letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
@@ -2625,28 +2663,17 @@ const S = {
   mobileHeader: { position: "fixed", top: 0, left: 0, right: 0, height: 52, background: "var(--r-surf,#0a0a0c)", borderBottom: "1px solid var(--r-bord,#161618)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", zIndex: 100 },
   hamburger: { background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", padding: "4px 6px", lineHeight: 1 },
   sidebarBackdrop: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 150 },
-  sidebar: { width: 220, background: "var(--r-surf,#0a0a0c)", borderRight: "1px solid var(--r-bord,#161618)", display: "flex", flexDirection: "column", padding: "20px 0", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
-  sidebarTop: { padding: "0 14px 18px", borderBottom: "1px solid var(--r-bord,#161618)" },
-  logo: { fontSize: 15, fontWeight: 700, marginBottom: 12, letterSpacing: "-0.03em" },
+  sidebar: { width: 240, background: "var(--r-surf,#0a0a0c)", borderRight: "1px solid var(--r-bord,#161618)", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
+  logo: { fontSize: 15, fontWeight: 700, letterSpacing: "-0.03em" },
   accDot: { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 },
-  sobrietyBadge: { background: "var(--r-surf2,#111113)", borderRadius: 9, padding: "10px 12px", border: "0.5px solid" },
-  sobrietyDays: { fontSize: 36, fontWeight: 700, lineHeight: 1, fontFamily: "monospace" },
-  sobrietyLabel: { fontSize: 10, color: "var(--r-fg2,#555)", marginTop: 3 },
-  nav: { padding: "12px 8px", flex: 1 },
-  navBtn: { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 10px", borderRadius: 7, border: "none", borderLeft: "3px solid transparent", background: "transparent", color: "var(--r-fg2,#555)", fontSize: 13, cursor: "pointer", marginBottom: 2, textAlign: "left", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" },
-  navBtnActive: { background: "var(--r-surf2,#141416)", color: "var(--r-fg,#e8e8e8)" },
-  navIcon: { fontSize: 13, width: 16, textAlign: "center" },
-  sidebarBottom: { padding: "12px 8px", borderTop: "1px solid var(--r-bord,#161618)" },
-  relapseBtn: { width: "100%", padding: "8px", borderRadius: 7, border: "1px solid #3a1212", background: "#160c0c", color: "#f87171", fontSize: 12, cursor: "pointer", marginBottom: 6, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" },
-  resetLink: { background: "none", border: "none", color: "#252525", fontSize: 10, cursor: "pointer", width: "100%", textAlign: "center", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" },
+  navBtn: { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "7px 10px", borderRadius: 7, border: "none", background: "transparent", color: "var(--r-fg2,#555)", fontSize: 13, cursor: "pointer", marginBottom: 1, textAlign: "left", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", transition: "background 0.15s" },
+  navIcon: { fontSize: 13, width: 18, textAlign: "center", flexShrink: 0 },
   main: { flex: 1, overflow: "auto", minWidth: 0 },
-  content: { maxWidth: 1100, margin: "0 auto", padding: "28px 24px" },
-  pageTitle: { fontSize: 21, fontWeight: 700, marginBottom: 20, letterSpacing: "-0.03em" },
-  panicBtn: { display: "flex", alignItems: "center", gap: 12, background: "rgba(239,68,68,0.07)", border: "1.5px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, cursor: "pointer" },
+  content: { maxWidth: 1200, margin: "0 auto", padding: "28px 28px" },
+  pageTitle: { fontSize: 22, fontWeight: 700, marginBottom: 0, letterSpacing: "-0.03em" },
+  panicBtn: { display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "8px 14px", cursor: "pointer" },
   statGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 },
-  statCard: { background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderTop: "2px solid", borderRadius: 10, padding: "14px 16px" },
-  statValue: { fontSize: 22, fontWeight: 700, fontFamily: "monospace", marginBottom: 3 },
-  statLabel: { fontSize: 10, color: "var(--r-fg2,#555)", textTransform: "uppercase", letterSpacing: "0.07em" },
+  statCard: { background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderTop: "2px solid", borderRadius: 10, padding: "16px 18px" },
   card: { background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderRadius: 10, padding: "16px 18px", marginBottom: 12 },
   cardLabel: { fontSize: 10, color: "var(--r-fg2,#555)", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 10, fontWeight: 600 },
   progressWrap: { display: "flex", alignItems: "center", gap: 10 },
