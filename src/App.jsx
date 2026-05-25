@@ -119,12 +119,26 @@ const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DEFAULT_THEME = () => ({ preset: "midnight", bg: "#0d0d0f", surf: "#0a0a0c", surf2: "#111113", bord: "#161618", fg: "#e8e8e8", fg2: "#555", font: "inter" });
 const INTERNAL_EMAIL = "user@recover-app.internal";
 const THEME_PRESETS = [
-  { id: "midnight", name: "Midnight", bg: "#0d0d0f", surf: "#0a0a0c", surf2: "#111113", bord: "#161618", fg: "#e8e8e8", fg2: "#555" },
-  { id: "obsidian", name: "Obsidian", bg: "#0a0d12", surf: "#080b0f", surf2: "#0d1117", bord: "#161b22", fg: "#e6edf3", fg2: "#7d8590" },
-  { id: "slate", name: "Slate", bg: "#0e1117", surf: "#0b0e15", surf2: "#111521", bord: "#1a1f2b", fg: "#e2e8f0", fg2: "#94a3b8" },
-  { id: "charcoal", name: "Charcoal", bg: "#111111", surf: "#0e0e0e", surf2: "#141414", bord: "#1c1c1c", fg: "#ededed", fg2: "#777" },
-  { id: "forest", name: "Forest", bg: "#0a0f0a", surf: "#080d08", surf2: "#0d130d", bord: "#141e14", fg: "#e4ede4", fg2: "#7a9a7a" },
-  { id: "warm", name: "Warm", bg: "#110e09", surf: "#0e0b07", surf2: "#13100b", bord: "#1e1812", fg: "#ede8e0", fg2: "#8a806e" },
+  // ── Base themes ──
+  { id: "midnight", name: "Midnight", desc: "The default dark experience", category: "base", accent: "#34d399",
+    bg: "#0d0d0f", surf: "#0a0a0c", surf2: "#111113", bord: "#161618", fg: "#e8e8e8", fg2: "#555" },
+  { id: "obsidian", name: "Obsidian", desc: "Deep space blue", category: "base", accent: "#60a5fa",
+    bg: "#0a0d12", surf: "#080b0f", surf2: "#0d1117", bord: "#161b22", fg: "#e6edf3", fg2: "#7d8590" },
+  { id: "slate", name: "Slate", desc: "Cool and focused", category: "base", accent: "#2dd4bf",
+    bg: "#0e1117", surf: "#0b0e15", surf2: "#111521", bord: "#1a1f2b", fg: "#e2e8f0", fg2: "#94a3b8" },
+  { id: "charcoal", name: "Charcoal", desc: "Neutral · clean · precise", category: "base", accent: "#a78bfa",
+    bg: "#111111", surf: "#0e0e0e", surf2: "#141414", bord: "#1c1c1c", fg: "#ededed", fg2: "#777" },
+  { id: "warm", name: "Ember", desc: "Warm amber glow", category: "base", accent: "#f59e0b",
+    bg: "#110e09", surf: "#0e0b07", surf2: "#13100b", bord: "#1e1812", fg: "#ede8e0", fg2: "#8a806e" },
+  // ── Exclusive themes ──
+  { id: "forest", name: "Forest", desc: "Organic · grounded · deep work", category: "exclusive", accent: "#34d399", font: "georgia", fontTags: ["Georgia"],
+    bg: "#0a0f0a", surf: "#080d08", surf2: "#0d130d", bord: "#141e14", fg: "#e4ede4", fg2: "#7a9a7a" },
+  { id: "blueprint", name: "Blueprint", desc: "Engineering · systems · precision", category: "exclusive", accent: "#38bdf8", font: "dm-sans", fontTags: ["DM Sans"],
+    bg: "#080d14", surf: "#060a10", surf2: "#0a1018", bord: "#0f1a26", fg: "#d0e8f8", fg2: "#4a7a9a" },
+  { id: "candy", name: "Candy", desc: "Playful · expressive · vibrant", category: "exclusive", accent: "#f472b6", font: "inter", fontTags: ["Inter"],
+    bg: "#0f0914", surf: "#0c0710", surf2: "#140c1c", bord: "#1e1028", fg: "#f0deff", fg2: "#8060a8" },
+  { id: "noir", name: "Noir", desc: "Pure black · minimal · sharp", category: "exclusive", accent: "#e8e8e8", font: "dm-sans", fontTags: ["DM Sans"],
+    bg: "#000000", surf: "#080808", surf2: "#0f0f0f", bord: "#181818", fg: "#f0f0f0", fg2: "#555" },
 ];
 const FONT_PACKAGES = [
   { id: "inter", name: "Inter", label: "Modern sans-serif", stack: "'Inter',system-ui,sans-serif", url: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" },
@@ -2484,7 +2498,10 @@ export default function App() {
         {view === "settings" && (() => {
           const applyPreset = preset => {
             const p = THEME_PRESETS.find(x => x.id === preset);
-            if (p) updTheme({ preset: p.id, bg: p.bg, surf: p.surf, surf2: p.surf2, bord: p.bord, fg: p.fg, fg2: p.fg2 });
+            if (!p) return;
+            const patch = { preset: p.id, bg: p.bg, surf: p.surf, surf2: p.surf2, bord: p.bord, fg: p.fg, fg2: p.fg2 };
+            if (p.font) patch.font = p.font;
+            updTheme(patch);
           };
           return (
             <div style={S.content}>
@@ -2500,64 +2517,92 @@ export default function App() {
               </div>
 
               {/* ── Appearance tab ── */}
-              {settingsTab === "appearance" && (<>
-                <div style={S.card}>
-                  <div style={S.cardLabel}>Theme preset</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 8 }}>
-                    {THEME_PRESETS.map(p => {
-                      const active = theme.preset === p.id;
-                      return (
-                        <button key={p.id} onClick={() => applyPreset(p.id)} style={{ padding: "12px 8px", borderRadius: 9, border: `2px solid ${active ? accentColor : p.bord}`, background: p.bg, cursor: "pointer", textAlign: "center", transition: "border-color 0.2s" }}>
-                          <div style={{ display: "flex", gap: 3, justifyContent: "center", marginBottom: 6 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: p.surf }} />
-                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: p.fg }} />
-                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: p.fg2 }} />
-                          </div>
-                          <div style={{ fontSize: 11, color: p.fg, fontWeight: active ? 700 : 400 }}>{p.name}</div>
-                          {active && <div style={{ fontSize: 9, color: accentColor, marginTop: 2 }}>Active</div>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div style={S.card}>
-                  <div style={S.cardLabel}>Custom colours</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
-                    {[["bg","Background"],["surf","Surface"],["bord","Border"],["fg","Text"],["fg2","Muted text"]].map(([key, label]) => (
-                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 12, color: "var(--r-fg2)", width: 90 }}>{label}</span>
-                        <input type="color" value={theme[key] || "#000000"} onChange={e => updTheme({ [key]: e.target.value, preset: "custom" })} style={{ width: 36, height: 28, padding: 2, borderRadius: 5, border: "1px solid var(--r-bord)", background: "transparent", cursor: "pointer" }} />
-                        <span style={{ fontSize: 11, color: "var(--r-fg2)", fontFamily: "monospace" }}>{theme[key]}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={S.card}>
-                  <div style={S.cardLabel}>Font</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-                    {FONT_PACKAGES.map(pkg => (
-                      <button key={pkg.id} onClick={() => updTheme({ font: pkg.id })} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 8, border: `1.5px solid ${theme.font === pkg.id ? accentColor : "var(--r-bord)"}`, background: theme.font === pkg.id ? accentColor + "12" : "transparent", cursor: "pointer", textAlign: "left" }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontFamily: pkg.stack, color: "var(--r-fg)", fontWeight: 500 }}>{pkg.name}</div>
-                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 1 }}>{pkg.label}</div>
+              {settingsTab === "appearance" && (() => {
+                const ThemeCard = ({ p }) => {
+                  const active = theme.preset === p.id;
+                  return (
+                    <button onClick={() => applyPreset(p.id)} style={{ padding: 0, border: `2px solid ${active ? accentColor : "var(--r-bord)"}`, borderRadius: 12, cursor: "pointer", background: "transparent", transition: "border-color 0.15s", overflow: "hidden", textAlign: "left", display: "block", width: "100%" }}>
+                      <div style={{ background: p.bg, padding: "12px 14px", borderBottom: `1px solid ${p.bord}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
+                          <div style={{ width: 22, height: 4, background: p.fg2, borderRadius: 2, opacity: 0.7 }} />
+                          <div style={{ width: 13, height: 4, background: p.fg2, borderRadius: 2, opacity: 0.4 }} />
+                          <div style={{ marginLeft: "auto", width: 9, height: 9, borderRadius: "50%", background: p.accent }} />
                         </div>
-                        {theme.font === pkg.id && <span style={{ color: accentColor, fontSize: 14 }}>✓</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                        <div style={{ height: 3, background: p.fg2, opacity: 0.22, borderRadius: 2, marginBottom: 4 }} />
+                        <div style={{ height: 3, background: p.fg2, opacity: 0.12, borderRadius: 2, marginBottom: 8, width: "72%" }} />
+                        <div style={{ height: 5, background: p.accent, opacity: 0.55, borderRadius: 3, width: "50%" }} />
+                      </div>
+                      <div style={{ padding: "10px 12px", background: "var(--r-surf)" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--r-fg)", letterSpacing: "-0.01em" }}>{p.name}</div>
+                          {active && <div style={{ width: 16, height: 16, borderRadius: "50%", background: accentColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#0d1f17", fontWeight: 800, flexShrink: 0 }}>✓</div>}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--r-fg2)", lineHeight: 1.4 }}>{p.desc}</div>
+                        {p.fontTags && (
+                          <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+                            {p.fontTags.map(tag => (
+                              <span key={tag} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "var(--r-surf2)", border: "0.5px solid var(--r-bord)", color: "var(--r-fg2)", fontWeight: 500 }}>{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                };
+                return (<>
+                  <p style={{ fontSize: 13, color: "var(--r-fg2)", lineHeight: 1.6, marginBottom: 20 }}>Choose a theme that matches your vibe. Exclusive themes include custom typography.</p>
 
-                <div style={S.card}>
-                  <div style={S.cardLabel}>Accent colour</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                    {ACCOUNT_COLORS.map(c => (
-                      <div key={c} onClick={() => upd({ color: c })} style={{ width: 32, height: 32, borderRadius: "50%", background: c, cursor: "pointer", border: accentColor === c ? "3px solid #fff" : "3px solid transparent", transition: "border-color 0.2s" }} />
-                    ))}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", letterSpacing: "0.1em", marginBottom: 10 }}>BASE THEMES</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10, marginBottom: 28 }}>
+                    {THEME_PRESETS.filter(p => p.category === "base").map(p => <ThemeCard key={p.id} p={p} />)}
                   </div>
-                </div>
-              </>)}
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", letterSpacing: "0.1em" }}>EXCLUSIVE THEMES</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, background: accentColor + "20", color: accentColor, border: `1px solid ${accentColor}40`, borderRadius: 20, padding: "2px 8px", letterSpacing: "0.08em" }}>CUSTOM FONTS</div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10, marginBottom: 28 }}>
+                    {THEME_PRESETS.filter(p => p.category === "exclusive").map(p => <ThemeCard key={p.id} p={p} />)}
+                  </div>
+
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>Accent colour</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                      {ACCOUNT_COLORS.map(c => (
+                        <div key={c} onClick={() => upd({ color: c })} style={{ width: 32, height: 32, borderRadius: "50%", background: c, cursor: "pointer", border: accentColor === c ? "3px solid #fff" : "3px solid transparent", transition: "border-color 0.2s" }} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>Font override</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                      {FONT_PACKAGES.map(pkg => (
+                        <button key={pkg.id} onClick={() => updTheme({ font: pkg.id })} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 8, border: `1.5px solid ${theme.font === pkg.id ? accentColor : "var(--r-bord)"}`, background: theme.font === pkg.id ? accentColor + "12" : "transparent", cursor: "pointer", textAlign: "left" }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, fontFamily: pkg.stack, color: "var(--r-fg)", fontWeight: 500 }}>{pkg.name}</div>
+                            <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 1 }}>{pkg.label}</div>
+                          </div>
+                          {theme.font === pkg.id && <span style={{ color: accentColor, fontSize: 14 }}>✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>Custom colours</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+                      {[["bg","Background"],["surf","Surface"],["bord","Border"],["fg","Text"],["fg2","Muted text"]].map(([key, label]) => (
+                        <div key={key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <span style={{ fontSize: 12, color: "var(--r-fg2)", width: 90 }}>{label}</span>
+                          <input type="color" value={theme[key] || "#000000"} onChange={e => updTheme({ [key]: e.target.value, preset: "custom" })} style={{ width: 36, height: 28, padding: 2, borderRadius: 5, border: "1px solid var(--r-bord)", background: "transparent", cursor: "pointer" }} />
+                          <span style={{ fontSize: 11, color: "var(--r-fg2)", fontFamily: "monospace" }}>{theme[key]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>);
+              })()}
 
               {/* ── Account tab ── */}
               {settingsTab === "account" && (<>
