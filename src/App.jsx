@@ -1023,7 +1023,7 @@ export default function App() {
         {/* Logo */}
         <div style={{ padding: "20px 16px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <svg width="40" height="40" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+            <svg width="56" height="56" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
               <path d="M 260 210 C 260 285, 308 330, 340 330 C 372 330, 420 285, 420 210 C 420 178, 408 158, 390 145" fill="none" stroke="#2d7a5a" strokeWidth="16" strokeLinecap="round"/>
               <path d="M 278 210 C 278 272, 310 308, 340 308 C 370 308, 402 272, 402 210" fill="none" stroke="#2d7a5a" strokeWidth="5" strokeLinecap="round" opacity="0.3"/>
               <circle cx="340" cy="360" r="11" fill="#2d7a5a"/>
