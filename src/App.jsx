@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "./supabase.js";
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
 const ROOT_KEY = "recover_root_v1";
@@ -116,6 +117,7 @@ const ACCOUNT_COLORS = ["#34d399", "#60a5fa", "#a78bfa", "#f97316", "#f472b6", "
 const PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DEFAULT_THEME = () => ({ preset: "midnight", bg: "#0d0d0f", surf: "#0a0a0c", surf2: "#111113", bord: "#161618", fg: "#e8e8e8", fg2: "#555", font: "inter" });
+const INTERNAL_EMAIL = "user@recover-app.internal";
 const THEME_PRESETS = [
   { id: "midnight", name: "Midnight", bg: "#0d0d0f", surf: "#0a0a0c", surf2: "#111113", bord: "#161618", fg: "#e8e8e8", fg2: "#555" },
   { id: "obsidian", name: "Obsidian", bg: "#0a0d12", surf: "#080b0f", surf2: "#0d1117", bord: "#161b22", fg: "#e6edf3", fg2: "#7d8590" },
@@ -442,24 +444,51 @@ export default function App() {
   const [scheduleViewDate, setScheduleViewDate] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [pinInput, setPinInput] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null); // "syncing" | "synced" | "error"
 
   const notifRef = useRef([]);
+  const syncRef = useRef(null);
+
+  const syncToSupabase = useCallback((rootData) => {
+    if (syncRef.current) clearTimeout(syncRef.current);
+    setSyncStatus("syncing");
+    syncRef.current = setTimeout(async () => {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s) { setSyncStatus(null); return; }
+      const { error } = await supabase.from("profiles").upsert({
+        id: s.user.id,
+        account: rootData.account,
+        theme: rootData.theme,
+        updated_at: new Date().toISOString(),
+      });
+      setSyncStatus(error ? "error" : "synced");
+      setTimeout(() => setSyncStatus(null), 2000);
+    }, 1500);
+  }, []);
 
   const upd = useCallback(patch => {
     setRoot(prev => {
       const next = { ...prev, account: { ...prev.account, ...patch } };
       saveRoot(next);
+      syncToSupabase(next);
       return next;
     });
-  }, []);
+  }, [syncToSupabase]);
 
   const updTheme = useCallback(patch => {
     setRoot(prev => {
       const next = { ...prev, theme: { ...prev.theme, ...patch } };
       saveRoot(next);
+      syncToSupabase(next);
       return next;
     });
-  }, []);
+  }, [syncToSupabase]);
 
   const account = root.account;
   const theme = root.theme || DEFAULT_THEME();
@@ -606,6 +635,60 @@ export default function App() {
     style.textContent = `:root{--r-bg:${theme.bg};--r-surf:${theme.surf};--r-surf2:${theme.surf2};--r-bord:${theme.bord};--r-fg:${theme.fg};--r-fg2:${theme.fg2};--r-font:${pkg.stack};}`;
   }, [theme]);
 
+  // ── Supabase auth ─────────────────────────────────────────────────────────
+  const loadFromSupabase = useCallback(async (sess) => {
+    const { data } = await supabase.from("profiles").select("account,theme").eq("id", sess.user.id).single();
+    if (data?.account) {
+      const merged = { account: data.account, theme: data.theme ?? DEFAULT_THEME() };
+      setRoot(merged);
+      saveRoot(merged);
+    }
+    setAuthLoading(false);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s) loadFromSupabase(s);
+      else setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (!s) setAuthLoading(false);
+    });
+    return () => subscription.unsubscribe();
+  }, [loadFromSupabase]);
+
+  const handlePinLogin = async () => {
+    const pin = pinInput.trim();
+    if (pin.length < 4) { setAuthError("PIN must be at least 4 digits"); return; }
+    setAuthError("");
+    const { error } = await supabase.auth.signInWithPassword({ email: INTERNAL_EMAIL, password: pin });
+    if (!error) return;
+    if (error.message.toLowerCase().includes("invalid login credentials")) {
+      if (!isNewUser) {
+        setIsNewUser(true);
+        setPinConfirm("");
+        return;
+      }
+      if (pinConfirm !== pin) { setAuthError("PINs don't match — try again"); setPinConfirm(""); return; }
+      const { error: signUpErr } = await supabase.auth.signUp({ email: INTERNAL_EMAIL, password: pin });
+      if (signUpErr) { setAuthError(signUpErr.message); return; }
+      await supabase.auth.signInWithPassword({ email: INTERNAL_EMAIL, password: pin });
+    } else {
+      setAuthError("Incorrect PIN");
+    }
+  };
+
+  const handleLock = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    setPinInput("");
+    setPinConfirm("");
+    setAuthError("");
+    setIsNewUser(false);
+  };
+
   // ── Actions ───────────────────────────────────────────────────────────────
   function createJourney() {
     const acc = {
@@ -620,7 +703,7 @@ export default function App() {
       postRelapseReminders: DEFAULT_POST_REMINDERS(),
     };
     const next = { account: acc, theme: DEFAULT_THEME() };
-    saveRoot(next); setRoot(next);
+    saveRoot(next); setRoot(next); syncToSupabase(next);
   }
 
   const completedToday = id => (habits.find(h => h.id === id)?.completions || []).includes(getTodayStr());
@@ -766,6 +849,61 @@ export default function App() {
     setEditPrayerTargets(false);
   }
 
+  // ── Auth loading ──────────────────────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div style={S.setupWrap}>
+        <div style={{ color: "var(--r-fg2,#555)", fontSize: 14 }}>Loading…</div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div style={S.setupWrap}>
+        <div style={S.setupCard}>
+          <div style={S.setupEmoji}>🔒</div>
+          <h1 style={S.setupTitle}>{isNewUser ? "Set your PIN" : "Welcome back"}</h1>
+          <p style={S.setupSub}>
+            {isNewUser ? "No account found. Choose a 4–8 digit PIN to create one." : "Enter your PIN to access your recovery data."}
+          </p>
+          <input
+            style={{ ...S.input, textAlign: "center", fontSize: 22, letterSpacing: "0.3em", marginBottom: 10 }}
+            type="password"
+            inputMode="numeric"
+            maxLength={8}
+            placeholder="• • • •"
+            value={pinInput}
+            onChange={e => { setPinInput(e.target.value.replace(/\D/g, "")); setAuthError(""); }}
+            onKeyDown={e => { if (e.key === "Enter" && !isNewUser) handlePinLogin(); }}
+            autoFocus
+          />
+          {isNewUser && (
+            <input
+              style={{ ...S.input, textAlign: "center", fontSize: 22, letterSpacing: "0.3em", marginBottom: 10 }}
+              type="password"
+              inputMode="numeric"
+              maxLength={8}
+              placeholder="Confirm PIN"
+              value={pinConfirm}
+              onChange={e => { setPinConfirm(e.target.value.replace(/\D/g, "")); setAuthError(""); }}
+              onKeyDown={e => { if (e.key === "Enter") handlePinLogin(); }}
+            />
+          )}
+          {authError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{authError}</div>}
+          <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17" }} onClick={handlePinLogin}>
+            {isNewUser ? "Create account" : "Unlock"}
+          </button>
+          {isNewUser && (
+            <button style={{ ...S.primaryBtn, marginTop: 8, background: "transparent", color: "var(--r-fg2)", border: "none" }} onClick={() => { setIsNewUser(false); setAuthError(""); setPinConfirm(""); }}>
+              ← Back
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // ── No account yet ────────────────────────────────────────────────────────
   if (!account) {
     const sd = setupDraft;
@@ -903,6 +1041,15 @@ export default function App() {
             <span style={{ ...S.navIcon, color: view === "settings" ? accentColor : "var(--r-fg2)" }}>⚙</span>
             <span style={{ color: view === "settings" ? "var(--r-fg)" : "var(--r-fg2)" }}>Settings</span>
             {view === "settings" && <div style={{ width: 3, height: 16, background: accentColor, borderRadius: 2, marginLeft: "auto" }} />}
+          </button>
+          <button style={{ ...S.navBtn, marginTop: 2 }} onClick={handleLock}>
+            <span style={{ ...S.navIcon, color: "var(--r-fg2)" }}>🔒</span>
+            <span style={{ color: "var(--r-fg2)", fontSize: 12 }}>
+              Lock
+              {syncStatus === "syncing" && <span style={{ marginLeft: 6, fontSize: 10, color: "#60a5fa" }}>↑ syncing</span>}
+              {syncStatus === "synced" && <span style={{ marginLeft: 6, fontSize: 10, color: "#34d399" }}>✓ synced</span>}
+              {syncStatus === "error" && <span style={{ marginLeft: 6, fontSize: 10, color: "#f87171" }}>⚠ sync failed</span>}
+            </span>
           </button>
         </div>
       </aside>
