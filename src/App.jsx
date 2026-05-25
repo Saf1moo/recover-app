@@ -29,6 +29,12 @@ const accountDefaults = () => ({
   scheduleCompletions: {},
   vision: DEFAULT_VISION(),
   accountability: DEFAULT_ACCOUNTABILITY(),
+  waterLogs: {},
+  waterConfig: DEFAULT_WATER_CONFIG(),
+  medications: [],
+  medicationLogs: {},
+  exerciseLogs: [],
+  bodyMetrics: [],
 });
 
 function loadRoot() {
@@ -96,6 +102,9 @@ const LIFE_AREAS = [
 const PERIOD_ORDER = ["yearly", "monthly", "weekly", "daily"];
 const DEFAULT_VISION = () => ({ myWhy: "", lifeVision: "", lifeAreas: { health: 5, faith: 5, relationships: 5, career: 5, finances: 5, personalGrowth: 5, fun: 5 } });
 const DEFAULT_ACCOUNTABILITY = () => ({ contract: null, futureLetters: [], weeklyReviews: [], wins: [], gratitude: [] });
+const DEFAULT_WATER_CONFIG = () => ({ glassSize: 250, dailyTarget: 8 });
+const EXERCISE_CATS = ["cardio", "strength", "flexibility", "sports", "other"];
+const EXERCISE_CAT_HEX = { cardio: "#f97316", strength: "#34d399", flexibility: "#a78bfa", sports: "#60a5fa", other: "#f59e0b" };
 const ACCOUNT_COLORS = ["#34d399", "#60a5fa", "#a78bfa", "#f97316", "#f472b6", "#f59e0b", "#f87171", "#2dd4bf"];
 const PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -403,6 +412,14 @@ export default function App() {
   const [routineTab, setRoutineTab] = useState("sleep");
   const [editPrayerTargets, setEditPrayerTargets] = useState(false);
   const [prayerTargetsDraft, setPrayerTargetsDraft] = useState(null);
+  const [healthTab, setHealthTab] = useState("water");
+  const [editWaterConfig, setEditWaterConfig] = useState(false);
+  const [waterConfigDraft, setWaterConfigDraft] = useState(null);
+  const [medDraft, setMedDraft] = useState(null);
+  const [editMedId, setEditMedId] = useState(null);
+  const [exerciseDraft, setExerciseDraft] = useState(null);
+  const [metricDraft, setMetricDraft] = useState(null);
+  const [scheduleViewDate, setScheduleViewDate] = useState(null);
 
   const notifRef = useRef([]);
 
@@ -457,6 +474,24 @@ export default function App() {
   const habitPct = todayHabits.length ? Math.round(todayDone / todayHabits.length * 100) : 0;
   const claimed = account?.claimedRewards || [];
   const availRew = (account?.rewards || []).filter(r => daysSober >= r.days && !claimed.includes(r.id));
+  const waterLogs = account?.waterLogs || {};
+  const waterConfig = account?.waterConfig || DEFAULT_WATER_CONFIG();
+  const medications = account?.medications || [];
+  const medicationLogs = account?.medicationLogs || {};
+  const exerciseLogs = account?.exerciseLogs || [];
+  const bodyMetrics = account?.bodyMetrics || [];
+  const todayWater = waterLogs[getTodayStr()] || 0;
+  const waterStreak = (() => {
+    let s = 0; const d = new Date(); d.setHours(12, 0, 0, 0);
+    while ((waterLogs[d.toISOString().split("T")[0]] || 0) >= waterConfig.dailyTarget) { s++; d.setDate(d.getDate() - 1); }
+    return s;
+  })();
+  const thisWeekExerciseMins = (() => {
+    const end = new Date(weekStartStr + "T12:00"); end.setDate(end.getDate() + 6);
+    const endStr = end.toISOString().split("T")[0];
+    return exerciseLogs.filter(e => e.date >= weekStartStr && e.date <= endStr).reduce((s, e) => s + (e.durationMins || 0), 0);
+  })();
+  const latestMetric = bodyMetrics.length ? [...bodyMetrics].sort((a, b) => b.date.localeCompare(a.date))[0] : null;
 
   const sleepScoreMap = {};
   sleepLogs.forEach(l => {
@@ -651,6 +686,34 @@ export default function App() {
   function addJournal() { if (!journalText.trim()) return; upd({ journal: [{ id: Date.now(), date: new Date().toISOString(), text: journalText.trim() }, ...(account?.journal || [])] }); setJT(""); }
   function addReward() { if (!newRewName.trim()) return; upd({ rewards: [...(account?.rewards || []), { id: "rw" + Date.now(), days: Number(newRewDays), name: newRewName.trim() }] }); setNRN(""); setNRD(30); }
   const claimReward = id => upd({ claimedRewards: [...claimed, id] });
+  function logWater(delta) {
+    const today = getTodayStr();
+    upd({ waterLogs: { ...waterLogs, [today]: Math.max(0, (waterLogs[today] || 0) + delta) } });
+  }
+  function saveWaterConfig() { upd({ waterConfig: waterConfigDraft }); setEditWaterConfig(false); }
+  function toggleMedication(medId, date) {
+    const d = date || getTodayStr();
+    const dayMeds = medicationLogs[d] || [];
+    upd({ medicationLogs: { ...medicationLogs, [d]: dayMeds.includes(medId) ? dayMeds.filter(x => x !== medId) : [...dayMeds, medId] } });
+  }
+  function saveMedication() {
+    if (!medDraft?.name?.trim()) return;
+    const med = { ...medDraft, id: editMedId || "med" + Date.now(), name: medDraft.name.trim() };
+    upd({ medications: editMedId ? medications.map(m => m.id === editMedId ? med : m) : [...medications, med] });
+    setMedDraft(null); setEditMedId(null);
+  }
+  function addExerciseLog() {
+    if (!exerciseDraft?.type?.trim() || !exerciseDraft?.durationMins) return;
+    const entry = { ...exerciseDraft, id: "ex" + Date.now(), date: exerciseDraft.date || getTodayStr(), durationMins: Number(exerciseDraft.durationMins) };
+    upd({ exerciseLogs: [entry, ...exerciseLogs] });
+    setExerciseDraft(null);
+  }
+  function addBodyMetric() {
+    if (!metricDraft?.weight) return;
+    const entry = { ...metricDraft, id: "bm" + Date.now(), date: metricDraft.date || getTodayStr(), weight: Number(metricDraft.weight) };
+    upd({ bodyMetrics: [entry, ...bodyMetrics] });
+    setMetricDraft(null);
+  }
   function saveRoutine() { upd({ routineTargets: { ...routineTargets, ...rtDraft } }); setEditRt(false); }
   function updatePrayer(prayerName, patch) {
     const today = getTodayStr();
@@ -710,6 +773,7 @@ export default function App() {
     { id: "routine", icon: "🌙", label: "Routine" },
     { id: "habits", icon: "☑", label: "Habits" },
     { id: "schedule", icon: "📅", label: "Schedule" },
+    { id: "health", icon: "💧", label: "Health" },
     { id: "goals", icon: "◎", label: "Goals" },
     { id: "relapse", icon: "⚡", label: "Relapse" },
     { id: "rewards", icon: "★", label: "Rewards" },
@@ -1254,113 +1318,356 @@ export default function App() {
 
         {/* ════ SCHEDULE ════ */}
         {view === "schedule" && (() => {
-          const todayStr = getTodayStr();
-          const totalItems = sortedTodayHabits.length + sortedTodayActivities.length;
-          const doneHabits = sortedTodayHabits.filter(h => h.completions.includes(todayStr)).length;
-          const doneActs = sortedTodayActivities.filter(a => (scheduleCompletions[todayStr] || {})[a.id]).length;
-          const totalDone = doneHabits + doneActs;
-          const pct = totalItems ? Math.round(totalDone / totalItems * 100) : 0;
+          const today = getTodayStr();
+          const schedDate = scheduleViewDate || today;
+          const schedDayName = DAY_NAMES[new Date(schedDate + "T12:00").getDay()];
+          const isToday = schedDate === today;
+          const weekDates = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(weekStartStr + "T12:00"); d.setDate(d.getDate() + i);
+            return d.toISOString().split("T")[0];
+          });
+          const viewHabits = normalizedHabits
+            .filter(h => h.days.length === 0 || h.days.includes(schedDayName))
+            .sort((a, b) => { const ta = a.scheduledTimes[0] || null, tb = b.scheduledTimes[0] || null; if (!ta && !tb) return 0; if (!ta) return 1; if (!tb) return -1; return ta.localeCompare(tb); });
+          const viewActivities = scheduleActivities
+            .filter(a => a.type === "oneTime" ? a.date === schedDate : (a.days.length === 0 || a.days.includes(schedDayName)))
+            .sort((a, b) => { const ta = a.times?.[0] || a.time || null, tb = b.times?.[0] || b.time || null; if (!ta && !tb) return 0; if (!ta) return 1; if (!tb) return -1; return ta.localeCompare(tb); });
+          const viewMeds = medications.filter(m => m.time && (!m.days?.length || m.days.includes(schedDayName)));
+          const allItems = [
+            ...viewHabits.map(h => ({ _type: "habit", id: h.id, name: h.name, time: h.scheduledTimes[0] || null, col: CAT_HEX[h.category] || "#a78bfa", data: h })),
+            ...viewActivities.map(a => ({ _type: "activity", id: a.id, name: a.name, time: a.times?.[0] || a.time || null, col: "#60a5fa", data: a })),
+            ...viewMeds.map(m => ({ _type: "med", id: m.id, name: m.name + (m.notes ? ` — ${m.notes}` : ""), time: m.time, col: "#2dd4bf", data: m })),
+          ].sort((a, b) => { if (!a.time && !b.time) return 0; if (!a.time) return 1; if (!b.time) return -1; return a.time.localeCompare(b.time); });
+          const schedComps = scheduleCompletions[schedDate] || {};
+          const medComps = medicationLogs[schedDate] || [];
+          function isDone(item) {
+            if (item._type === "habit") return item.data.completions.includes(schedDate);
+            if (item._type === "activity") return schedComps[item.id] || false;
+            if (item._type === "med") return medComps.includes(item.id);
+            return false;
+          }
+          function toggleItem(item) {
+            if (item._type === "habit") toggleHabit(item.id);
+            else if (item._type === "activity") toggleSchedActivity(item.id);
+            else if (item._type === "med") toggleMedication(item.id, schedDate);
+          }
+          const doneItems = allItems.filter(item => isDone(item)).length;
+          const pct = allItems.length ? Math.round(doneItems / allItems.length * 100) : 0;
           return (
             <div style={S.content}>
               <h2 style={S.pageTitle}>Schedule</h2>
+              {/* Day picker */}
+              <div style={{ display: "flex", gap: 3, marginBottom: 12 }}>
+                {weekDates.map(date => {
+                  const d = new Date(date + "T12:00");
+                  const isActive = date === schedDate;
+                  const isT = date === today;
+                  return (
+                    <button key={date} onClick={() => setScheduleViewDate(date)} style={{ flex: 1, minWidth: 36, padding: "6px 2px", borderRadius: 7, border: `1px solid ${isActive ? accentColor : "#161618"}`, fontSize: 11, fontWeight: isT ? 700 : 400, cursor: "pointer", fontFamily: "Georgia,serif", background: isActive ? accentColor + "18" : "transparent", color: isActive ? accentColor : isT ? "#aaa" : "#444", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, marginBottom: 1 }}>{DAY_NAMES[d.getDay()].slice(0, 1)}</div>
+                      <div>{d.getDate()}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Summary */}
               <div style={S.card}>
-                <div style={S.cardLabel}>Today — {new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{totalDone} / {totalItems} done</div>
+                <div style={S.cardLabel}>{new Date(schedDate + "T12:00").toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{doneItems} / {allItems.length} done</div>
                 <div style={S.bigProgressBg}><div style={{ ...S.bigProgressBar, width: `${pct}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
               </div>
-
-              {/* Habits today */}
-              <div style={S.card}>
-                <div style={S.cardLabel}>Habits</div>
-                {sortedTodayHabits.length === 0 ? (
-                  <div style={S.empty}>No habits scheduled for today. <button style={S.linkBtn} onClick={() => setView("habits")}>Add habits →</button></div>
-                ) : sortedTodayHabits.map(h => {
-                  const done = h.completions.includes(todayStr);
-                  const col = CAT_HEX[h.category] || "#a78bfa";
-                  const weekCount = getWeekCompletions(h.completions, weekStartStr);
-                  const lvlCfg = h.levelsEnabled ? h.levels.find(l => l.level === h.currentLevel) : null;
-                  const upReady = lvlCfg?.upPerWeek != null && weekCount >= lvlCfg.upPerWeek;
-                  const downRisk = lvlCfg?.downPerWeek != null && weekCount < lvlCfg.downPerWeek;
-                  return (
-                    <div key={h.id} style={{ ...S.scheduleRow, borderLeftColor: col, opacity: done ? 0.45 : 1 }}>
-                      <div style={{ width: 54, flexShrink: 0, textAlign: "right", paddingRight: 10 }}>
-                        {h.scheduledTimes[0]
-                          ? <span style={{ fontSize: 11, color: done ? "#444" : col, fontFamily: "monospace", fontWeight: 600 }}>{fmtTime(h.scheduledTimes[0])}</span>
-                          : <span style={{ fontSize: 10, color: "#333" }}>—</span>}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 13, fontWeight: 500, textDecoration: done ? "line-through" : "none" }}>{h.name}</span>
-                          {h.levelsEnabled && <span style={{ fontSize: 9, color: "#a78bfa", background: "rgba(167,139,250,0.12)", padding: "1px 5px", borderRadius: 8 }}>Lv.{h.currentLevel}</span>}
+              {/* Unified item list */}
+              {allItems.length === 0 ? (
+                <div style={S.card}><div style={S.empty}>Nothing scheduled for {schedDayName}. <button style={S.linkBtn} onClick={() => setView("habits")}>Add habits →</button></div></div>
+              ) : (
+                <div style={S.card}>
+                  {allItems.map(item => {
+                    const done = isDone(item);
+                    const h = item._type === "habit" ? item.data : null;
+                    const weekCount = h ? getWeekCompletions(h.completions, weekStartStr) : 0;
+                    const lvlCfg = h?.levelsEnabled ? h.levels.find(l => l.level === h.currentLevel) : null;
+                    const upReady = lvlCfg?.upPerWeek != null && weekCount >= lvlCfg.upPerWeek;
+                    const downRisk = lvlCfg?.downPerWeek != null && weekCount < lvlCfg.downPerWeek;
+                    return (
+                      <div key={item._type + item.id} style={{ ...S.scheduleRow, borderLeftColor: item.col, opacity: done ? 0.45 : 1 }}>
+                        <div style={{ width: 54, flexShrink: 0, textAlign: "right", paddingRight: 10 }}>
+                          {item.time ? <span style={{ fontSize: 11, color: done ? "#444" : item.col, fontFamily: "monospace", fontWeight: 600 }}>{fmtTime(item.time)}</span> : <span style={{ fontSize: 10, color: "#333" }}>—</span>}
                         </div>
-                        {h.levelsEnabled && lvlCfg && (
-                          <div style={{ fontSize: 10, marginTop: 2, color: upReady ? "#34d399" : downRisk ? "#f87171" : "#555" }}>
-                            {weekCount}/{lvlCfg.upPerWeek ?? "?"} this week
-                            {upReady && " · ready to level up!"}
-                            {downRisk && " · at risk of drop"}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 13, fontWeight: 500, textDecoration: done ? "line-through" : "none" }}>{item.name}</span>
+                            {h?.levelsEnabled && <span style={{ fontSize: 9, color: "#a78bfa", background: "rgba(167,139,250,0.12)", padding: "1px 5px", borderRadius: 8 }}>Lv.{h.currentLevel}</span>}
+                            {item._type === "med" && <span style={{ fontSize: 9, color: "#2dd4bf", background: "rgba(45,212,191,0.1)", padding: "1px 5px", borderRadius: 8 }}>med</span>}
                           </div>
-                        )}
+                          {h?.levelsEnabled && lvlCfg && (
+                            <div style={{ fontSize: 10, marginTop: 2, color: upReady ? "#34d399" : downRisk ? "#f87171" : "#555" }}>
+                              {weekCount}/{lvlCfg.upPerWeek ?? "?"} this week{upReady && " · ready to level up!"}{downRisk && " · at risk of drop"}
+                            </div>
+                          )}
+                          {item._type === "activity" && <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{item.data.type === "oneTime" ? "one-time" : !item.data.days?.length ? "daily" : item.data.days.join(" · ")}</div>}
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button style={{ ...S.checkBtn, background: done ? "#34d399" : "transparent", borderColor: done ? "#34d399" : isToday ? "#333" : "#1a1a1e", cursor: isToday ? "pointer" : "default", opacity: isToday ? 1 : 0.35 }} onClick={() => isToday && toggleItem(item)}>{done ? "✓" : ""}</button>
+                          {item._type === "activity" && <button style={S.deleteBtn} onClick={() => deleteSchedActivity(item.id)}>×</button>}
+                        </div>
                       </div>
-                      <button style={{ ...S.checkBtn, background: done ? "#34d399" : "transparent", borderColor: done ? "#34d399" : "#333", flexShrink: 0 }} onClick={() => toggleHabit(h.id)}>{done ? "✓" : ""}</button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Custom activities */}
-              <div style={S.card}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={S.cardLabel}>Activities</div>
-                  <button style={S.linkBtn} onClick={() => { setSchedActDraft({ name: "", type: "recurring", days: [], times: [], date: getTodayStr(), time: "" }); setSchedActModal(true); }}>+ Add</button>
+                    );
+                  })}
                 </div>
-                {sortedTodayActivities.length === 0 ? (
-                  <div style={S.empty}>No activities for today.</div>
-                ) : sortedTodayActivities.map(act => {
-                  const done = (scheduleCompletions[todayStr] || {})[act.id] || false;
-                  const t = act.times?.[0] || act.time || null;
-                  return (
-                    <div key={act.id} style={{ ...S.scheduleRow, borderLeftColor: "#60a5fa", opacity: done ? 0.45 : 1 }}>
-                      <div style={{ width: 54, flexShrink: 0, textAlign: "right", paddingRight: 10 }}>
-                        {t ? <span style={{ fontSize: 11, color: done ? "#444" : "#60a5fa", fontFamily: "monospace", fontWeight: 600 }}>{fmtTime(t)}</span>
-                           : <span style={{ fontSize: 10, color: "#333" }}>—</span>}
+              )}
+              <button style={{ ...S.linkBtn, marginBottom: 10 }} onClick={() => { setSchedActDraft({ name: "", type: "recurring", days: [], times: [], date: getTodayStr(), time: "" }); setSchedActModal(true); }}>+ Add custom activity</button>
+              {scheduleActivities.length > 0 && (
+                <div style={S.card}>
+                  <div style={S.cardLabel}>All activities</div>
+                  {scheduleActivities.map(act => (
+                    <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "0.5px solid #111" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13 }}>{act.name}</div>
+                        <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{act.type === "oneTime" ? `one-time · ${act.date}` : !act.days?.length ? "daily" : act.days.join(" · ")}{(act.times?.[0] || act.time) && ` · ${fmtTime(act.times?.[0] || act.time)}`}</div>
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, textDecoration: done ? "line-through" : "none" }}>{act.name}</div>
-                        <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>
-                          {act.type === "oneTime" ? "one-time" : act.days.length === 0 ? "daily" : act.days.join(" · ")}
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                        <button style={{ ...S.checkBtn, background: done ? "#34d399" : "transparent", borderColor: done ? "#34d399" : "#333" }} onClick={() => toggleSchedActivity(act.id)}>{done ? "✓" : ""}</button>
-                        <button style={S.deleteBtn} onClick={() => deleteSchedActivity(act.id)}>×</button>
-                      </div>
+                      <button style={S.deleteBtn} onClick={() => deleteSchedActivity(act.id)}>×</button>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ════ HEALTH & BODY ════ */}
+        {view === "health" && (() => {
+          const today = getTodayStr();
+          const todayMedLogs = medicationLogs[today] || [];
+          const waterPct = waterConfig.dailyTarget ? Math.min(100, Math.round(todayWater / waterConfig.dailyTarget * 100)) : 0;
+          const last30Weight = (() => {
+            const d = [];
+            for (let i = 29; i >= 0; i--) {
+              const date = new Date(); date.setDate(date.getDate() - i);
+              const ds = date.toISOString().split("T")[0];
+              const m = bodyMetrics.find(x => x.date === ds);
+              d.push({ actual: m ? m.weight : null, label: i % 7 === 0 ? new Date(ds + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" }) : "" });
+            }
+            return d;
+          })();
+          const weekExSessions = (() => {
+            const end = new Date(weekStartStr + "T12:00"); end.setDate(end.getDate() + 6);
+            const endStr = end.toISOString().split("T")[0];
+            return exerciseLogs.filter(e => e.date >= weekStartStr && e.date <= endStr).length;
+          })();
+          return (
+            <div style={S.content}>
+              <h2 style={S.pageTitle}>Health &amp; Body</h2>
+              <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+                {[["water","💧 Water"],["meds","💊 Meds"],["exercise","🏃 Exercise"],["body","⚖ Body"]].map(([t, label]) => (
+                  <button key={t} onClick={() => setHealthTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${healthTab === t ? "#2dd4bf" : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "Georgia,serif", background: healthTab === t ? "rgba(45,212,191,0.08)" : "#0a0a0c", color: healthTab === t ? "#2dd4bf" : "#444" }}>{label}</button>
+                ))}
               </div>
 
-              {/* All custom activities (manage) */}
-              {scheduleActivities.length > 0 && (() => {
-                const recurring = scheduleActivities.filter(a => a.type === "recurring");
-                const oneTime = scheduleActivities.filter(a => a.type === "oneTime");
-                return (
-                  <div style={S.card}>
-                    <div style={S.cardLabel}>All activities</div>
-                    {[...recurring, ...oneTime].map(act => (
-                      <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "0.5px solid #111" }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13 }}>{act.name}</div>
-                          <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>
-                            {act.type === "oneTime" ? `one-time · ${act.date}` : act.days.length === 0 ? "daily" : act.days.join(" · ")}
-                            {(act.times?.[0] || act.time) && ` · ${fmtTime(act.times?.[0] || act.time)}`}
-                          </div>
-                        </div>
-                        <button style={S.deleteBtn} onClick={() => deleteSchedActivity(act.id)}>×</button>
-                      </div>
-                    ))}
+              {/* ── Water tab ── */}
+              {healthTab === "water" && (<>
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div style={S.cardLabel}>Today's intake</div>
+                    <button style={S.linkBtn} onClick={() => { if (editWaterConfig) { setEditWaterConfig(false); } else { setWaterConfigDraft({ ...waterConfig }); setEditWaterConfig(true); } }}>{editWaterConfig ? "Done" : "Settings"}</button>
                   </div>
-                );
-              })()}
+                  {editWaterConfig ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div style={S.formRow}><label style={S.formLabel}>Glass size (ml)</label><input type="number" min="50" max="2000" style={S.input} value={waterConfigDraft?.glassSize || 250} onChange={e => setWaterConfigDraft(d => ({ ...d, glassSize: Number(e.target.value) }))} /></div>
+                      <div style={S.formRow}><label style={S.formLabel}>Daily target (glasses)</label><input type="number" min="1" max="30" style={S.input} value={waterConfigDraft?.dailyTarget || 8} onChange={e => setWaterConfigDraft(d => ({ ...d, dailyTarget: Number(e.target.value) }))} /></div>
+                      <button style={S.primaryBtn} onClick={saveWaterConfig}>Save settings</button>
+                    </div>
+                  ) : (<>
+                    <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
+                      <CircleRing value={waterPct} size={88} strokeWidth={8} />
+                      <div>
+                        <div style={{ fontSize: 32, fontWeight: 700, fontFamily: "monospace", color: "#2dd4bf", lineHeight: 1 }}>{todayWater}<span style={{ fontSize: 14, color: "#444", marginLeft: 4 }}>/ {waterConfig.dailyTarget}</span></div>
+                        <div style={{ fontSize: 11, color: "#555", marginTop: 4 }}>{waterConfig.glassSize}ml · {Math.round(todayWater * waterConfig.glassSize)}ml today</div>
+                        <div style={{ fontSize: 11, color: waterStreak > 0 ? "#2dd4bf" : "#333", marginTop: 3 }}>{waterStreak > 0 ? `🔥 ${waterStreak} day streak` : "Start your streak"}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button style={{ flex: 3, padding: "12px", borderRadius: 8, border: "1.5px solid #2dd4bf", background: "rgba(45,212,191,0.08)", color: "#2dd4bf", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "Georgia,serif" }} onClick={() => logWater(1)}>+ glass</button>
+                      <button style={{ flex: 1, padding: "12px", borderRadius: 8, border: "1px solid #222", background: "transparent", color: "#555", fontSize: 14, cursor: "pointer", fontFamily: "Georgia,serif" }} onClick={() => logWater(-1)}>−</button>
+                    </div>
+                  </>)}
+                </div>
+                <div style={S.card}>
+                  <div style={S.cardLabel}>Last 7 days</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 68, paddingTop: 4 }}>
+                    {Array.from({ length: 7 }, (_, i) => {
+                      const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(12,0,0,0);
+                      const ds = d.toISOString().split("T")[0];
+                      const count = waterLogs[ds] || 0;
+                      const pct2 = waterConfig.dailyTarget ? Math.min(1, count / waterConfig.dailyTarget) : 0;
+                      return (
+                        <div key={ds} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <div style={{ width: "100%", height: Math.max(3, Math.round(pct2 * 44)), background: pct2 >= 1 ? "#2dd4bf" : pct2 > 0 ? "#2dd4bf55" : "#161618", borderRadius: 3, marginTop: "auto" }} />
+                          <div style={{ fontSize: 9, color: ds === today ? "#2dd4bf" : "#333" }}>{DAY_NAMES[d.getDay()].slice(0,1)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>)}
+
+              {/* ── Meds tab ── */}
+              {healthTab === "meds" && (<>
+                <div style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={S.cardLabel}>Today — {new Date().toLocaleDateString("en-AU", { weekday: "long" })}</div>
+                    <button style={S.linkBtn} onClick={() => { setMedDraft({ name: "", time: "", days: [], notes: "" }); setEditMedId(null); }}>+ Add</button>
+                  </div>
+                  {medications.length === 0 ? <div style={S.empty}>No medications added yet.</div> : medications.filter(m => !m.days?.length || m.days.includes(todayDay)).map(med => {
+                    const done = todayMedLogs.includes(med.id);
+                    return (
+                      <div key={med.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "0.5px solid #111" }}>
+                        <button style={{ ...S.checkBtn, background: done ? "#2dd4bf" : "transparent", borderColor: done ? "#2dd4bf" : "#333", flexShrink: 0 }} onClick={() => toggleMedication(med.id, today)}>{done ? "✓" : ""}</button>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, textDecoration: done ? "line-through" : "none", opacity: done ? 0.5 : 1 }}>{med.name}</div>
+                          <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{med.time && <span style={{ marginRight: 8, fontFamily: "monospace" }}>{fmtTime(med.time)}</span>}{med.notes}</div>
+                        </div>
+                        <button style={{ ...S.linkBtn, fontSize: 11 }} onClick={() => { setMedDraft({ name: med.name, time: med.time || "", days: med.days || [], notes: med.notes || "" }); setEditMedId(med.id); }}>Edit</button>
+                        <button style={S.deleteBtn} onClick={() => upd({ medications: medications.filter(m => m.id !== med.id) })}>×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {medDraft && (
+                  <div style={{ ...S.card, borderColor: "rgba(45,212,191,0.3)" }}>
+                    <div style={{ fontSize: 12, color: "#2dd4bf", fontWeight: 600, marginBottom: 12 }}>{editMedId ? "Edit" : "Add"} medication</div>
+                    <input style={S.input} placeholder="Name (e.g. Vitamin D, 500mg Metformin…)" value={medDraft.name} onChange={e => setMedDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+                      <div style={S.formRow}><label style={S.formLabel}>Time (optional)</label><input type="time" style={S.input} value={medDraft.time || ""} onChange={e => setMedDraft(d => ({ ...d, time: e.target.value }))} /></div>
+                      <div style={S.formRow}><label style={S.formLabel}>Notes (dosage etc.)</label><input style={S.input} placeholder="e.g. 500mg with food" value={medDraft.notes || ""} onChange={e => setMedDraft(d => ({ ...d, notes: e.target.value }))} /></div>
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ ...S.formLabel, marginBottom: 6 }}>Days (blank = every day)</div>
+                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                        {DAY_NAMES.map(day => <button key={day} style={{ ...S.catBtn, borderColor: medDraft.days.includes(day) ? "#2dd4bf" : "#222", color: medDraft.days.includes(day) ? "#2dd4bf" : "#444", background: medDraft.days.includes(day) ? "rgba(45,212,191,0.1)" : "transparent" }} onClick={() => setMedDraft(d => ({ ...d, days: d.days.includes(day) ? d.days.filter(x => x !== day) : [...d.days, day] }))}>{day}</button>)}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                      <button style={{ ...S.primaryBtn, flex: 1, background: "#2dd4bf", color: "#0d1f17" }} onClick={saveMedication}>Save</button>
+                      <button style={{ ...S.primaryBtn, flex: 1, background: "#1a1a1e", color: "#666" }} onClick={() => { setMedDraft(null); setEditMedId(null); }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+                {medications.length > 0 && (
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>7-day adherence</div>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead><tr><td style={{ fontSize: 10, color: "#333", padding: "3px 6px 6px 0", width: 90 }} />{Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return <td key={i} style={{ fontSize: 9, color: "#444", textAlign: "center", padding: "3px 4px" }}>{DAY_NAMES[d.getDay()].slice(0,1)}</td>; })}</tr></thead>
+                        <tbody>{medications.map(med => <tr key={med.id}><td style={{ fontSize: 11, color: "#666", padding: "4px 6px 4px 0", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{med.name}</td>{Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(12,0,0,0); const ds = d.toISOString().split("T")[0]; const taken = (medicationLogs[ds] || []).includes(med.id); const isT = ds === today; return <td key={i} style={{ textAlign: "center", padding: "4px" }}><div style={{ width: 14, height: 14, borderRadius: "50%", background: taken ? "#2dd4bf" : "#161618", border: `1px solid ${isT ? "#2dd4bf44" : "transparent"}`, margin: "0 auto", cursor: isT ? "pointer" : "default" }} onClick={() => isT && toggleMedication(med.id, today)} /></td>; })}</tr>)}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>)}
+
+              {/* ── Exercise tab ── */}
+              {healthTab === "exercise" && (<>
+                <div style={S.card}>
+                  <div style={S.cardLabel}>This week</div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Volume</div><div style={{ ...S.sleepTargetVal, color: "#34d399" }}>{fmtDur(thisWeekExerciseMins)}</div></div>
+                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Sessions</div><div style={{ ...S.sleepTargetVal, color: "#34d399" }}>{weekExSessions}</div></div>
+                  </div>
+                </div>
+                {exerciseDraft ? (
+                  <div style={{ ...S.card, borderColor: "rgba(52,211,153,0.3)" }}>
+                    <div style={{ fontSize: 12, color: "#34d399", fontWeight: 600, marginBottom: 12 }}>Log exercise</div>
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ ...S.formLabel, marginBottom: 6 }}>Category</div>
+                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                        {EXERCISE_CATS.map(cat => <button key={cat} style={{ ...S.catBtn, borderColor: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] : "#222", color: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] : "#444", background: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] + "18" : "transparent" }} onClick={() => setExerciseDraft(d => ({ ...d, category: cat }))}>{cat}</button>)}
+                      </div>
+                    </div>
+                    <input style={S.input} placeholder="Type (e.g. running, bench press, yoga…)" value={exerciseDraft.type || ""} onChange={e => setExerciseDraft(d => ({ ...d, type: e.target.value }))} />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+                      <div style={S.formRow}><label style={S.formLabel}>Duration (min)</label><input type="number" min="1" style={S.input} value={exerciseDraft.durationMins || ""} onChange={e => setExerciseDraft(d => ({ ...d, durationMins: e.target.value }))} /></div>
+                      <div style={S.formRow}><label style={S.formLabel}>Date</label><input type="date" style={S.input} max={today} value={exerciseDraft.date || today} onChange={e => setExerciseDraft(d => ({ ...d, date: e.target.value }))} /></div>
+                    </div>
+                    <div style={{ marginTop: 10, ...S.formRow }}><label style={S.formLabel}>Notes (optional)</label><input style={S.input} placeholder="e.g. 3×10 at 80kg, felt strong…" value={exerciseDraft.notes || ""} onChange={e => setExerciseDraft(d => ({ ...d, notes: e.target.value }))} /></div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                      <button style={{ ...S.primaryBtn, flex: 1 }} onClick={addExerciseLog}>Log</button>
+                      <button style={{ ...S.primaryBtn, flex: 1, background: "#1a1a1e", color: "#666" }} onClick={() => setExerciseDraft(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button style={{ ...S.primaryBtn, background: "transparent", border: "1px dashed #34d39955", color: "#34d399", marginBottom: 10 }} onClick={() => setExerciseDraft({ type: "", category: "cardio", durationMins: "", date: today, notes: "" })}>+ Log exercise</button>
+                )}
+                <div style={S.card}>
+                  <div style={S.cardLabel}>History</div>
+                  {exerciseLogs.length === 0 ? <div style={S.empty}>No exercise logged yet.</div> : [...exerciseLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 50).map(entry => {
+                    const col = EXERCISE_CAT_HEX[entry.category] || "#34d399";
+                    return (
+                      <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "0.5px solid #111" }}>
+                        <div style={{ width: 4, alignSelf: "stretch", background: col, borderRadius: 2, flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13 }}>{entry.type}</div>
+                          <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{entry.category} · {fmtDur(entry.durationMins)}{entry.notes && ` · ${entry.notes}`}</div>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#444" }}>{new Date(entry.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
+                        <button style={S.deleteBtn} onClick={() => upd({ exerciseLogs: exerciseLogs.filter(x => x.id !== entry.id) })}>×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>)}
+
+              {/* ── Body tab ── */}
+              {healthTab === "body" && (<>
+                {latestMetric && (
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>Current weight</div>
+                    <div style={{ fontSize: 36, fontWeight: 700, fontFamily: "monospace", color: accentColor, lineHeight: 1 }}>{latestMetric.weight}<span style={{ fontSize: 14, color: "#444", marginLeft: 5 }}>{latestMetric.unit}</span></div>
+                    <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>Logged {new Date(latestMetric.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "long" })}</div>
+                  </div>
+                )}
+                {bodyMetrics.length >= 2 && (
+                  <div style={S.card}><div style={S.cardLabel}>Trend — last 30 days</div><LineChart data={last30Weight} height={110} /></div>
+                )}
+                {metricDraft ? (
+                  <div style={{ ...S.card, borderColor: accentColor + "44" }}>
+                    <div style={{ fontSize: 12, color: accentColor, fontWeight: 600, marginBottom: 12 }}>Log weight</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div style={S.formRow}><label style={S.formLabel}>Weight</label><input type="number" step="0.1" min="0" style={S.input} placeholder="e.g. 75.5" value={metricDraft.weight || ""} onChange={e => setMetricDraft(d => ({ ...d, weight: e.target.value }))} autoFocus /></div>
+                      <div style={S.formRow}><label style={S.formLabel}>Unit</label><div style={{ display: "flex", gap: 5, marginTop: 2 }}>{["kg","lbs"].map(u => <button key={u} style={{ ...S.catBtn, flex: 1, borderColor: metricDraft.unit === u ? accentColor : "#222", color: metricDraft.unit === u ? accentColor : "#444", background: metricDraft.unit === u ? accentColor + "18" : "transparent" }} onClick={() => setMetricDraft(d => ({ ...d, unit: u }))}>{u}</button>)}</div></div>
+                    </div>
+                    <div style={{ marginTop: 10, ...S.formRow }}><label style={S.formLabel}>Date</label><input type="date" style={S.input} max={today} value={metricDraft.date || today} onChange={e => setMetricDraft(d => ({ ...d, date: e.target.value }))} /></div>
+                    <div style={{ marginTop: 10, ...S.formRow }}><label style={S.formLabel}>Notes (optional)</label><input style={S.input} placeholder="e.g. morning, after gym…" value={metricDraft.notes || ""} onChange={e => setMetricDraft(d => ({ ...d, notes: e.target.value }))} /></div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                      <button style={{ ...S.primaryBtn, flex: 1 }} onClick={addBodyMetric}>Save</button>
+                      <button style={{ ...S.primaryBtn, flex: 1, background: "#1a1a1e", color: "#666" }} onClick={() => setMetricDraft(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button style={{ ...S.primaryBtn, background: "transparent", border: `1px dashed ${accentColor}55`, color: accentColor, marginBottom: 10 }} onClick={() => setMetricDraft({ weight: "", unit: "kg", date: today, notes: "" })}>+ Log weight</button>
+                )}
+                {bodyMetrics.length > 0 && (
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>History</div>
+                    {[...bodyMetrics].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 50).map((entry, i, arr) => {
+                      const prev = arr[i + 1];
+                      const delta = prev && prev.unit === entry.unit ? entry.weight - prev.weight : null;
+                      return (
+                        <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "0.5px solid #111" }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "monospace" }}>{entry.weight} {entry.unit}</div>
+                            {entry.notes && <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>{entry.notes}</div>}
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: 11, color: "#444" }}>{new Date(entry.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
+                            {delta !== null && <div style={{ fontSize: 10, color: delta < 0 ? "#34d399" : delta > 0 ? "#f87171" : "#555", marginTop: 1 }}>{delta > 0 ? "+" : ""}{delta.toFixed(1)}</div>}
+                          </div>
+                          <button style={S.deleteBtn} onClick={() => upd({ bodyMetrics: bodyMetrics.filter(x => x.id !== entry.id) })}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>)}
             </div>
           );
         })()}
