@@ -649,14 +649,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let initialDone = false;
     supabase.auth.getSession().then(({ data: { session: s } }) => {
+      initialDone = true;
       setSession(s);
       if (s) loadFromSupabase(s);
       else setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      if (!s) setAuthLoading(false);
+      if (s) {
+        // On initial load getSession already handles it; only act on subsequent sign-ins
+        if (initialDone) { setAuthLoading(true); loadFromSupabase(s); }
+      } else {
+        setAuthLoading(false);
+      }
     });
     return () => subscription.unsubscribe();
   }, [loadFromSupabase]);
