@@ -626,6 +626,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    document.body.style.overflow = (isMobile && sidebarOpen) ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobile, sidebarOpen]);
+
+  useEffect(() => {
     const pkg = FONT_PACKAGES.find(f => f.id === theme.font) || FONT_PACKAGES[0];
     if (pkg.url) {
       let link = document.getElementById("r-font-link");
@@ -1024,7 +1029,7 @@ export default function App() {
         </div>
 
         {/* Nav groups */}
-        <nav style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0" }}>
+        <nav style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>
           {navGroups.map((group, gi) => (
             <div key={gi} style={{ marginBottom: 4 }}>
               {group.label && <div style={{ fontSize: 10, fontWeight: 600, color: "var(--r-fg2)", letterSpacing: "0.1em", padding: "10px 8px 4px", opacity: 0.6 }}>{group.label}</div>}
@@ -2880,7 +2885,7 @@ const S = {
   navBtn: { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "7px 10px", borderRadius: 7, border: "none", background: "transparent", color: "var(--r-fg2,#555)", fontSize: 13, cursor: "pointer", marginBottom: 1, textAlign: "left", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", transition: "background 0.15s" },
   navIcon: { fontSize: 13, width: 18, textAlign: "center", flexShrink: 0 },
   main: { flex: 1, overflow: "auto", minWidth: 0 },
-  content: { maxWidth: 1200, margin: "0 auto", padding: "28px 28px" },
+  content: { padding: "28px 32px" },
   pageTitle: { fontSize: 22, fontWeight: 700, marginBottom: 0, letterSpacing: "-0.03em" },
   panicBtn: { display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "8px 14px", cursor: "pointer" },
   statGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 },
