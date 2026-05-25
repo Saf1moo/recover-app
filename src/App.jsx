@@ -25,6 +25,8 @@ const accountDefaults = () => ({
   goals: [], reminders: [],
   postRelapseActions: [],
   postRelapseReminders: [],
+  scheduleActivities: [],
+  scheduleCompletions: {},
 });
 
 function loadRoot() {
@@ -56,10 +58,10 @@ const BUILTIN_RELAPSE_TOOLS = [
   { id: "tipp", icon: "🧊", title: "TIPP skill (DBT)", desc: "Temperature, Intense exercise, Paced breathing, Progressive relaxation." },
 ];
 const DEFAULT_HABITS = () => [
-  { id: "h1", name: "Morning mindfulness", category: "mental", scheduledTime: "07:00", freq: "daily", completions: [] },
-  { id: "h2", name: "Exercise (30 min)", category: "physical", scheduledTime: "08:00", freq: "daily", completions: [] },
-  { id: "h3", name: "Peer support contact", category: "social", scheduledTime: "12:00", freq: "daily", completions: [] },
-  { id: "h4", name: "Journal entry", category: "mental", scheduledTime: "21:00", freq: "daily", completions: [] },
+  { id: "h1", name: "Morning mindfulness", category: "mental", days: [], scheduledTimes: ["07:00"], levelsEnabled: false, currentLevel: 1, levels: [], completions: [] },
+  { id: "h2", name: "Exercise (30 min)", category: "physical", days: [], scheduledTimes: ["08:00"], levelsEnabled: false, currentLevel: 1, levels: [], completions: [] },
+  { id: "h3", name: "Peer support contact", category: "social", days: [], scheduledTimes: ["12:00"], levelsEnabled: false, currentLevel: 1, levels: [], completions: [] },
+  { id: "h4", name: "Journal entry", category: "mental", days: [], scheduledTimes: ["21:00"], levelsEnabled: false, currentLevel: 1, levels: [], completions: [] },
 ];
 const DEFAULT_REWARDS = () => [
   { id: "r1", days: 7, name: "Buy yourself a coffee" }, { id: "r2", days: 14, name: "New book or album" },
@@ -82,6 +84,7 @@ const GOAL_PERIODS = ["daily", "weekly", "monthly", "yearly"];
 const GOAL_COLORS = { daily: "#34d399", weekly: "#60a5fa", monthly: "#a78bfa", yearly: "#f59e0b" };
 const ACCOUNT_COLORS = ["#34d399", "#60a5fa", "#a78bfa", "#f97316", "#f472b6", "#f59e0b", "#f87171", "#2dd4bf"];
 const PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
+const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 const getDaysSince = d => d ? Math.floor((new Date() - new Date(d)) / 864e5) : 0;
@@ -94,6 +97,33 @@ const sleepDur = (b, w) => { let bm = timeToMins(b), wm = timeToMins(w); if (wm 
 const fmtDur = m => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
 const fmtTime = t => { if (!t) return "—"; const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "pm" : "am"}`; };
 const scoreColor = s => s >= 80 ? "#34d399" : s >= 60 ? "#60a5fa" : s >= 40 ? "#f59e0b" : "#f87171";
+const getTodayDay = () => DAY_NAMES[new Date().getDay()];
+const getWeekCompletions = (completions, weekStart) => {
+  const end = new Date(weekStart + "T12:00"); end.setDate(end.getDate() + 6);
+  const endStr = end.toISOString().split("T")[0];
+  return (completions || []).filter(c => c >= weekStart && c <= endStr).length;
+};
+const normalizeHabit = h => ({
+  id: h.id, name: h.name, category: h.category || "custom",
+  days: h.days || [],
+  scheduledTimes: h.scheduledTimes || (h.scheduledTime ? [h.scheduledTime] : []),
+  levelsEnabled: h.levelsEnabled || false,
+  currentLevel: h.currentLevel || 1,
+  levels: h.levels || [],
+  completions: h.completions || [],
+});
+function recalcHabitLevel(habit) {
+  if (!habit.levelsEnabled || !habit.levels || !habit.levels.length) return habit;
+  const weekStart = getWeekStr();
+  const count = getWeekCompletions(habit.completions, weekStart);
+  let lvl = habit.currentLevel || 1;
+  const maxLvl = Math.max(...habit.levels.map(l => l.level));
+  const cfg = habit.levels.find(l => l.level === lvl);
+  if (!cfg) return habit;
+  if (lvl > 1 && cfg.downPerWeek != null && count < cfg.downPerWeek) lvl--;
+  else if (lvl < maxLvl && cfg.upPerWeek != null && count >= cfg.upPerWeek) lvl++;
+  return lvl !== habit.currentLevel ? { ...habit, currentLevel: lvl } : habit;
+}
 
 // ─── Scoring ─────────────────────────────────────────────────────────────────
 function calcSleepScore(bedtime, waketime, durationMins, targets) {
@@ -282,9 +312,11 @@ export default function App() {
   const [logWake, setLogWake] = useState("");
   const [editRt, setEditRt] = useState(false);
   const [rtDraft, setRtDraft] = useState(null);
-  const [newHabitName, setNHN] = useState("");
-  const [newHabitCat, setNHC] = useState("custom");
-  const [newHabitTime, setNHT] = useState("");
+  const [habitModal, setHabitModal] = useState(null);
+  const [editHabitId, setEditHabitId] = useState(null);
+  const [habitDraft, setHabitDraft] = useState(null);
+  const [schedActModal, setSchedActModal] = useState(false);
+  const [schedActDraft, setSchedActDraft] = useState(null);
   const [newGoalText, setNGT] = useState("");
   const [newGoalPeriod, setNGP] = useState(null);
   const [newRem, setNewRem] = useState("");
@@ -324,6 +356,15 @@ export default function App() {
   const sleepLogs = account?.sleepLogs || [];
   const prayerLogs = account?.prayerLogs || [];
   const habits = account?.habits || [];
+  const normalizedHabits = habits.map(normalizeHabit);
+  const todayDay = getTodayDay();
+  const weekStartStr = getWeekStr();
+  const scheduleActivities = account?.scheduleActivities || [];
+  const scheduleCompletions = account?.scheduleCompletions || {};
+  const todayHabits = normalizedHabits.filter(h => h.days.length === 0 || h.days.includes(todayDay));
+  const todayActivities = scheduleActivities.filter(a =>
+    a.type === "oneTime" ? a.date === getTodayStr() : (a.days.length === 0 || a.days.includes(todayDay))
+  );
   const goals = account?.goals || [];
   const reminders = account?.reminders || [];
   const postRelapseActions = account?.postRelapseActions || [];
@@ -336,8 +377,8 @@ export default function App() {
   const last7 = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
   const avgSleep = last7.length ? Math.round(last7.reduce((s, l) => s + l.durationMins, 0) / last7.length) : null;
   const avg7Score = last7.length ? Math.round(last7.reduce((s, l) => s + (l.score ?? calcSleepScore(l.bedtime, l.waketime, l.durationMins, routineTargets)), 0) / last7.length) : null;
-  const todayDone = habits.filter(h => (h.completions || []).includes(getTodayStr())).length;
-  const habitPct = habits.length ? Math.round(todayDone / habits.length * 100) : 0;
+  const todayDone = todayHabits.filter(h => h.completions.includes(getTodayStr())).length;
+  const habitPct = todayHabits.length ? Math.round(todayDone / todayHabits.length * 100) : 0;
   const claimed = account?.claimedRewards || [];
   const availRew = (account?.rewards || []).filter(r => daysSober >= r.days && !claimed.includes(r.id));
 
@@ -397,12 +438,14 @@ export default function App() {
     notifRef.current.forEach(clearTimeout);
     notifRef.current = [];
     if (!account) return;
-    habits.forEach(h => {
-      if (!h.scheduledTime) return;
-      const [hh, mm] = h.scheduledTime.split(":").map(Number);
-      const t = new Date(); t.setHours(hh, mm, 0, 0);
-      if (t < new Date()) t.setDate(t.getDate() + 1);
-      notifRef.current.push(setTimeout(() => sendNotif(`⏰ ${h.name}`, "Your scheduled habit is due."), t - new Date()));
+    normalizedHabits.forEach(h => {
+      (h.scheduledTimes || []).forEach(st => {
+        if (!st) return;
+        const [hh, mm] = st.split(":").map(Number);
+        const t = new Date(); t.setHours(hh, mm, 0, 0);
+        if (t < new Date()) t.setDate(t.getDate() + 1);
+        notifRef.current.push(setTimeout(() => sendNotif(`⏰ ${h.name}`, "Your scheduled habit is due."), t - new Date()));
+      });
     });
     const [bh, bm] = routineTargets.bedtime.split(":").map(Number);
     const bt = new Date(); bt.setHours(bh, bm - 30, 0, 0);
@@ -441,8 +484,68 @@ export default function App() {
   const completedToday = id => (habits.find(h => h.id === id)?.completions || []).includes(getTodayStr());
   const toggleHabit = id => {
     const today = getTodayStr();
-    upd({ habits: habits.map(h => { if (h.id !== id) return h; const c = h.completions || []; return { ...h, completions: c.includes(today) ? c.filter(d => d !== today) : [...c, today] }; }) });
+    upd({ habits: habits.map(h => {
+      if (h.id !== id) return h;
+      const norm = normalizeHabit(h);
+      const c = norm.completions;
+      const updated = { ...norm, completions: c.includes(today) ? c.filter(d => d !== today) : [...c, today] };
+      return recalcHabitLevel(updated);
+    }) });
   };
+  function openAddHabit() {
+    setHabitDraft({ name: "", category: "custom", days: [], scheduledTimes: [], levelsEnabled: false, currentLevel: 1, levels: [] });
+    setEditHabitId(null);
+    setHabitModal("add");
+  }
+  function openEditHabit(h) {
+    setHabitDraft({ ...normalizeHabit(h) });
+    setEditHabitId(h.id);
+    setHabitModal("edit");
+  }
+  function saveHabit() {
+    if (!habitDraft?.name?.trim()) return;
+    if (habitModal === "add") {
+      const h = { ...habitDraft, id: "h" + Date.now(), name: habitDraft.name.trim(), completions: [] };
+      upd({ habits: [...habits, h] });
+    } else {
+      upd({ habits: habits.map(x => x.id === editHabitId ? { ...habitDraft, name: habitDraft.name.trim() } : x) });
+    }
+    setHabitModal(null); setHabitDraft(null); setEditHabitId(null);
+  }
+  function addHabitLevel() {
+    const next = (habitDraft.levels.length ? Math.max(...habitDraft.levels.map(l => l.level)) : 0) + 1;
+    setHabitDraft(d => ({ ...d, levels: [...d.levels, { level: next, name: "", description: "", upPerWeek: 3, downPerWeek: 1 }] }));
+  }
+  function removeHabitLevel(lvl) {
+    setHabitDraft(d => ({
+      ...d,
+      levels: d.levels.filter(l => l.level !== lvl).map((l, i) => ({ ...l, level: i + 1 })),
+    }));
+  }
+  function updateHabitLevel(idx, key, val) {
+    setHabitDraft(d => ({ ...d, levels: d.levels.map((l, i) => i === idx ? { ...l, [key]: val } : l) }));
+  }
+  function toggleLevelsEnabled(on) {
+    setHabitDraft(d => ({
+      ...d, levelsEnabled: on,
+      levels: on && !d.levels.length ? [{ level: 1, name: "", description: "", upPerWeek: 3, downPerWeek: null }] : d.levels,
+    }));
+  }
+  function addSchedActivity() {
+    if (!schedActDraft?.name?.trim()) return;
+    const act = { ...schedActDraft, id: "sa" + Date.now(), name: schedActDraft.name.trim() };
+    upd({ scheduleActivities: [...scheduleActivities, act] });
+    setSchedActModal(false); setSchedActDraft(null);
+  }
+  function deleteSchedActivity(id) {
+    upd({ scheduleActivities: scheduleActivities.filter(a => a.id !== id) });
+  }
+  function toggleSchedActivity(id) {
+    const today = getTodayStr();
+    const dayComps = { ...(scheduleCompletions[today] || {}) };
+    dayComps[id] = !dayComps[id];
+    upd({ scheduleCompletions: { ...scheduleCompletions, [today]: dayComps } });
+  }
   const toggleGoal = id => {
     const g = goals.find(g => g.id === id); if (!g) return;
     const key = getPeriodKey(g.period); const done = g.done || [];
@@ -466,11 +569,6 @@ export default function App() {
     setModal(null); setLogBed(""); setLogWake("");
   }
 
-  function addHabit() {
-    if (!newHabitName.trim()) return;
-    upd({ habits: [...habits, { id: "h" + Date.now(), name: newHabitName.trim(), category: newHabitCat, scheduledTime: newHabitTime || null, freq: "daily", completions: [] }] });
-    setNHN(""); setNHT("");
-  }
   function addGoal() { if (!newGoalText.trim()) return; upd({ goals: [...goals, { id: "g" + Date.now(), text: newGoalText.trim(), period: newGoalPeriod, done: [], createdAt: new Date().toISOString() }] }); setNGT(""); setNGP(null); }
   function addReminder() { if (!newRem.trim()) return; upd({ reminders: [...reminders, { id: "rem" + Date.now(), text: newRem.trim() }] }); setNewRem(""); }
   function addPostAction() { if (!newPostAction.trim()) return; upd({ postRelapseActions: [...postRelapseActions, { id: "pa" + Date.now(), text: newPostAction.trim() }] }); setNewPostAction(""); }
@@ -517,16 +615,26 @@ export default function App() {
   if (!account) return null;
   const accentColor = account.color || "#34d399";
 
-  const sortedHabits = [...habits].sort((a, b) => {
-    if (!a.scheduledTime && !b.scheduledTime) return 0;
-    if (!a.scheduledTime) return 1; if (!b.scheduledTime) return -1;
-    return a.scheduledTime.localeCompare(b.scheduledTime);
+  const sortedTodayHabits = [...todayHabits].sort((a, b) => {
+    const ta = a.scheduledTimes[0] || null;
+    const tb = b.scheduledTimes[0] || null;
+    if (!ta && !tb) return 0;
+    if (!ta) return 1; if (!tb) return -1;
+    return ta.localeCompare(tb);
+  });
+  const sortedTodayActivities = [...todayActivities].sort((a, b) => {
+    const ta = a.times?.[0] || a.time || null;
+    const tb = b.times?.[0] || b.time || null;
+    if (!ta && !tb) return 0;
+    if (!ta) return 1; if (!tb) return -1;
+    return ta.localeCompare(tb);
   });
 
   const navItems = [
     { id: "dashboard", icon: "◉", label: "Dashboard" },
     { id: "routine", icon: "🌙", label: "Routine" },
     { id: "habits", icon: "☑", label: "Habits" },
+    { id: "schedule", icon: "📅", label: "Schedule" },
     { id: "goals", icon: "◎", label: "Goals" },
     { id: "relapse", icon: "⚡", label: "Relapse" },
     { id: "rewards", icon: "★", label: "Rewards" },
@@ -936,12 +1044,167 @@ export default function App() {
         {/* ════ HABITS ════ */}
         {view === "habits" && (
           <div style={S.content}>
-            <h2 style={S.pageTitle}>Habits &amp; schedule</h2>
-            <div style={S.card}><div style={S.cardLabel}>Today — {new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</div><div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{todayDone} / {habits.length} done</div><div style={S.bigProgressBg}><div style={{ ...S.bigProgressBar, width: `${habitPct}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div></div>
-            <div style={S.card}><div style={S.cardLabel}>Today's schedule</div>{sortedHabits.length === 0 ? <div style={S.empty}>Add habits below.</div> : sortedHabits.map(h => { const done = completedToday(h.id); const col = CAT_HEX[h.category] || "#a78bfa"; return (<div key={h.id} style={{ ...S.scheduleRow, borderLeftColor: col, opacity: done ? 0.5 : 1 }}><div style={{ width: 54, flexShrink: 0, textAlign: "right", paddingRight: 10 }}>{h.scheduledTime ? <span style={{ fontSize: 11, color: done ? "#444" : col, fontFamily: "monospace", fontWeight: 600 }}>{fmtTime(h.scheduledTime)}</span> : <span style={{ fontSize: 10, color: "#333" }}>—</span>}</div><div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 500, textDecoration: done ? "line-through" : "none" }}>{h.name}</div><div style={{ fontSize: 10, color: col, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 1 }}>{h.category}</div></div><div style={{ display: "flex", gap: 6 }}><button style={{ ...S.checkBtn, background: done ? "#34d399" : "transparent", borderColor: done ? "#34d399" : "#333" }} onClick={() => toggleHabit(h.id)}>{done ? "✓" : ""}</button><button style={S.deleteBtn} onClick={() => upd({ habits: habits.filter(x => x.id !== h.id) })}>×</button></div></div>); })}</div>
-            <div style={S.card}><div style={S.cardLabel}>Add a habit</div><input style={S.input} placeholder="Habit name…" value={newHabitName} onChange={e => setNHN(e.target.value)} /><div style={{ marginTop: 10 }}><div style={{ fontSize: 10, color: "#444", marginBottom: 4 }}>Scheduled time (optional)</div><input type="time" style={{ ...S.input }} value={newHabitTime} onChange={e => setNHT(e.target.value)} /></div><div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>{Object.keys(CAT_HEX).map(cat => (<button key={cat} style={{ ...S.catBtn, background: newHabitCat === cat ? CAT_HEX[cat] + "33" : "transparent", borderColor: CAT_HEX[cat], color: CAT_HEX[cat] }} onClick={() => setNHC(cat)}>{cat}</button>))}</div><button style={{ ...S.primaryBtn, marginTop: 12 }} onClick={addHabit}>Add to schedule</button></div>
+            <h2 style={S.pageTitle}>Habits</h2>
+            <div style={S.card}>
+              <div style={S.cardLabel}>Today — {new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{todayDone} / {todayHabits.length} done today</div>
+              <div style={S.bigProgressBg}><div style={{ ...S.bigProgressBar, width: `${habitPct}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
+            </div>
+            {normalizedHabits.length === 0 ? (
+              <div style={S.card}><div style={S.empty}>No habits yet. Add one below.</div></div>
+            ) : normalizedHabits.map(h => {
+              const col = CAT_HEX[h.category] || "#a78bfa";
+              const weekCount = getWeekCompletions(h.completions, weekStartStr);
+              const lvlCfg = h.levelsEnabled ? h.levels.find(l => l.level === h.currentLevel) : null;
+              return (
+                <div key={h.id} style={{ ...S.card, borderLeft: `3px solid ${col}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</span>
+                        {h.levelsEnabled && <span style={{ fontSize: 10, color: "#a78bfa", background: "rgba(167,139,250,0.12)", border: "0.5px solid rgba(167,139,250,0.3)", padding: "1px 7px", borderRadius: 10 }}>Lv.{h.currentLevel}</span>}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
+                        <span style={{ fontSize: 10, color: col, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h.category}</span>
+                        {h.days.length > 0 && <span style={{ fontSize: 10, color: "#555" }}>{h.days.join(" · ")}</span>}
+                        {h.days.length === 0 && <span style={{ fontSize: 10, color: "#3a3a3a" }}>every day</span>}
+                        {h.scheduledTimes.length > 0 && <span style={{ fontSize: 10, color: "#555", fontFamily: "monospace" }}>{h.scheduledTimes.map(fmtTime).join(", ")}</span>}
+                      </div>
+                      {h.levelsEnabled && lvlCfg && (
+                        <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
+                          {lvlCfg.description && <span style={{ marginRight: 8 }}>{lvlCfg.description}</span>}
+                          {lvlCfg.upPerWeek != null && (
+                            <span style={{ color: weekCount >= lvlCfg.upPerWeek ? "#34d399" : lvlCfg.downPerWeek != null && weekCount < lvlCfg.downPerWeek ? "#f87171" : "#60a5fa" }}>
+                              {weekCount}/{lvlCfg.upPerWeek} this week
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 10 }}>
+                      <button style={S.linkBtn} onClick={() => openEditHabit(h)}>Edit</button>
+                      <button style={S.deleteBtn} onClick={() => upd({ habits: habits.filter(x => x.id !== h.id) })}>×</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <button style={{ ...S.primaryBtn, marginTop: 4 }} onClick={openAddHabit}>+ Add habit</button>
           </div>
         )}
+
+        {/* ════ SCHEDULE ════ */}
+        {view === "schedule" && (() => {
+          const todayStr = getTodayStr();
+          const totalItems = sortedTodayHabits.length + sortedTodayActivities.length;
+          const doneHabits = sortedTodayHabits.filter(h => h.completions.includes(todayStr)).length;
+          const doneActs = sortedTodayActivities.filter(a => (scheduleCompletions[todayStr] || {})[a.id]).length;
+          const totalDone = doneHabits + doneActs;
+          const pct = totalItems ? Math.round(totalDone / totalItems * 100) : 0;
+          return (
+            <div style={S.content}>
+              <h2 style={S.pageTitle}>Schedule</h2>
+              <div style={S.card}>
+                <div style={S.cardLabel}>Today — {new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{totalDone} / {totalItems} done</div>
+                <div style={S.bigProgressBg}><div style={{ ...S.bigProgressBar, width: `${pct}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
+              </div>
+
+              {/* Habits today */}
+              <div style={S.card}>
+                <div style={S.cardLabel}>Habits</div>
+                {sortedTodayHabits.length === 0 ? (
+                  <div style={S.empty}>No habits scheduled for today. <button style={S.linkBtn} onClick={() => setView("habits")}>Add habits →</button></div>
+                ) : sortedTodayHabits.map(h => {
+                  const done = h.completions.includes(todayStr);
+                  const col = CAT_HEX[h.category] || "#a78bfa";
+                  const weekCount = getWeekCompletions(h.completions, weekStartStr);
+                  const lvlCfg = h.levelsEnabled ? h.levels.find(l => l.level === h.currentLevel) : null;
+                  const upReady = lvlCfg?.upPerWeek != null && weekCount >= lvlCfg.upPerWeek;
+                  const downRisk = lvlCfg?.downPerWeek != null && weekCount < lvlCfg.downPerWeek;
+                  return (
+                    <div key={h.id} style={{ ...S.scheduleRow, borderLeftColor: col, opacity: done ? 0.45 : 1 }}>
+                      <div style={{ width: 54, flexShrink: 0, textAlign: "right", paddingRight: 10 }}>
+                        {h.scheduledTimes[0]
+                          ? <span style={{ fontSize: 11, color: done ? "#444" : col, fontFamily: "monospace", fontWeight: 600 }}>{fmtTime(h.scheduledTimes[0])}</span>
+                          : <span style={{ fontSize: 10, color: "#333" }}>—</span>}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, textDecoration: done ? "line-through" : "none" }}>{h.name}</span>
+                          {h.levelsEnabled && <span style={{ fontSize: 9, color: "#a78bfa", background: "rgba(167,139,250,0.12)", padding: "1px 5px", borderRadius: 8 }}>Lv.{h.currentLevel}</span>}
+                        </div>
+                        {h.levelsEnabled && lvlCfg && (
+                          <div style={{ fontSize: 10, marginTop: 2, color: upReady ? "#34d399" : downRisk ? "#f87171" : "#555" }}>
+                            {weekCount}/{lvlCfg.upPerWeek ?? "?"} this week
+                            {upReady && " · ready to level up!"}
+                            {downRisk && " · at risk of drop"}
+                          </div>
+                        )}
+                      </div>
+                      <button style={{ ...S.checkBtn, background: done ? "#34d399" : "transparent", borderColor: done ? "#34d399" : "#333", flexShrink: 0 }} onClick={() => toggleHabit(h.id)}>{done ? "✓" : ""}</button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Custom activities */}
+              <div style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={S.cardLabel}>Activities</div>
+                  <button style={S.linkBtn} onClick={() => { setSchedActDraft({ name: "", type: "recurring", days: [], times: [], date: getTodayStr(), time: "" }); setSchedActModal(true); }}>+ Add</button>
+                </div>
+                {sortedTodayActivities.length === 0 ? (
+                  <div style={S.empty}>No activities for today.</div>
+                ) : sortedTodayActivities.map(act => {
+                  const done = (scheduleCompletions[todayStr] || {})[act.id] || false;
+                  const t = act.times?.[0] || act.time || null;
+                  return (
+                    <div key={act.id} style={{ ...S.scheduleRow, borderLeftColor: "#60a5fa", opacity: done ? 0.45 : 1 }}>
+                      <div style={{ width: 54, flexShrink: 0, textAlign: "right", paddingRight: 10 }}>
+                        {t ? <span style={{ fontSize: 11, color: done ? "#444" : "#60a5fa", fontFamily: "monospace", fontWeight: 600 }}>{fmtTime(t)}</span>
+                           : <span style={{ fontSize: 10, color: "#333" }}>—</span>}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, textDecoration: done ? "line-through" : "none" }}>{act.name}</div>
+                        <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>
+                          {act.type === "oneTime" ? "one-time" : act.days.length === 0 ? "daily" : act.days.join(" · ")}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <button style={{ ...S.checkBtn, background: done ? "#34d399" : "transparent", borderColor: done ? "#34d399" : "#333" }} onClick={() => toggleSchedActivity(act.id)}>{done ? "✓" : ""}</button>
+                        <button style={S.deleteBtn} onClick={() => deleteSchedActivity(act.id)}>×</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* All custom activities (manage) */}
+              {scheduleActivities.length > 0 && (() => {
+                const recurring = scheduleActivities.filter(a => a.type === "recurring");
+                const oneTime = scheduleActivities.filter(a => a.type === "oneTime");
+                return (
+                  <div style={S.card}>
+                    <div style={S.cardLabel}>All activities</div>
+                    {[...recurring, ...oneTime].map(act => (
+                      <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "0.5px solid #111" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13 }}>{act.name}</div>
+                          <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>
+                            {act.type === "oneTime" ? `one-time · ${act.date}` : act.days.length === 0 ? "daily" : act.days.join(" · ")}
+                            {(act.times?.[0] || act.time) && ` · ${fmtTime(act.times?.[0] || act.time)}`}
+                          </div>
+                        </div>
+                        <button style={S.deleteBtn} onClick={() => deleteSchedActivity(act.id)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })()}
 
         {/* ════ GOALS ════ */}
         {view === "goals" && (
@@ -1143,6 +1406,157 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* ── Habit add/edit modal ── */}
+      {habitModal && habitDraft && (
+        <div style={S.overlay} onClick={() => setHabitModal(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>{habitModal === "add" ? "Add habit" : "Edit habit"}</div>
+
+            <div style={S.formRow}>
+              <label style={S.formLabel}>Name</label>
+              <input style={S.input} placeholder="Habit name…" value={habitDraft.name} onChange={e => setHabitDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ ...S.formLabel, marginBottom: 6 }}>Category</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {Object.keys(CAT_HEX).map(cat => (
+                  <button key={cat} style={{ ...S.catBtn, background: habitDraft.category === cat ? CAT_HEX[cat] + "33" : "transparent", borderColor: CAT_HEX[cat], color: CAT_HEX[cat] }} onClick={() => setHabitDraft(d => ({ ...d, category: cat }))}>{cat}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ ...S.formLabel, marginBottom: 6 }}>Days (leave blank = every day)</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {DAY_NAMES.map(day => (
+                  <button key={day} style={{ ...S.catBtn, borderColor: habitDraft.days.includes(day) ? accentColor : "#222", color: habitDraft.days.includes(day) ? accentColor : "#444", background: habitDraft.days.includes(day) ? accentColor + "22" : "transparent" }}
+                    onClick={() => setHabitDraft(d => ({ ...d, days: d.days.includes(day) ? d.days.filter(x => x !== day) : [...d.days, day] }))}>
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ ...S.formLabel, marginBottom: 6 }}>Scheduled times (optional)</div>
+              {habitDraft.scheduledTimes.map((t, idx) => (
+                <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                  <input type="time" style={{ ...S.input, flex: 1 }} value={t} onChange={e => setHabitDraft(d => ({ ...d, scheduledTimes: d.scheduledTimes.map((x, i) => i === idx ? e.target.value : x) }))} />
+                  <button style={S.deleteBtn} onClick={() => setHabitDraft(d => ({ ...d, scheduledTimes: d.scheduledTimes.filter((_, i) => i !== idx) }))}>×</button>
+                </div>
+              ))}
+              <button style={{ ...S.linkBtn, fontSize: 12 }} onClick={() => setHabitDraft(d => ({ ...d, scheduledTimes: [...d.scheduledTimes, ""] }))}>+ Add time</button>
+            </div>
+
+            <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
+              <button style={{ ...S.catBtn, borderColor: habitDraft.levelsEnabled ? "#a78bfa" : "#222", color: habitDraft.levelsEnabled ? "#a78bfa" : "#444", background: habitDraft.levelsEnabled ? "rgba(167,139,250,0.12)" : "transparent", padding: "6px 14px" }}
+                onClick={() => toggleLevelsEnabled(!habitDraft.levelsEnabled)}>
+                {habitDraft.levelsEnabled ? "✓ Levels on" : "Enable levels"}
+              </button>
+              <span style={{ fontSize: 11, color: "#333" }}>build intensity progressively</span>
+            </div>
+
+            {habitDraft.levelsEnabled && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ ...S.formLabel, marginBottom: 8 }}>Levels</div>
+                {habitDraft.levels.map((lvl, idx) => {
+                  const isLast = idx === habitDraft.levels.length - 1;
+                  return (
+                    <div key={lvl.level} style={{ background: "#060608", border: "0.5px solid #1a1a1e", borderRadius: 9, padding: "12px", marginBottom: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>Level {lvl.level}</span>
+                        {habitDraft.levels.length > 1 && <button style={S.deleteBtn} onClick={() => removeHabitLevel(lvl.level)}>×</button>}
+                      </div>
+                      <input style={{ ...S.input, marginBottom: 6 }} placeholder="Level name (optional, e.g. Starter)" value={lvl.name} onChange={e => updateHabitLevel(idx, "name", e.target.value)} />
+                      <input style={{ ...S.input, marginBottom: 8 }} placeholder="What to do at this level…" value={lvl.description} onChange={e => updateHabitLevel(idx, "description", e.target.value)} />
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {!isLast && (
+                          <div style={S.formRow}>
+                            <label style={S.formLabel}>Level up: min/week</label>
+                            <input type="number" min="1" style={S.input} value={lvl.upPerWeek ?? ""} onChange={e => updateHabitLevel(idx, "upPerWeek", e.target.value !== "" ? Number(e.target.value) : null)} />
+                          </div>
+                        )}
+                        {idx > 0 && (
+                          <div style={S.formRow}>
+                            <label style={S.formLabel}>Level down: drop below/week</label>
+                            <input type="number" min="0" style={S.input} value={lvl.downPerWeek ?? ""} onChange={e => updateHabitLevel(idx, "downPerWeek", e.target.value !== "" ? Number(e.target.value) : null)} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                <button style={{ ...S.primaryBtn, background: "#161618", color: "#a78bfa", border: "0.5px solid rgba(167,139,250,0.25)", marginTop: 2 }} onClick={addHabitLevel}>+ Add level</button>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button style={{ ...S.primaryBtn, flex: 1 }} onClick={saveHabit} disabled={!habitDraft.name.trim()}>
+                {habitModal === "add" ? "Add habit" : "Save changes"}
+              </button>
+              <button style={{ ...S.primaryBtn, flex: 1, background: "#1a1a1e", color: "#666" }} onClick={() => setHabitModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Schedule activity modal ── */}
+      {schedActModal && schedActDraft && (
+        <div style={S.overlay} onClick={() => setSchedActModal(false)}>
+          <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>Add activity</div>
+
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {[["recurring", "Recurring"], ["oneTime", "One-time (this week)"]].map(([t, label]) => (
+                <button key={t} style={{ flex: 1, padding: "8px 10px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "Georgia,serif", background: schedActDraft.type === t ? "#60a5fa" : "#1a1a1e", color: schedActDraft.type === t ? "#0d0d0f" : "#555" }}
+                  onClick={() => setSchedActDraft(d => ({ ...d, type: t }))}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div style={S.formRow}>
+              <label style={S.formLabel}>Name</label>
+              <input style={S.input} placeholder="Activity name…" value={schedActDraft.name} onChange={e => setSchedActDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
+            </div>
+
+            {schedActDraft.type === "recurring" && (<>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ ...S.formLabel, marginBottom: 6 }}>Days (leave blank = daily)</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {DAY_NAMES.map(day => (
+                    <button key={day} style={{ ...S.catBtn, borderColor: schedActDraft.days.includes(day) ? "#60a5fa" : "#222", color: schedActDraft.days.includes(day) ? "#60a5fa" : "#444", background: schedActDraft.days.includes(day) ? "rgba(96,165,250,0.12)" : "transparent" }}
+                      onClick={() => setSchedActDraft(d => ({ ...d, days: d.days.includes(day) ? d.days.filter(x => x !== day) : [...d.days, day] }))}>
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ marginTop: 12, ...S.formRow }}>
+                <label style={S.formLabel}>Time (optional)</label>
+                <input type="time" style={S.input} value={schedActDraft.times[0] || ""} onChange={e => setSchedActDraft(d => ({ ...d, times: e.target.value ? [e.target.value] : [] }))} />
+              </div>
+            </>)}
+
+            {schedActDraft.type === "oneTime" && (<>
+              <div style={{ marginTop: 12, ...S.formRow }}>
+                <label style={S.formLabel}>Date</label>
+                <input type="date" style={S.input} value={schedActDraft.date} onChange={e => setSchedActDraft(d => ({ ...d, date: e.target.value }))} />
+              </div>
+              <div style={{ marginTop: 10, ...S.formRow }}>
+                <label style={S.formLabel}>Time (optional)</label>
+                <input type="time" style={S.input} value={schedActDraft.time} onChange={e => setSchedActDraft(d => ({ ...d, time: e.target.value }))} />
+              </div>
+            </>)}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button style={{ ...S.primaryBtn, flex: 1 }} onClick={addSchedActivity} disabled={!schedActDraft.name.trim()}>Add</button>
+              <button style={{ ...S.primaryBtn, flex: 1, background: "#1a1a1e", color: "#666" }} onClick={() => setSchedActModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1247,6 +1661,8 @@ const S = {
   sleepTargetLabel: { fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 },
   sleepTargetVal: { fontSize: 17, fontWeight: 700, fontFamily: "monospace" },
   sleepLogRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #111" },
+  habitCard: { background: "#0a0a0c", border: "0.5px solid #161618", borderRadius: 10, padding: "12px 14px", marginBottom: 8, borderLeft: "3px solid transparent" },
+  lvlBadge: { fontSize: 10, color: "#a78bfa", background: "rgba(167,139,250,0.12)", border: "0.5px solid rgba(167,139,250,0.3)", padding: "1px 7px", borderRadius: 10 },
   journalEntry: { background: "#0a0a0c", border: "0.5px solid #161618", borderRadius: 9, padding: "12px 16px", marginBottom: 9 },
   journalDate: { fontSize: 10, color: "#444", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" },
   journalText: { fontSize: 13, color: "#bbb", lineHeight: 1.75 },
