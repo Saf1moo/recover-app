@@ -1008,7 +1008,7 @@ export default function App() {
       {isMobile && sidebarOpen && <div style={S.sidebarBackdrop} onClick={() => setSidebarOpen(false)} />}
 
       {/* ── Sidebar ── */}
-      <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.8)", width: 240 } : {}) }}>
+      <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, height: "auto", transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.8)", width: 240 } : {}) }}>
         {/* Logo */}
         <div style={{ padding: "20px 16px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={S.logo}>🌿 Recover</div>
@@ -1048,7 +1048,7 @@ export default function App() {
         </nav>
 
         {/* Bottom actions */}
-        <div style={{ padding: "12px 10px", borderTop: "1px solid var(--r-bord)", marginTop: "auto" }}>
+        <div style={{ padding: "12px 10px", paddingBottom: "max(12px, env(safe-area-inset-bottom))", borderTop: "1px solid var(--r-bord)", flexShrink: 0 }}>
           <button style={{ ...S.navBtn, color: "#f87171", marginBottom: 2 }} onClick={() => { setModal("relapseLog"); if (isMobile) setSidebarOpen(false); }}>
             <span style={{ ...S.navIcon, color: "#f87171" }}>⚠</span>
             <span>Log a relapse</span>
