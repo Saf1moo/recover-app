@@ -36,6 +36,7 @@ const accountDefaults = () => ({
   medicationLogs: {},
   exerciseLogs: [],
   bodyMetrics: [],
+  badHabits: [],
 });
 
 function loadRoot() {
@@ -205,6 +206,19 @@ function calcLongestStreak(completions) {
     else current = 1;
   }
   return longest;
+}
+function calcAvoidStreak(bh) {
+  const baseTs = bh.slips?.length ? Math.max(...bh.slips.map(s => s.ts)) : bh.startTs;
+  const elapsed = Date.now() - baseTs;
+  if (bh.unit === "hours") return { value: Math.floor(elapsed / 3_600_000), label: "h clean" };
+  const days = Math.floor(elapsed / 86_400_000);
+  return days < 1 ? { value: Math.floor(elapsed / 3_600_000), label: "h clean" } : { value: days, label: "d clean" };
+}
+function avoidStreakColor(bh) {
+  const { value, label } = calcAvoidStreak(bh);
+  if (bh.unit === "hours") return value >= 72 ? "#34d399" : value >= 24 ? "#f59e0b" : "#f87171";
+  if (label === "h clean") return "#f87171";
+  return value >= 7 ? "#34d399" : value >= 3 ? "#f59e0b" : "#f87171";
 }
 function calcHabitRate(habit, days) {
   const norm = normalizeHabit(habit);
@@ -475,6 +489,12 @@ export default function App() {
   const [habitModal, setHabitModal] = useState(null);
   const [editHabitId, setEditHabitId] = useState(null);
   const [habitDraft, setHabitDraft] = useState(null);
+  const [habitsTab, setHabitsTab] = useState("good");
+  const [badHabitModal, setBadHabitModal] = useState(null);
+  const [badHabitDraft, setBadHabitDraft] = useState(null);
+  const [badHabitEditId, setBadHabitEditId] = useState(null);
+  const [slipModal, setSlipModal] = useState(null);
+  const [slipNote, setSlipNote] = useState("");
   const [schedActModal, setSchedActModal] = useState(false);
   const [schedActDraft, setSchedActDraft] = useState(null);
   const [goalsTab, setGoalsTab] = useState("goals");
@@ -646,6 +666,7 @@ export default function App() {
   const avg7Score = last7.length ? Math.round(last7.reduce((s, l) => s + (l.score ?? calcSleepScore(l.bedtime, l.waketime, l.durationMins, routineTargets)), 0) / last7.length) : null;
   const todayDone = todayHabits.filter(h => h.completions.includes(getTodayStr())).length;
   const habitPct = todayHabits.length ? Math.round(todayDone / todayHabits.length * 100) : 0;
+  const badHabits = account?.badHabits || [];
   const claimed = account?.claimedRewards || [];
   const availRew = (account?.rewards || []).filter(r => daysSober >= r.days && !claimed.includes(r.id));
   const waterLogs = account?.waterLogs || {};
@@ -1850,51 +1871,108 @@ export default function App() {
         {view === "habits" && (
           <div style={S.content}>
             <h2 style={S.pageTitle}>Habits</h2>
-            <div style={S.card}>
-              <div style={S.cardLabel}>Today — {new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{todayDone} / {todayHabits.length} done today</div>
-              <div style={S.bigProgressBg}><div style={{ ...S.bigProgressBar, width: `${habitPct}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
+            {/* Tab toggle */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+              {[["good", `Good Habits (${todayDone}/${todayHabits.length})`], ["break", `Breaking (${badHabits.length})`]].map(([t, label]) => (
+                <button key={t} onClick={() => setHabitsTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${habitsTab === t ? accentColor : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: habitsTab === t ? accentColor + "18" : "var(--r-surf)", color: habitsTab === t ? accentColor : "#444" }}>{label}</button>
+              ))}
             </div>
-            {normalizedHabits.length === 0 ? (
-              <div style={S.card}><div style={S.empty}>No habits yet. Add one below.</div></div>
-            ) : normalizedHabits.map(h => {
-              const col = CAT_HEX[h.category] || "#a78bfa";
-              const weekCount = getWeekCompletions(h.completions, weekStartStr);
-              const lvlCfg = h.levelsEnabled ? h.levels.find(l => l.level === h.currentLevel) : null;
-              return (
-                <div key={h.id} style={{ ...S.card, borderLeft: `3px solid ${col}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</span>
-                        {h.levelsEnabled && <span style={{ fontSize: 10, color: "#a78bfa", background: "rgba(167,139,250,0.12)", border: "0.5px solid rgba(167,139,250,0.3)", padding: "1px 7px", borderRadius: 10 }}>Lv.{h.currentLevel}</span>}
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
-                        <span style={{ fontSize: 10, color: col, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h.category}</span>
-                        {h.days.length > 0 && <span style={{ fontSize: 10, color: "#555" }}>{h.days.join(" · ")}</span>}
-                        {h.days.length === 0 && <span style={{ fontSize: 10, color: "#3a3a3a" }}>every day</span>}
-                        {h.scheduledTimes.length > 0 && <span style={{ fontSize: 10, color: "#555", fontFamily: "monospace" }}>{h.scheduledTimes.map(fmtTime).join(", ")}</span>}
-                      </div>
-                      {h.levelsEnabled && lvlCfg && (
-                        <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
-                          {lvlCfg.description && <span style={{ marginRight: 8 }}>{lvlCfg.description}</span>}
-                          {lvlCfg.upPerWeek != null && (
-                            <span style={{ color: weekCount >= lvlCfg.upPerWeek ? "#34d399" : lvlCfg.downPerWeek != null && weekCount < lvlCfg.downPerWeek ? "#f87171" : "#60a5fa" }}>
-                              {weekCount}/{lvlCfg.upPerWeek} this week
-                            </span>
-                          )}
+
+            {habitsTab === "good" && (<>
+              <div style={S.card}>
+                <div style={S.cardLabel}>Today — {new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{todayDone} / {todayHabits.length} done today</div>
+                <div style={S.bigProgressBg}><div style={{ ...S.bigProgressBar, width: `${habitPct}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
+              </div>
+              {normalizedHabits.length === 0 ? (
+                <div style={S.card}><div style={S.empty}>No habits yet. Add one below.</div></div>
+              ) : normalizedHabits.map(h => {
+                const col = CAT_HEX[h.category] || "#a78bfa";
+                const weekCount = getWeekCompletions(h.completions, weekStartStr);
+                const lvlCfg = h.levelsEnabled ? h.levels.find(l => l.level === h.currentLevel) : null;
+                return (
+                  <div key={h.id} style={{ ...S.card, borderLeft: `3px solid ${col}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</span>
+                          {h.levelsEnabled && <span style={{ fontSize: 10, color: "#a78bfa", background: "rgba(167,139,250,0.12)", border: "0.5px solid rgba(167,139,250,0.3)", padding: "1px 7px", borderRadius: 10 }}>Lv.{h.currentLevel}</span>}
                         </div>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 10 }}>
-                      <button style={S.linkBtn} onClick={() => openEditHabit(h)}>Edit</button>
-                      <button style={S.deleteBtn} onClick={() => upd({ habits: habits.filter(x => x.id !== h.id) })}>×</button>
+                        <div style={{ display: "flex", gap: 8, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
+                          <span style={{ fontSize: 10, color: col, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h.category}</span>
+                          {h.days.length > 0 && <span style={{ fontSize: 10, color: "#555" }}>{h.days.join(" · ")}</span>}
+                          {h.days.length === 0 && <span style={{ fontSize: 10, color: "#3a3a3a" }}>every day</span>}
+                          {h.scheduledTimes.length > 0 && <span style={{ fontSize: 10, color: "#555", fontFamily: "monospace" }}>{h.scheduledTimes.map(fmtTime).join(", ")}</span>}
+                        </div>
+                        {h.levelsEnabled && lvlCfg && (
+                          <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
+                            {lvlCfg.description && <span style={{ marginRight: 8 }}>{lvlCfg.description}</span>}
+                            {lvlCfg.upPerWeek != null && (
+                              <span style={{ color: weekCount >= lvlCfg.upPerWeek ? "#34d399" : lvlCfg.downPerWeek != null && weekCount < lvlCfg.downPerWeek ? "#f87171" : "#60a5fa" }}>
+                                {weekCount}/{lvlCfg.upPerWeek} this week
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 10 }}>
+                        <button style={S.linkBtn} onClick={() => openEditHabit(h)}>Edit</button>
+                        <button style={S.deleteBtn} onClick={() => upd({ habits: habits.filter(x => x.id !== h.id) })}>×</button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-            <button style={{ ...S.primaryBtn, marginTop: 4 }} onClick={openAddHabit}>+ Add habit</button>
+                );
+              })}
+              <button style={{ ...S.primaryBtn, marginTop: 4 }} onClick={openAddHabit}>+ Add habit</button>
+            </>)}
+
+            {habitsTab === "break" && (<>
+              {badHabits.length === 0 ? (
+                <div style={S.card}><div style={S.empty}>No bad habits tracked yet. Add one below.</div></div>
+              ) : badHabits.map(bh => {
+                const streak = calcAvoidStreak(bh);
+                const col = avoidStreakColor(bh);
+                const todayStr = getTodayStr();
+                const resistedToday = (bh.resisted || []).filter(r => new Date(r.ts).toISOString().split("T")[0] === todayStr).length;
+                return (
+                  <div key={bh.id} style={{ ...S.card, borderLeft: `3px solid ${col}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 14, fontWeight: 600 }}>{bh.name}</span>
+                          <span style={{ fontSize: 12, color: col, fontWeight: 700 }}>{streak.value}{streak.label}</span>
+                        </div>
+                        {(bh.trigger || bh.replacement) && (
+                          <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
+                            {bh.trigger && <span>Trigger: <span style={{ color: "#888" }}>{bh.trigger}</span></span>}
+                            {bh.trigger && bh.replacement && <span style={{ color: "#333", margin: "0 6px" }}>→</span>}
+                            {bh.replacement && <span>Replace: <span style={{ color: "#888" }}>{bh.replacement}</span></span>}
+                          </div>
+                        )}
+                        {bh.ifThen && (
+                          <div style={{ fontSize: 11, color: "#555", marginTop: 3, fontStyle: "italic" }}>"{bh.ifThen}"</div>
+                        )}
+                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                          <button style={{ ...S.primaryBtn, width: "auto", padding: "6px 12px", fontSize: 11, background: "#34d39922", color: "#34d399", border: "1px solid #34d39944" }}
+                            onClick={() => upd({ badHabits: badHabits.map(x => x.id !== bh.id ? x : { ...x, resisted: [...(x.resisted || []), { id: "r" + Date.now(), ts: Date.now() }] }) })}>
+                            Resisted{resistedToday > 0 ? ` (${resistedToday})` : ""}
+                          </button>
+                          <button style={{ ...S.primaryBtn, width: "auto", padding: "6px 12px", fontSize: 11, background: "#f8717122", color: "#f87171", border: "1px solid #f8717144" }}
+                            onClick={() => { setSlipModal(bh.id); setSlipNote(""); }}>
+                            I slipped
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 10 }}>
+                        <button style={S.linkBtn} onClick={() => { setBadHabitEditId(bh.id); setBadHabitDraft({ ...bh }); setBadHabitModal("edit"); }}>Edit</button>
+                        <button style={S.deleteBtn} onClick={() => upd({ badHabits: badHabits.filter(x => x.id !== bh.id) })}>×</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <button style={{ ...S.primaryBtn, marginTop: 4 }} onClick={() => { setBadHabitDraft({ name: "", unit: "days", trigger: "", replacement: "", ifThen: "" }); setBadHabitEditId(null); setBadHabitModal("add"); }}>+ Add bad habit</button>
+            </>)}
           </div>
         )}
 
@@ -3141,6 +3219,81 @@ export default function App() {
                 {habitModal === "add" ? "Add habit" : "Save changes"}
               </button>
               <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)" }} onClick={() => setHabitModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bad habit add/edit modal ── */}
+      {badHabitModal && badHabitDraft && (
+        <div style={S.overlay} onClick={() => setBadHabitModal(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>{badHabitModal === "add" ? "Add bad habit" : "Edit bad habit"}</div>
+
+            <div style={S.formRow}>
+              <label style={S.formLabel}>Name</label>
+              <input style={S.input} placeholder="e.g. Scrolling in bed" value={badHabitDraft.name} onChange={e => setBadHabitDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ ...S.formLabel, marginBottom: 6 }}>Track by</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[["days", "Days — daily streaks"], ["hours", "Hours — for frequent urges"]].map(([val, label]) => (
+                  <button key={val} onClick={() => setBadHabitDraft(d => ({ ...d, unit: val }))}
+                    style={{ flex: 1, padding: "8px 10px", borderRadius: 7, border: `1px solid ${badHabitDraft.unit === val ? accentColor : "#222"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: badHabitDraft.unit === val ? accentColor + "18" : "transparent", color: badHabitDraft.unit === val ? accentColor : "#555" }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12, ...S.formRow }}>
+              <label style={S.formLabel}>Trigger / cue (optional)</label>
+              <input style={S.input} placeholder="What sets this off?" value={badHabitDraft.trigger} onChange={e => setBadHabitDraft(d => ({ ...d, trigger: e.target.value }))} />
+            </div>
+
+            <div style={{ marginTop: 12, ...S.formRow }}>
+              <label style={S.formLabel}>Replacement behaviour (optional)</label>
+              <input style={S.input} placeholder="What will you do instead?" value={badHabitDraft.replacement} onChange={e => setBadHabitDraft(d => ({ ...d, replacement: e.target.value }))} />
+            </div>
+
+            <div style={{ marginTop: 12, ...S.formRow }}>
+              <label style={S.formLabel}>If-then plan (optional)</label>
+              <input style={S.input} placeholder="If [trigger], I will…" value={badHabitDraft.ifThen} onChange={e => setBadHabitDraft(d => ({ ...d, ifThen: e.target.value }))} />
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+              <button style={{ ...S.primaryBtn, flex: 1 }} onClick={() => {
+                if (!badHabitDraft.name.trim()) return;
+                if (badHabitModal === "add") {
+                  upd({ badHabits: [...badHabits, { ...badHabitDraft, id: "bh" + Date.now(), name: badHabitDraft.name.trim(), startTs: Date.now(), slips: [], resisted: [] }] });
+                } else {
+                  upd({ badHabits: badHabits.map(x => x.id !== badHabitEditId ? x : { ...x, ...badHabitDraft, name: badHabitDraft.name.trim() }) });
+                }
+                setBadHabitModal(null); setBadHabitDraft(null); setBadHabitEditId(null);
+              }}>Save</button>
+              <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)" }} onClick={() => { setBadHabitModal(null); setBadHabitDraft(null); setBadHabitEditId(null); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Slip modal ── */}
+      {slipModal && (
+        <div style={S.overlay} onClick={() => setSlipModal(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+            <div style={S.modalTitle}>Log a slip</div>
+            <div style={{ ...S.modalSub, marginBottom: 14 }}>Your streak resets. That's okay — awareness is progress.</div>
+            <div style={S.formRow}>
+              <label style={S.formLabel}>Note (optional)</label>
+              <textarea style={S.textarea} rows={3} placeholder="What happened? What triggered it?" value={slipNote} onChange={e => setSlipNote(e.target.value)} autoFocus />
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button style={{ ...S.primaryBtn, flex: 1, background: "#f8717122", color: "#f87171", border: "1px solid #f8717144" }} onClick={() => {
+                upd({ badHabits: badHabits.map(x => x.id !== slipModal ? x : { ...x, slips: [...(x.slips || []), { id: "s" + Date.now(), ts: Date.now(), note: slipNote.trim() }] }) });
+                setSlipModal(null); setSlipNote("");
+              }}>Confirm slip</button>
+              <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)" }} onClick={() => setSlipModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
