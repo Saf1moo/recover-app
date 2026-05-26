@@ -369,8 +369,11 @@ function LineChart({ data, height = 90 }) {
   const W = 280, H = height - 22;
   const allVals = data.flatMap(d => [d.actual, d.target].filter(v => v != null));
   if (!allVals.length) return null;
-  const minV = Math.min(...allVals), maxV = Math.max(...allVals);
-  const range = maxV - minV || 1;
+  const rawMin = Math.min(...allVals), rawMax = Math.max(...allVals);
+  const rawRange = rawMax - rawMin || 1;
+  const pad = rawRange * 0.25;
+  const minV = rawMin - pad, maxV = rawMax + pad;
+  const range = maxV - minV;
   const xS = i => (i / (data.length - 1)) * W;
   const yS = v => H - 4 - ((v - minV) / range) * (H - 12);
 
