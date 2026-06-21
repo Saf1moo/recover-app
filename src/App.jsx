@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
 import { supabase } from "./supabase.js";
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
@@ -117,36 +117,98 @@ const EXERCISE_CAT_HEX = { cardio: "#f97316", strength: "#34d399", flexibility: 
 const ACCOUNT_COLORS = ["#34d399", "#60a5fa", "#a78bfa", "#f97316", "#f472b6", "#f59e0b", "#f87171", "#2dd4bf"];
 const PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const DEFAULT_THEME = () => ({ preset: "midnight", bg: "#0d0d0f", surf: "#0a0a0c", surf2: "#111113", bord: "#161618", fg: "#e8e8e8", fg2: "#555", font: "inter" });
+// ─── "Sakīnah / Fajr" design system — tokens, themes, helpers ──────────────────
+const DEFAULT_THEME = () => ({ preset: "fajr", bg: "#0d0e13", surf: "#14151c", surf2: "#1b1c25", surf3: "#23242f", bord: "#1f2029", fg: "#ece9e4", fg2: "#8b8a94", fg3: "#5d5c66", glow: "#f2b06a", font: "dm-sans" });
 const INTERNAL_EMAIL = "user@recover-app.internal";
 const THEME_PRESETS = [
-  // ── Base themes ──
-  { id: "midnight", name: "Midnight", desc: "The default dark experience", category: "base", accent: "#34d399",
-    bg: "#0d0d0f", surf: "#0a0a0c", surf2: "#111113", bord: "#161618", fg: "#e8e8e8", fg2: "#555" },
-  { id: "obsidian", name: "Obsidian", desc: "Deep space blue", category: "base", accent: "#60a5fa",
-    bg: "#0a0d12", surf: "#080b0f", surf2: "#0d1117", bord: "#161b22", fg: "#e6edf3", fg2: "#7d8590" },
-  { id: "slate", name: "Slate", desc: "Cool and focused", category: "base", accent: "#2dd4bf",
-    bg: "#0e1117", surf: "#0b0e15", surf2: "#111521", bord: "#1a1f2b", fg: "#e2e8f0", fg2: "#94a3b8" },
-  { id: "charcoal", name: "Charcoal", desc: "Neutral · clean · precise", category: "base", accent: "#a78bfa",
-    bg: "#111111", surf: "#0e0e0e", surf2: "#141414", bord: "#1c1c1c", fg: "#ededed", fg2: "#777" },
-  { id: "warm", name: "Ember", desc: "Warm amber glow", category: "base", accent: "#f59e0b",
-    bg: "#110e09", surf: "#0e0b07", surf2: "#13100b", bord: "#1e1812", fg: "#ede8e0", fg2: "#8a806e" },
-  // ── Exclusive themes ──
-  { id: "forest", name: "Forest", desc: "Organic · grounded · deep work", category: "exclusive", accent: "#34d399", font: "georgia", fontTags: ["Georgia"],
-    bg: "#0a0f0a", surf: "#080d08", surf2: "#0d130d", bord: "#141e14", fg: "#e4ede4", fg2: "#7a9a7a" },
-  { id: "blueprint", name: "Blueprint", desc: "Engineering · systems · precision", category: "exclusive", accent: "#38bdf8", font: "dm-sans", fontTags: ["DM Sans"],
-    bg: "#080d14", surf: "#060a10", surf2: "#0a1018", bord: "#0f1a26", fg: "#d0e8f8", fg2: "#4a7a9a" },
-  { id: "candy", name: "Candy", desc: "Playful · expressive · vibrant", category: "exclusive", accent: "#f472b6", font: "inter", fontTags: ["Inter"],
-    bg: "#0f0914", surf: "#0c0710", surf2: "#140c1c", bord: "#1e1028", fg: "#f0deff", fg2: "#8060a8" },
-  { id: "noir", name: "Noir", desc: "Pure black · minimal · sharp", category: "exclusive", accent: "#e8e8e8", font: "dm-sans", fontTags: ["DM Sans"],
-    bg: "#000000", surf: "#080808", surf2: "#0f0f0f", bord: "#181818", fg: "#f0f0f0", fg2: "#555" },
+  // ── Base ──
+  { id: "fajr", name: "Fajr", desc: "Warm indigo pre-dawn. Light on the horizon.", category: "base", accent: "#34d399", glow: "#f2b06a",
+    bg: "#0d0e13", surf: "#14151c", surf2: "#1b1c25", surf3: "#23242f", bord: "#1f2029", fg: "#ece9e4", fg2: "#8b8a94", fg3: "#5d5c66" },
+  { id: "obsidian", name: "Obsidian", desc: "Cool slate calm. Restrained and exact.", category: "base", accent: "#60a5fa", glow: "#7cb8ff",
+    bg: "#0a0d12", surf: "#111620", surf2: "#18202c", surf3: "#202a38", bord: "#1c2531", fg: "#e6ebf2", fg2: "#838f9f", fg3: "#5f6b7a" },
+  { id: "forest", name: "Forest", desc: "Warm moss dark. Grounded, alive, quiet.", category: "base", accent: "#34d399", glow: "#9bd66a",
+    bg: "#0a0f0b", surf: "#111813", surf2: "#18211a", surf3: "#1f2a22", bord: "#1b251d", fg: "#e6eae3", fg2: "#828b7a", fg3: "#67705f" },
+  { id: "noir", name: "Noir", desc: "Warm charcoal monochrome. Nothing shouts.", category: "base", accent: "#e3e0d8", glow: "#cdab78",
+    bg: "#0a0a0b", surf: "#121214", surf2: "#1a1a1d", surf3: "#222226", bord: "#1e1e22", fg: "#ededea", fg2: "#8a8a8d", fg3: "#6d6d70" },
+  { id: "dawn", name: "Dawn", desc: "Light cream daybreak. Open, merciful, awake.", category: "base", lightRamp: true, accent: "#2f9e74", textAccent: "#1f7a52", glow: "#f0a85a",
+    bg: "#f4efe7", surf: "#fbf8f2", surf2: "#fffefb", surf3: "#ffffff", bord: "#e6ddcf", fg: "#2a2723", fg2: "#6f6757", fg3: "#a89f8e" },
+  // ── Exclusive ──
+  { id: "sakinah", name: "Sakīnah", desc: "Deep indigo, rose-gold dawn. Tranquil depth.", category: "exclusive", accent: "#d8a36b", glow: "#e9b985", fontTags: ["Fraunces"],
+    bg: "#0c0d16", surf: "#131520", surf2: "#1a1d2b", surf3: "#222536", bord: "#1e2130", fg: "#ece8e0", fg2: "#85869a", fg3: "#6a6b7c" },
+  { id: "plum", name: "Plum", desc: "Aubergine night, muted mauve. Soft and rare.", category: "exclusive", accent: "#c08ad0", glow: "#d6a0e0",
+    bg: "#100a14", surf: "#18111e", surf2: "#201728", surf3: "#281e32", bord: "#241a2c", fg: "#ece6ef", fg2: "#8a8095", fg3: "#6f6678" },
+  { id: "ember", name: "Ember", desc: "Warm brown-black, terracotta. Slow heat.", category: "exclusive", accent: "#e0875a", glow: "#f0a06a",
+    bg: "#110c0a", surf: "#1a1310", surf2: "#231a15", surf3: "#2c221c", bord: "#271d18", fg: "#efe7df", fg2: "#928175", fg3: "#76695f" },
 ];
 const FONT_PACKAGES = [
+  { id: "dm-sans", name: "DM Sans", label: "Clean sans-serif", stack: "'DM Sans',system-ui,sans-serif", url: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" },
   { id: "inter", name: "Inter", label: "Modern sans-serif", stack: "'Inter',system-ui,sans-serif", url: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" },
   { id: "georgia", name: "Georgia", label: "Classic serif", stack: "Georgia,serif", url: null },
-  { id: "dm-sans", name: "DM Sans", label: "Clean sans-serif", stack: "'DM Sans',system-ui,sans-serif", url: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" },
   { id: "system", name: "System", label: "Native OS font", stack: "system-ui,-apple-system,sans-serif", url: null },
 ];
+
+// soul/hero typeface (continuous weight range so 340–500 resolve) + design tokens
+const HERO_FONT = "'Fraunces',Georgia,serif";
+const FRAUNCES_URL = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,340..500&display=swap";
+const hexA = (h, a) => `${h}${a}`;
+const normalizeHex = (h) => { if (!h || h[0] !== "#") return "#34d399"; let c = h.slice(1); if (c.length === 3) c = c.split("").map(x => x + x).join(""); return "#" + (c + "000000").slice(0, 6).toLowerCase(); };
+const relLum = (h) => { const c = normalizeHex(h).slice(1); const f = i => { const v = parseInt(c.substr(i, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4); };
+const onAccent = (h) => relLum(h) > 0.42 ? "#08120d" : "#ffffff";
+const SP = { x0: 2, x1: 4, x2: 6, x3: 8, x4: 10, x5: 12, x6: 14, x7: 16, x8: 20, x9: 24, x10: 32, x11: 40, x12: 48, x13: 64, x14: 80 };
+const RAD = { xs: 10, sm: 8, md: 12, lg: 16, xl: 20, hero: 24, x2l: 28, pill: 999 };
+const ELEV = { sm: "var(--r-shadow-sm)", md: "var(--r-shadow-md)", lg: "var(--r-shadow-lg)", glowHero: "var(--r-glow-hero)", glowActive: "var(--r-glow-active)", inset: "var(--r-inset)" };
+const DUR = { instant: 80, fast: 150, normal: 240, slow: 360, ringFill: 900, countUp: 1000, bloom: 8000 };
+const EASE = { dawn: "cubic-bezier(.22,1,.36,1)", soft: "cubic-bezier(.4,0,.2,1)", expo: "cubic-bezier(.16,1,.3,1)" };
+const SCORE_DARK = { high: "#5ad6a0", mid: "#5fa0e8", low: "#e0992f", crit: "#cf6f6f" };
+const SCORE_LIGHT = { high: "#18815a", mid: "#2b6bad", low: "#946312", crit: "#a8413f" };
+const SEM = { success: "var(--r-accent)", info: "#6aa8ef", warn: "#e6a23c", chromeRose: "#9c6b6b", danger: "#e5484d", bizBlue: "#3b82f6" };
+let CURRENT_LIGHT = false;
+
+// Migrate legacy/stored themes to the current palette + depth keys (surf3/fg3/glow)
+function migrateTheme(t) {
+  if (!t) return DEFAULT_THEME();
+  if (t.preset === "custom") return { surf3: t.surf2, fg3: t.fg2, glow: "#f2b06a", lightRamp: false, textAccent: null, ...t };
+  const p = THEME_PRESETS.find(x => x.id === t.preset);
+  if (!p) return { ...DEFAULT_THEME(), font: t.font || "dm-sans" };
+  return { ...t, bg: p.bg, surf: p.surf, surf2: p.surf2, surf3: p.surf3, bord: p.bord, fg: p.fg, fg2: p.fg2, fg3: p.fg3, glow: p.glow, lightRamp: p.lightRamp || false, textAccent: p.textAccent || null, font: t.font || p.font || "dm-sans" };
+}
+
+function buildThemeCSS({ T, A, G, ACT, surf3, fg3, light, fontStack }) {
+  const sh = light
+    ? { sm: "0 1px 2px rgba(40,32,20,.06)", md: "0 8px 24px -8px rgba(40,32,20,.10),0 2px 6px rgba(40,32,20,.06)", lg: "0 24px 64px -18px rgba(40,32,20,.14),0 6px 16px rgba(40,32,20,.08)", inset: "inset 0 1px 0 rgba(255,255,255,.6)" }
+    : { sm: "0 1px 2px rgba(7,8,14,.45)", md: "0 6px 20px -6px rgba(7,8,14,.55),0 2px 6px rgba(7,8,14,.40)", lg: "0 22px 60px -16px rgba(7,8,14,.66),0 6px 16px rgba(7,8,14,.44)", inset: "inset 0 1px 0 rgba(255,255,255,.04)" };
+  return `:root{
+--r-bg:${T.bg};--r-surf:${T.surf};--r-surf2:${T.surf2};--r-surf3:${surf3};
+--r-bord:${T.bord};--r-fg:${T.fg};--r-fg2:${T.fg2};--r-fg3:${fg3};
+--r-accent:${A};--r-accent-text:${ACT};--r-on-accent:${onAccent(A)};--r-glow:${G};
+--r-font:${fontStack};--r-hero:${HERO_FONT};
+--r-shadow-sm:${sh.sm};--r-shadow-md:${sh.md};--r-shadow-lg:${sh.lg};--r-inset:${sh.inset};
+--r-glow-hero:0 0 90px -8px ${G};
+--r-glow-active:0 0 0 1px ${hexA(A, "40")},0 0 16px -4px ${hexA(A, "55")};
+--r-ease-dawn:cubic-bezier(.22,1,.36,1);--r-ease-soft:cubic-bezier(.4,0,.2,1);--r-ease-expo:cubic-bezier(.16,1,.3,1);
+}
+body{background:var(--r-bg);color:var(--r-fg)}
+.r-tnum{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+::placeholder{color:var(--r-fg2);opacity:1}
+input:focus,textarea:focus{outline:none!important;border-color:var(--r-accent)!important;box-shadow:0 0 0 3px ${hexA(A, "22")}!important;background:var(--r-surf3)!important}
+:focus-visible:not(input):not(textarea){outline:none;box-shadow:0 0 0 2px var(--r-bg),0 0 0 4px var(--r-accent)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--r-surf2);border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+.r-press{transition:transform 120ms var(--r-ease-soft),filter 120ms var(--r-ease-soft);-webkit-tap-highlight-color:transparent}
+.r-press:active{transform:scale(.97)}
+.r-press:hover{filter:brightness(1.06)}
+@keyframes fajrBloom{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.04);opacity:1}}
+@keyframes fajrBloomSurge{0%{transform:scale(1);opacity:.85}45%{transform:scale(1.28);opacity:1}100%{transform:scale(1);opacity:.85}}
+@keyframes checkPop{0%{transform:scale(.8);box-shadow:0 0 0 0 ${hexA(A, "8c")}}55%{transform:scale(1.12);box-shadow:0 0 0 6px ${hexA(A, "00")}}100%{transform:scale(1);box-shadow:0 0 0 0 transparent}}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes breathe{0%{transform:scale(1);opacity:.55}36%{transform:scale(1.35);opacity:1}100%{transform:scale(1);opacity:.55}}
+@keyframes breatheCalm{0%,100%{opacity:.6}50%{opacity:.92}}
+@keyframes lightSweep{from{transform:translateX(-120%) skewX(-12deg);opacity:0}30%{opacity:1}to{transform:translateX(120%) skewX(-12deg);opacity:0}}
+@keyframes milestoneGlow{0%{text-shadow:0 0 28px ${hexA(G, "4d")}}50%{text-shadow:0 0 60px ${hexA(G, "99")}}100%{text-shadow:0 0 28px ${hexA(G, "4d")}}}
+@media (prefers-reduced-motion:reduce){*:not(.r-breathe),*:not(.r-breathe)::before,*:not(.r-breathe)::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.r-breathe{animation:breatheCalm 11s ease-in-out infinite!important}}`;
+}
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 const getDaysSince = d => d ? Math.floor((new Date() - new Date(d)) / 864e5) : 0;
@@ -158,7 +220,7 @@ const timeToMins = t => { if (!t) return 0; const [h, m] = t.split(":").map(Numb
 const sleepDur = (b, w) => { let bm = timeToMins(b), wm = timeToMins(w); if (wm <= bm) wm += 1440; return wm - bm; };
 const fmtDur = m => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
 const fmtTime = t => { if (!t) return "—"; const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "pm" : "am"}`; };
-const scoreColor = s => s >= 80 ? "#34d399" : s >= 60 ? "#60a5fa" : s >= 40 ? "#f59e0b" : "#f87171";
+function scoreColor(s, light) { const R = (light === undefined ? CURRENT_LIGHT : light) ? SCORE_LIGHT : SCORE_DARK; return s >= 80 ? R.high : s >= 60 ? R.mid : s >= 40 ? R.low : R.crit; }
 const getTodayDay = () => DAY_NAMES[new Date().getDay()];
 const getWeekCompletions = (completions, weekStart) => {
   const end = new Date(weekStart + "T12:00"); end.setDate(end.getDate() + 6);
@@ -305,35 +367,59 @@ function getPeriodKey(p) {
 const reqNotif = () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); };
 const sendNotif = (t, b) => { if ("Notification" in window && Notification.permission === "granted") new Notification(t, { body: b }); };
 
+// ─── Interaction infra ────────────────────────────────────────────────────────
+function useHover() {
+  const [h, setH] = useState(false);
+  return [h, { onMouseEnter: () => setH(true), onMouseLeave: () => setH(false), onTouchStart: () => setH(true), onTouchEnd: () => setH(false) }];
+}
+const usePRM = () => useSyncExternalStore(
+  cb => { const m = matchMedia("(prefers-reduced-motion: reduce)"); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); },
+  () => matchMedia("(prefers-reduced-motion: reduce)").matches, () => false);
+
 // ─── Visual components ────────────────────────────────────────────────────────
 
-function CircleRing({ value = 0, size = 100, strokeWidth = 8 }) {
+function CircleRing({ value = 0, size = 100, strokeWidth = 8, delay = 0, glow = false, role = "diagnostic", label }) {
+  const prm = usePRM();
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(100, value));
-  const offset = circ * (1 - pct / 100);
-  const col = scoreColor(pct);
+  const [drawn, setDrawn] = useState(prm ? pct : 0);
+  useEffect(() => {
+    if (prm) { setDrawn(pct); return; }
+    const id = requestAnimationFrame(() => setDrawn(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct, prm]);
+  const offset = circ * (1 - drawn / 100);
+  const identity = role === "identity";
+  const col = identity ? "var(--r-accent)" : scoreColor(pct);
   const cx = size / 2, cy = size / 2;
+  const heroType = identity || role === "momentum" || size >= 60;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1a1a1e" strokeWidth={strokeWidth} />
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label={label}
+      style={{ display: "block", filter: glow ? `drop-shadow(0 0 6px ${identity ? "var(--r-accent)" : hexA(scoreColor(pct), "66")})` : undefined }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--r-bord)" strokeWidth={strokeWidth} />
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth={strokeWidth}
         strokeDasharray={circ} strokeDashoffset={offset}
         strokeLinecap="round" transform={`rotate(-90 ${cx} ${cy})`}
-        style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+        style={{ transition: prm ? "none" : `stroke-dashoffset ${DUR.ringFill}ms ${EASE.dawn}`, transitionDelay: `${delay}ms` }} />
       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central"
-        fill={col} fontSize={size * 0.24} fontWeight="700" fontFamily="monospace">
-        {Math.round(pct)}
+        fill={identity ? "var(--r-fg)" : col} fontSize={size * 0.30} fontWeight="400"
+        fontFamily={heroType ? "Fraunces,Georgia,serif" : "'DM Sans',system-ui,sans-serif"}
+        style={{ fontVariantNumeric: "tabular-nums" }}>
+        {Math.round(drawn)}
       </text>
     </svg>
   );
 }
 
 function HeatmapGrid({ getScore }) {
+  const prm = usePRM();
   const today = getTodayStr();
   const DAYS = 91;
-  const CELL = 11, GAP = 2, STEP = CELL + GAP;
+  const CELL = 13, GAP = 3, STEP = CELL + GAP;
   const cols = Math.ceil(DAYS / 7);
+  const [drawn, setDrawn] = useState(prm);
+  useEffect(() => { if (prm) { setDrawn(true); return; } const id = requestAnimationFrame(() => setDrawn(true)); return () => cancelAnimationFrame(id); }, [prm]);
   const cells = [];
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date(today + "T12:00");
@@ -347,10 +433,15 @@ function HeatmapGrid({ getScore }) {
         {cells.map(({ dateStr, s }, i) => {
           const col = Math.floor(i / 7);
           const row = i % 7;
-          const fill = s == null ? "#161618" : scoreColor(s);
+          const isToday = dateStr === today;
+          const fill = s == null ? "var(--r-surf2)" : scoreColor(s);
+          const fo = s == null ? 0.4 : 0.45 + s / 100 * 0.5;
           return (
-            <rect key={dateStr} x={col * STEP} y={row * STEP}
-              width={CELL} height={CELL} rx={2} fill={fill} opacity={s == null ? 0.35 : 0.85}>
+            <rect key={dateStr} x={col * STEP} y={row * STEP} width={CELL} height={CELL} rx={3}
+              fill={fill} fillOpacity={fo}
+              stroke={isToday ? "var(--r-accent)" : undefined} strokeWidth={isToday ? 1.5 : undefined}
+              opacity={drawn ? 1 : 0} aria-label={`${dateStr}${s != null ? `: ${Math.round(s)}` : " no data"}`}
+              style={{ transition: prm ? "none" : `opacity 400ms ${EASE.dawn}`, transitionDelay: `${col * 16}ms` }}>
               <title>{dateStr}{s != null ? `: ${Math.round(s)}` : " — no data"}</title>
             </rect>
           );
@@ -361,8 +452,11 @@ function HeatmapGrid({ getScore }) {
 }
 
 function LineChart({ data, height = 90 }) {
+  const prm = usePRM();
+  const [drawn, setDrawn] = useState(prm);
+  useEffect(() => { if (prm) { setDrawn(true); return; } const id = requestAnimationFrame(() => setDrawn(true)); return () => cancelAnimationFrame(id); }, [prm]);
   if (!data || data.length < 2) return (
-    <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: "#333", fontSize: 12 }}>
+    <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--r-fg3)", fontSize: 14 }}>
       Not enough data
     </div>
   );
@@ -377,43 +471,39 @@ function LineChart({ data, height = 90 }) {
   const xS = i => (i / (data.length - 1)) * W;
   const yS = v => H - 4 - ((v - minV) / range) * (H - 12);
 
-  const linePath = (key, col, dashed) => {
-    let path = "";
-    data.forEach((p, i) => {
-      if (p[key] == null) return;
-      path += (path ? "L" : "M") + `${xS(i).toFixed(1)},${yS(p[key]).toFixed(1)}`;
-    });
-    return path ? (
-      <path d={path} fill="none" stroke={col} strokeWidth={1.5}
-        strokeDasharray={dashed ? "4 3" : undefined}
-        strokeLinecap="round" strokeLinejoin="round" />
-    ) : null;
-  };
-
+  const pts = data.map((p, i) => p.actual != null ? `${xS(i).toFixed(1)},${yS(p.actual).toFixed(1)}` : null).filter(Boolean);
+  const actualPath = pts.length ? "M" + pts.join("L") : "";
+  const areaPath = pts.length ? `M${pts.join("L")}L${W.toFixed(1)},${H} L0,${H} Z` : "";
+  let targetPath = "";
+  data.forEach((p, i) => { if (p.target == null) return; targetPath += (targetPath ? "L" : "M") + `${xS(i).toFixed(1)},${yS(p.target).toFixed(1)}`; });
+  let latestIdx = -1;
+  for (let i = data.length - 1; i >= 0; i--) { if (data[i].actual != null) { latestIdx = i; break; } }
   const labelIdxs = [0, Math.floor((data.length - 1) / 2), data.length - 1];
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H + 22}`} style={{ width: "100%", display: "block", overflow: "visible" }}>
-        {linePath("target", "#333", true)}
-        {linePath("actual", "#60a5fa", false)}
+        {areaPath && <path d={areaPath} fill="var(--r-accent)" fillOpacity={0.08} stroke="none" />}
+        {targetPath && <path d={targetPath} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth={1.5} strokeDasharray="4 3" strokeLinecap="round" strokeLinejoin="round" />}
+        {actualPath && <path d={actualPath} fill="none" stroke="var(--r-accent)" strokeWidth={2}
+          strokeLinecap="round" strokeLinejoin="round" pathLength="1" strokeDasharray="1" strokeDashoffset={drawn ? 0 : 1}
+          style={{ transition: prm ? "none" : `stroke-dashoffset 800ms ${EASE.dawn}` }} />}
         {data.map((p, i) => p.actual != null && (
-          <circle key={i} cx={xS(i)} cy={yS(p.actual)} r={2.5} fill="#60a5fa" />
+          <circle key={i} cx={xS(i)} cy={yS(p.actual)} r={i === latestIdx ? 3.5 : 2.5} fill={i === latestIdx ? scoreColor(p.actual) : "var(--r-accent)"} />
         ))}
         {labelIdxs.map(i => (
-          <text key={i} x={xS(i)} y={H + 16} textAnchor="middle"
-            fill="#444" fontSize={9} fontFamily="monospace">
+          <text key={i} x={xS(i)} y={H + 16} textAnchor="middle" fill="var(--r-fg2)" fontSize={11} fontFamily="'DM Sans',system-ui,sans-serif">
             {data[i]?.label || ""}
           </text>
         ))}
       </svg>
       <div style={{ display: "flex", gap: 14, marginTop: 2 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <div style={{ width: 14, height: 2, background: "#60a5fa" }} />
-          <span style={{ fontSize: 10, color: "#555" }}>Actual</span>
+          <div style={{ width: 14, height: 2, background: "var(--r-accent)" }} />
+          <span style={{ fontSize: 11, color: "var(--r-fg2)" }}>Actual</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <div style={{ width: 14, height: 2, background: "#333" }} />
-          <span style={{ fontSize: 10, color: "#555" }}>Target</span>
+          <div style={{ width: 14, height: 2, background: "rgba(255,255,255,.18)" }} />
+          <span style={{ fontSize: 11, color: "var(--r-fg2)" }}>Target</span>
         </div>
       </div>
     </div>
@@ -466,10 +556,13 @@ function BizEmptyState({ icon, title, sub }) {
 }
 function BizStatCard({ label, value, color, sub }) {
   return (
-    <div style={{ background: "var(--r-surf)", border: `0.5px solid var(--r-bord)`, borderLeft: color ? `3px solid ${color}` : undefined, borderRadius: 10, padding: "16px 18px" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: color || "var(--r-fg)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 4 }}>{sub}</div>}
+    <div style={{ background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 12, padding: "16px 20px", boxShadow: ELEV.sm }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+        {color && <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />}
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--r-fg2)" }}>{label}</div>
+      </div>
+      <div className="r-tnum" style={{ fontFamily: HERO_FONT, fontSize: 28, fontWeight: 400, color: color || "var(--r-fg)", letterSpacing: "-0.02em", lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 13, color: "var(--r-fg2)", marginTop: 6 }}>{sub}</div>}
     </div>
   );
 }
@@ -636,7 +729,7 @@ export default function App() {
   }
 
   const account = root.account;
-  const theme = root.theme || DEFAULT_THEME();
+  const theme = useMemo(() => migrateTheme(root.theme), [root.theme]);
 
   // ── Derived state ─────────────────────────────────────────────────────────
   const routineTargets = account?.routineTargets || DEFAULT_ROUTINE_TARGETS();
@@ -780,15 +873,25 @@ export default function App() {
 
   useEffect(() => {
     const pkg = FONT_PACKAGES.find(f => f.id === theme.font) || FONT_PACKAGES[0];
+    let heroLink = document.getElementById("r-hero-font");
+    if (!heroLink) { heroLink = document.createElement("link"); heroLink.id = "r-hero-font"; heroLink.rel = "stylesheet"; heroLink.href = FRAUNCES_URL; document.head.appendChild(heroLink); }
     if (pkg.url) {
       let link = document.getElementById("r-font-link");
       if (!link) { link = document.createElement("link"); link.id = "r-font-link"; link.rel = "stylesheet"; document.head.appendChild(link); }
       link.href = pkg.url;
     }
+    const preset = THEME_PRESETS.find(p => p.id === theme.preset);
+    const A = normalizeHex(account?.color || "#34d399");
+    const surf3 = theme.surf3 || preset?.surf3 || theme.surf2;
+    const fg3 = theme.fg3 || preset?.fg3 || theme.fg2;
+    const G = theme.glow || preset?.glow || A;
+    const light = theme.lightRamp ?? preset?.lightRamp ?? false;
+    const ACT = light ? (theme.textAccent || preset?.textAccent || A) : A;
+    CURRENT_LIGHT = light;
     let style = document.getElementById("r-theme-vars");
     if (!style) { style = document.createElement("style"); style.id = "r-theme-vars"; document.head.appendChild(style); }
-    style.textContent = `:root{--r-bg:${theme.bg};--r-surf:${theme.surf};--r-surf2:${theme.surf2};--r-bord:${theme.bord};--r-fg:${theme.fg};--r-fg2:${theme.fg2};--r-font:${pkg.stack};}`;
-  }, [theme]);
+    style.textContent = buildThemeCSS({ T: theme, A, G, ACT, surf3, fg3, light, fontStack: pkg.stack });
+  }, [theme, account?.color]);
 
   // ── Supabase auth ─────────────────────────────────────────────────────────
   const loadFromSupabase = useCallback(async (sess) => {
@@ -1338,7 +1441,7 @@ export default function App() {
                     <button key={n.id} style={{ ...S.navBtn, ...(active ? { background: accentColor + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }} onClick={() => { setView(n.id); if (isMobile) setSidebarOpen(false); }}>
                       <span style={{ ...S.navIcon, color: active ? accentColor : "var(--r-fg2)" }}>{n.icon}</span>
                       <span style={{ color: active ? "var(--r-fg)" : "var(--r-fg2)" }}>{n.label}</span>
-                      {active && <div style={{ width: 3, height: 16, background: accentColor, borderRadius: 2, marginLeft: "auto" }} />}
+                      <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: active ? 20 : 0, transform: "translateY(-50%)", background: accentColor, borderRadius: 2, boxShadow: active ? "var(--r-glow-active)" : "none", transition: "height 260ms var(--r-ease-dawn)" }} />
                     </button>
                   );
                 })}
@@ -1355,7 +1458,7 @@ export default function App() {
             <button style={{ ...S.navBtn, ...(view === "settings" ? { background: accentColor + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }} onClick={() => { setView("settings"); if (isMobile) setSidebarOpen(false); }}>
               <span style={{ ...S.navIcon, color: view === "settings" ? accentColor : "var(--r-fg2)" }}>⚙</span>
               <span style={{ color: view === "settings" ? "var(--r-fg)" : "var(--r-fg2)" }}>Settings</span>
-              {view === "settings" && <div style={{ width: 3, height: 16, background: accentColor, borderRadius: 2, marginLeft: "auto" }} />}
+              <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: view === "settings" ? 20 : 0, transform: "translateY(-50%)", background: accentColor, borderRadius: 2, boxShadow: view === "settings" ? "var(--r-glow-active)" : "none", transition: "height 260ms var(--r-ease-dawn)" }} />
             </button>
             <button style={{ ...S.navBtn, marginTop: 2 }} onClick={handleLock}>
               <span style={{ ...S.navIcon, color: "var(--r-fg2)" }}>🔒</span>
@@ -1387,7 +1490,7 @@ export default function App() {
                     onClick={() => { bizGoTo(n.id); if (isMobile) setSidebarOpen(false); }}>
                     <span style={{ ...S.navIcon, color: active ? BIZ_BLUE : "var(--r-fg2)" }}>{n.icon}</span>
                     <span style={{ color: active ? "var(--r-fg)" : "var(--r-fg2)" }}>{n.label}</span>
-                    {active && <div style={{ width: 3, height: 16, background: BIZ_BLUE, borderRadius: 2, marginLeft: "auto" }} />}
+                    <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: active ? 20 : 0, transform: "translateY(-50%)", background: BIZ_BLUE, borderRadius: 2, transition: "height 260ms var(--r-ease-dawn)" }} />
                   </button>
                 );
               })}
@@ -1428,25 +1531,14 @@ export default function App() {
           const nm = MILESTONES.find(m => m.days > daysSober);
           return (
             <div style={S.content}>
-              {/* Header row */}
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
-                <div>
-                  <h2 style={{ ...S.pageTitle, marginBottom: 2 }}>Overview</h2>
-                  <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>{new Date().toLocaleDateString("en-AU", { month: "long" })} snapshot</div>
-                </div>
-                <button style={{ ...S.panicBtn, margin: 0, padding: "9px 14px", borderRadius: 8 }} onClick={() => { setPanicStep(0); setModal("panic"); }}>
-                  <span style={{ fontSize: 16 }}>🆘</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#f87171" }}>Panic</span>
-                </button>
-              </div>
-
-              {/* KPI row */}
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
-                <StatCard value={daysSober} label="Days sober" accent={accentColor} />
-                <StatCard value={todayCombinedScore !== null ? todayCombinedScore : "—"} label="Routine score" accent="#60a5fa" />
-                <StatCard value={schedTotal ? `${schedDone}/${schedTotal}` : "—"} label="Today's schedule" accent="#a78bfa" />
-                <StatCard value={activeGoals.length || "—"} label="Active goals" accent="#f59e0b" />
-              </div>
+              <DashboardHero
+                daysSober={daysSober}
+                soberStart={account?.sobrietyStart}
+                scores={{ routine: todayCombinedScore, salah: todayPrayerScore, sleep: todaySleepScore }}
+                isMobile={isMobile}
+                onPanic={() => { setPanicStep(0); setModal("panic"); }}
+                nextMilestone={nm}
+              />
 
               {/* 2-column body */}
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, alignItems: "start" }}>
@@ -2876,7 +2968,7 @@ export default function App() {
           const applyPreset = preset => {
             const p = THEME_PRESETS.find(x => x.id === preset);
             if (!p) return;
-            const patch = { preset: p.id, bg: p.bg, surf: p.surf, surf2: p.surf2, bord: p.bord, fg: p.fg, fg2: p.fg2 };
+            const patch = { preset: p.id, bg: p.bg, surf: p.surf, surf2: p.surf2, surf3: p.surf3, bord: p.bord, fg: p.fg, fg2: p.fg2, fg3: p.fg3, glow: p.glow, lightRamp: p.lightRamp || false, textAccent: p.textAccent || null };
             if (p.font) patch.font = p.font;
             updTheme(patch);
           };
@@ -4178,78 +4270,160 @@ export default function App() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 function StatCard({ value, label, accent }) {
   return (
-    <div style={{ ...S.statCard, borderTopColor: accent }}>
-      <div style={{ fontSize: 10, color: "var(--r-fg2,#555)", textTransform: "uppercase", letterSpacing: "0.09em", fontWeight: 600, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: accent, fontFamily: "monospace", letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</div>
+    <div style={S.statCard}>
+      <div style={{ fontSize: 13, color: "var(--r-fg2)", fontWeight: 600, marginBottom: 10 }}>{label}</div>
+      <div className="r-tnum" style={{ fontFamily: HERO_FONT, fontSize: 34, fontWeight: 400, color: accent || "var(--r-fg)", letterSpacing: "-0.02em", lineHeight: 1 }}>{value}</div>
+    </div>
+  );
+}
+
+// Reusable hope-first empty state (glow disc, no illustration)
+function EmptyState({ title, body, cta, onCta, showGlyph = true }) {
+  const prm = usePRM();
+  const [shown, setShown] = useState(false);
+  useEffect(() => { const id = requestAnimationFrame(() => setShown(true)); return () => cancelAnimationFrame(id); }, []);
+  const rise = { opacity: shown ? 1 : 0, transform: shown ? "translateY(0)" : "translateY(10px)", transition: prm ? "none" : "opacity 500ms var(--r-ease-dawn),transform 500ms var(--r-ease-dawn)" };
+  return (
+    <div style={{ ...S.emptyState, ...rise }}>
+      {showGlyph && <div style={{ ...S.emptyGlyph, animation: prm ? "none" : "fajrBloom 8s ease-in-out infinite" }} />}
+      <div style={S.emptyTitle}>{title}</div>
+      <div style={S.emptyBody}>{body}</div>
+      {cta && <button className="r-press" style={{ ...S.primaryBtn, width: "auto", padding: "11px 22px" }} onClick={onCta}>{cta}</button>}
+    </div>
+  );
+}
+
+// Dashboard hero — day-count owns the top third (entrance + count-up + momentum rings)
+function DashboardHero({ daysSober, soberStart, scores, isMobile, onPanic, nextMilestone }) {
+  const prm = usePRM();
+  const [heroIn, setHeroIn] = useState(false);
+  const [shownDays, setShownDays] = useState(() => prm ? daysSober : Math.max(0, daysSober - 12));
+  useEffect(() => { const id = requestAnimationFrame(() => setHeroIn(true)); return () => cancelAnimationFrame(id); }, []);
+  useEffect(() => {
+    if (prm) { setShownDays(daysSober); return; }
+    const from = Math.max(0, daysSober - 12), to = daysSober, dur = 1000, t0 = performance.now();
+    let raf; const tick = now => { const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3); setShownDays(Math.round(from + (to - from) * e)); if (p < 1) raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
+  }, [daysSober, prm]);
+  const rise = (delay, dur = 600) => ({ opacity: heroIn ? 1 : 0, transform: heroIn ? "translateY(0)" : "translateY(12px)", transition: prm ? "none" : `opacity ${dur}ms var(--r-ease-dawn) ${delay}ms, transform ${dur}ms var(--r-ease-dawn) ${delay}ms` });
+  const ringSize = isMobile ? 64 : 80;
+  const sinceStr = soberStart ? new Date(soberStart).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : null;
+  const mil = nextMilestone;
+  const milPct = mil ? Math.min(100, daysSober / mil.days * 100) : 0;
+  const rings = [{ label: "Routine", v: scores.routine }, { label: "Salah", v: scores.salah }, { label: "Sleep", v: scores.sleep }];
+  return (
+    <div style={S.heroBlock}>
+      <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(120% 90% at 50% 18%, var(--r-glow) 0%, transparent 60%)", opacity: 0.2, animation: prm ? "none" : "fajrBloom 8s ease-in-out infinite" }} />
+      <div style={{ position: "relative" }}>
+        <div className="r-tnum" style={{ ...S.heroNumeral, ...rise(120, 700), textShadow: "0 0 34px var(--r-glow)", minWidth: "1.5ch", display: "inline-block" }}>{shownDays}</div>
+        <div style={{ ...rise(220), fontSize: 15, color: "var(--r-fg2)", letterSpacing: "0.04em" }}>{daysSober === 1 ? "day" : "days"} steady</div>
+        {sinceStr && <div style={{ ...S.heroMeta, ...rise(400) }}>since {sinceStr}</div>}
+        {mil && (
+          <div style={{ ...rise(320), marginTop: 14 }}>
+            <div style={S.heroMilestone}>{Math.max(0, mil.days - daysSober)} {mil.days - daysSober === 1 ? "day" : "days"} to {mil.label || `${mil.days}`} · steady</div>
+            <div style={{ height: 4, background: "var(--r-surf2)", borderRadius: 999, maxWidth: 240, margin: "8px auto 0", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${milPct}%`, background: "var(--r-accent)", borderRadius: 999, transition: prm ? "none" : "width .8s var(--r-ease-dawn)" }} />
+            </div>
+          </div>
+        )}
+        <div style={{ ...S.momentumRow, ...rise(480), marginTop: 26 }}>
+          {rings.map((r, i) => (
+            <div key={r.label} style={{ textAlign: "center" }}>
+              <CircleRing value={r.v ?? 0} size={ringSize} strokeWidth={6} role="momentum" glow delay={i * 120} label={`${r.label} ${r.v ?? 0}`} />
+              <div style={{ fontSize: 13, color: "var(--r-fg2)", marginTop: 8 }}>{r.label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...rise(560), marginTop: 22, display: "flex", justifyContent: "center" }}>
+          <button className="r-press" style={S.panicBtn} onClick={onPanic}>
+            <span style={{ fontSize: 15 }}>🕊️</span>
+            <span>I need a moment</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 const S = {
-  app: { display: "flex", minHeight: "100vh", background: "var(--r-bg,#0d0d0f)", color: "var(--r-fg,#e8e8e8)", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" },
-  mobileHeader: { position: "fixed", top: 0, left: 0, right: 0, height: 52, background: "var(--r-surf,#0a0a0c)", borderBottom: "1px solid var(--r-bord,#161618)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", zIndex: 100 },
-  hamburger: { background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", padding: "4px 6px", lineHeight: 1 },
-  sidebarBackdrop: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 150 },
-  sidebar: { width: 240, background: "var(--r-surf,#0a0a0c)", borderRight: "1px solid var(--r-bord,#161618)", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
-  logo: { fontSize: 15, fontWeight: 700, letterSpacing: "-0.03em" },
+  app: { display: "flex", minHeight: "100vh", background: "var(--r-bg,#0d0e13)", color: "var(--r-fg,#ece9e4)", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
+  mobileHeader: { position: "fixed", top: 0, left: 0, right: 0, height: 52, background: "var(--r-surf,#14151c)", borderBottom: "1px solid var(--r-bord,#1f2029)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", zIndex: 100 },
+  hamburger: { background: "none", border: "none", color: "var(--r-fg2)", fontSize: 22, cursor: "pointer", padding: "4px 6px", lineHeight: 1 },
+  sidebarBackdrop: { position: "fixed", inset: 0, background: "rgba(7,8,14,0.66)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", zIndex: 150 },
+  sidebar: { width: 240, background: "var(--r-surf,#14151c)", borderRight: "1px solid var(--r-bord,#1f2029)", boxShadow: "6px 0 24px rgba(7,8,14,.35)", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
+  logo: { fontSize: 17, fontWeight: 460, fontFamily: HERO_FONT, letterSpacing: "-0.02em" },
   accDot: { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 },
-  navBtn: { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "7px 10px", borderRadius: 7, border: "none", background: "transparent", color: "var(--r-fg2,#555)", fontSize: 13, cursor: "pointer", marginBottom: 1, textAlign: "left", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", transition: "background 0.15s" },
-  navIcon: { fontSize: 13, width: 18, textAlign: "center", flexShrink: 0 },
+  navBtn: { position: "relative", display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 40, padding: "10px 12px", borderRadius: 10, border: "none", background: "transparent", color: "var(--r-fg2)", fontSize: 15, fontWeight: 500, cursor: "pointer", marginBottom: 2, textAlign: "left", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)", transition: "color 200ms var(--r-ease-soft),background 200ms var(--r-ease-soft)" },
+  navIcon: { fontSize: 15, width: 20, textAlign: "center", flexShrink: 0, transition: "transform 200ms var(--r-ease-soft)" },
   main: { flex: 1, overflow: "auto", minWidth: 0 },
-  content: { padding: "28px 32px" },
-  pageTitle: { fontSize: 22, fontWeight: 700, marginBottom: 0, letterSpacing: "-0.03em" },
-  panicBtn: { display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "8px 14px", cursor: "pointer" },
-  statGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 },
-  statCard: { background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderTop: "2px solid", borderRadius: 10, padding: "16px 18px" },
-  card: { background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderRadius: 10, padding: "16px 18px", marginBottom: 12 },
-  cardLabel: { fontSize: 10, color: "var(--r-fg2,#555)", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 10, fontWeight: 600 },
+  content: { padding: "28px 32px", maxWidth: 1120, margin: "0 auto" },
+  pageTitle: { fontSize: 26, fontWeight: 600, marginBottom: 0, letterSpacing: "-0.02em" },
+  panicBtn: { display: "flex", alignItems: "center", gap: 8, background: "var(--r-surf2)", border: "1px solid rgba(156,107,107,0.48)", borderRadius: 10, padding: "11px 15px", color: "#e6b3b3", fontSize: 15, fontWeight: 600, cursor: "pointer", boxShadow: "var(--r-shadow-sm)" },
+  statGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 },
+  statCard: { background: "var(--r-surf,#14151c)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 12, padding: "16px 20px", boxShadow: "var(--r-shadow-sm)" },
+  card: { background: "var(--r-surf,#14151c)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 16, padding: "20px 24px", marginBottom: 16, boxShadow: "var(--r-shadow-sm)" },
+  cardHover: { boxShadow: "var(--r-shadow-md)", transform: "translateY(-1px)" },
+  cardLabel: { fontSize: 13, color: "var(--r-fg2,#8b8a94)", marginBottom: 14, fontWeight: 600 },
+  eyebrow: { fontSize: 13, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 },
   progressWrap: { display: "flex", alignItems: "center", gap: 10 },
-  progressBg: { flex: 1, height: 4, background: "var(--r-bord,#161618)", borderRadius: 3, overflow: "hidden" },
-  progressBar: { height: "100%", borderRadius: 3, transition: "width .4s" },
-  progressText: { fontSize: 11, color: "var(--r-fg2,#555)", whiteSpace: "nowrap" },
-  bigProgressBg: { height: 5, background: "var(--r-bord,#161618)", borderRadius: 3, overflow: "hidden", marginTop: 8 },
-  bigProgressBar: { height: "100%", borderRadius: 3, transition: "width .4s" },
-  milestonesGrid: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 },
-  milestoneChip: { display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 4px", borderRadius: 8, border: "1px solid", transition: "all .3s" },
-  mLabel: { fontSize: 9, color: "var(--r-fg2,#666)" },
-  scheduleRow: { display: "flex", alignItems: "center", padding: "9px 0 9px 10px", borderBottom: "0.5px solid var(--r-bord,#111)", borderLeft: "2px solid", marginBottom: 1 },
-  habitDot: { width: 16, height: 16, borderRadius: "50%", border: "2px solid", cursor: "pointer", transition: "all .2s", flexShrink: 0 },
-  checkBtn: { width: 28, height: 28, borderRadius: "50%", border: "2px solid", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "all .2s", background: "transparent" },
-  deleteBtn: { background: "none", border: "none", color: "#2a2a2a", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: "0 2px" },
-  catBtn: { padding: "4px 11px", borderRadius: 16, border: "1px solid", fontSize: 11, cursor: "pointer", background: "transparent", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" },
-  goalBadge: { display: "inline-block", padding: "2px 10px", borderRadius: 18, fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" },
-  goalCheck: { width: 18, height: 18, borderRadius: 4, border: "2px solid", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1, transition: "all .2s" },
-  actionCard: { display: "flex", gap: 12, background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderRadius: 9, padding: "12px 14px", marginBottom: 7, alignItems: "flex-start" },
-  actionTitle: { fontSize: 13, fontWeight: 600, marginBottom: 3 },
-  actionDesc: { fontSize: 12, color: "var(--r-fg2,#666)", lineHeight: 1.55 },
+  progressBg: { flex: 1, height: 5, background: "var(--r-surf2,#1b1c25)", borderRadius: 999, overflow: "hidden" },
+  progressBar: { height: "100%", borderRadius: 999, transition: "width .6s var(--r-ease-dawn)" },
+  progressText: { fontSize: 13, color: "var(--r-fg2,#8b8a94)", whiteSpace: "nowrap" },
+  bigProgressBg: { height: 6, background: "var(--r-surf2,#1b1c25)", borderRadius: 999, overflow: "hidden", marginTop: 8 },
+  bigProgressBar: { height: "100%", borderRadius: 999, transition: "width .6s var(--r-ease-dawn)" },
+  milestonesGrid: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 },
+  milestoneChip: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 6px", borderRadius: 10, border: "1px solid var(--r-bord)", background: "var(--r-surf)", transition: "all .3s" },
+  mLabel: { fontSize: 11, color: "var(--r-fg2,#8b8a94)" },
+  scheduleRow: { display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, marginBottom: 4, transition: "background 150ms var(--r-ease-soft)" },
+  habitDot: { width: 18, height: 18, borderRadius: "50%", border: "2px solid", cursor: "pointer", transition: "all .2s", flexShrink: 0 },
+  checkBtn: { width: 30, height: 30, borderRadius: "50%", border: "2px solid", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s", background: "transparent" },
+  deleteBtn: { background: "none", border: "none", color: "var(--r-fg3)", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: "0 2px" },
+  catBtn: { padding: "6px 13px", borderRadius: 999, border: "1px solid", fontSize: 13, cursor: "pointer", background: "transparent", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
+  goalBadge: { display: "inline-block", padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em" },
+  goalCheck: { width: 18, height: 18, borderRadius: 5, border: "2px solid", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1, transition: "all .2s" },
+  actionCard: { display: "flex", gap: 12, background: "var(--r-surf,#14151c)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 10, padding: "14px 16px", marginBottom: 8, alignItems: "flex-start", boxShadow: "var(--r-shadow-sm)" },
+  actionTitle: { fontSize: 15, fontWeight: 600, marginBottom: 3 },
+  actionDesc: { fontSize: 15, color: "var(--r-fg2,#8b8a94)", lineHeight: 1.55 },
   rewardRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 },
-  rewardCard: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "0.5px solid var(--r-bord,#161618)" },
-  rewardCardName: { fontSize: 13, marginBottom: 2 },
-  claimBtn: { background: "#0d1f18", border: "1px solid #34d399", color: "#34d399", padding: "4px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer", flexShrink: 0 },
-  sleepTarget: { background: "var(--r-surf2,#060608)", borderRadius: 8, padding: "10px 12px", textAlign: "center", flex: 1 },
-  sleepTargetLabel: { fontSize: 10, color: "var(--r-fg2,#555)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 },
-  sleepTargetVal: { fontSize: 17, fontWeight: 700, fontFamily: "monospace" },
-  sleepLogRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "0.5px solid var(--r-bord,#111)" },
-  habitCard: { background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderRadius: 10, padding: "12px 14px", marginBottom: 8, borderLeft: "3px solid transparent" },
-  lvlBadge: { fontSize: 10, color: "#a78bfa", background: "rgba(167,139,250,0.12)", border: "0.5px solid rgba(167,139,250,0.3)", padding: "1px 7px", borderRadius: 10 },
-  journalEntry: { background: "var(--r-surf,#0a0a0c)", border: "0.5px solid var(--r-bord,#161618)", borderRadius: 9, padding: "14px 18px", marginBottom: 10 },
-  journalDate: { fontSize: 10, color: "var(--r-fg2,#555)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" },
-  journalText: { fontSize: 13, color: "var(--r-fg,#bbb)", lineHeight: 1.8 },
-  empty: { fontSize: 12, color: "var(--r-fg2,#444)", padding: "4px 0" },
-  linkBtn: { background: "none", border: "none", color: "#60a5fa", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" },
-  textarea: { width: "100%", background: "var(--r-surf2,#060608)", border: "1px solid var(--r-bord,#161618)", borderRadius: 7, padding: "10px 12px", color: "var(--r-fg,#e8e8e8)", fontSize: 13, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", resize: "vertical", lineHeight: 1.65 },
-  input: { width: "100%", background: "var(--r-surf2,#060608)", border: "1px solid var(--r-bord,#161618)", borderRadius: 7, padding: "9px 12px", color: "var(--r-fg,#e8e8e8)", fontSize: 13, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" },
-  primaryBtn: { background: "#34d399", color: "#0d1f17", border: "none", padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", letterSpacing: "-0.01em" },
-  setupWrap: { minHeight: "100vh", background: "var(--r-bg,#0d0d0f)", display: "flex", alignItems: "center", justifyContent: "center" },
-  setupCard: { background: "var(--r-surf,#0a0a0c)", border: "1px solid var(--r-bord,#161618)", borderRadius: 16, padding: "40px 34px", maxWidth: 400, width: "100%", textAlign: "center" },
+  rewardCard: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--r-bord,#1f2029)" },
+  rewardCardName: { fontSize: 15, marginBottom: 2 },
+  claimBtn: { background: "var(--r-surf2)", border: "1px solid var(--r-accent)", color: "var(--r-accent-text)", padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 },
+  sleepTarget: { background: "var(--r-surf2,#1b1c25)", borderRadius: 10, padding: "12px 14px", textAlign: "center", flex: 1 },
+  sleepTargetLabel: { fontSize: 13, color: "var(--r-fg2,#8b8a94)", marginBottom: 5, fontWeight: 600 },
+  sleepTargetVal: { fontSize: 19, fontWeight: 400, fontFamily: HERO_FONT, letterSpacing: "-0.01em" },
+  sleepLogRow: { display: "flex", alignItems: "center", gap: 8, padding: "10px 0", borderBottom: "1px solid var(--r-bord,#1f2029)" },
+  habitCard: { background: "var(--r-surf,#14151c)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 12, padding: "12px 16px", marginBottom: 10, boxShadow: "var(--r-shadow-sm)" },
+  lvlBadge: { fontSize: 11, color: "var(--r-accent-text)", background: "var(--r-surf2)", border: "1px solid var(--r-bord)", padding: "2px 9px", borderRadius: 999 },
+  journalEntry: { background: "var(--r-surf,#14151c)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 12, padding: "18px 20px", marginBottom: 12, boxShadow: "var(--r-shadow-sm)" },
+  journalDate: { fontSize: 13, color: "var(--r-fg2,#8b8a94)", marginBottom: 8, fontWeight: 500 },
+  journalText: { fontSize: 15, color: "var(--r-fg,#ece9e4)", lineHeight: 1.8 },
+  empty: { fontSize: 15, color: "var(--r-fg3,#5d5c66)", padding: "4px 0" },
+  linkBtn: { background: "none", border: "none", color: "var(--r-accent-text)", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
+  textarea: { width: "100%", background: "var(--r-surf2,#1b1c25)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 8, padding: "12px 14px", color: "var(--r-fg,#ece9e4)", fontSize: 15, fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)", resize: "vertical", lineHeight: 1.6, transition: "border-color .15s,box-shadow .15s,background .15s" },
+  input: { width: "100%", background: "var(--r-surf2,#1b1c25)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 8, padding: "11px 13px", color: "var(--r-fg,#ece9e4)", fontSize: 15, fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)", transition: "border-color .15s,box-shadow .15s,background .15s" },
+  primaryBtn: { background: "var(--r-accent)", color: "var(--r-on-accent)", border: "none", padding: "12px 18px", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)", letterSpacing: "-0.01em", boxShadow: "var(--r-shadow-sm)", transition: "filter 150ms var(--r-ease-soft),box-shadow 150ms var(--r-ease-soft),transform 80ms var(--r-ease-soft)" },
+  secondaryBtn: { background: "var(--r-surf2)", color: "var(--r-fg)", border: "1px solid var(--r-bord)", padding: "12px 18px", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
+  ghostBtn: { background: "transparent", color: "var(--r-fg2)", border: "none", padding: "10px 14px", borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: "pointer", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
+  setupWrap: { minHeight: "100vh", background: "var(--r-bg,#0d0e13)", display: "flex", alignItems: "center", justifyContent: "center" },
+  setupCard: { background: "var(--r-surf3,#23242f)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px 34px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "var(--r-shadow-lg)" },
   setupEmoji: { fontSize: 40, marginBottom: 14 },
-  setupTitle: { fontSize: 21, fontWeight: 700, marginBottom: 10, letterSpacing: "-0.03em" },
-  setupSub: { fontSize: 13, color: "var(--r-fg2,#555)", lineHeight: 1.7, marginBottom: 20 },
-  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modalBox: { background: "var(--r-surf,#0a0a0c)", border: "1px solid var(--r-bord,#1a1a1e)", borderRadius: 13, padding: "24px", maxWidth: 460, width: "92%", maxHeight: "88vh", overflowY: "auto" },
-  modalTitle: { fontSize: 18, fontWeight: 700, marginBottom: 8, letterSpacing: "-0.02em" },
-  modalSub: { fontSize: 12, color: "var(--r-fg2,#555)", lineHeight: 1.6, marginBottom: 14 },
-  formRow: { display: "flex", flexDirection: "column", gap: 5 },
-  formLabel: { fontSize: 11, color: "var(--r-fg2,#555)", fontWeight: 500 },
-  accRow: { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: "0.5px solid", marginBottom: 8 },
+  setupTitle: { fontSize: 26, fontWeight: 420, fontFamily: HERO_FONT, marginBottom: 10, letterSpacing: "-0.02em" },
+  setupSub: { fontSize: 15, color: "var(--r-fg2,#8b8a94)", lineHeight: 1.7, marginBottom: 20 },
+  overlay: { position: "fixed", inset: 0, background: "rgba(7,8,14,0.72)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
+  modalBox: { background: "var(--r-surf3,#23242f)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "28px", maxWidth: 460, width: "92%", maxHeight: "88vh", overflowY: "auto", boxShadow: "var(--r-shadow-lg)" },
+  modalTitle: { fontSize: 21, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.02em" },
+  modalSub: { fontSize: 15, color: "var(--r-fg2,#8b8a94)", lineHeight: 1.6, marginBottom: 18 },
+  heroBlock: { position: "relative", overflow: "hidden", textAlign: "center", background: "radial-gradient(120% 90% at 50% 0%, var(--r-glow) 0%, transparent 55%), linear-gradient(180deg, var(--r-surf3) 0%, var(--r-surf) 100%)", border: "1px solid var(--r-bord)", borderRadius: 24, padding: "clamp(28px,6vw,56px) 24px 32px", marginBottom: 16, boxShadow: "var(--r-shadow-md)" },
+  heroNumeral: { fontFamily: HERO_FONT, fontSize: "clamp(4rem,10vw,7rem)", fontWeight: 360, lineHeight: 0.95, letterSpacing: "-0.02em", color: "var(--r-fg)", fontVariantNumeric: "tabular-nums" },
+  heroMeta: { fontSize: 15, color: "var(--r-fg2)", marginTop: 4 },
+  heroMilestone: { fontSize: 13, color: "var(--r-accent-text)", marginTop: 12, fontWeight: 500 },
+  momentumRow: { display: "flex", gap: "clamp(16px,4vw,40px)", justifyContent: "center", alignItems: "flex-start", padding: "8px 0 4px" },
+  emptyState: { textAlign: "center", padding: "clamp(2.5rem,8vh,5rem) 1.5rem", maxWidth: 420, margin: "0 auto" },
+  emptyGlyph: { width: 88, height: 88, borderRadius: "50%", margin: "0 auto 18px", background: "radial-gradient(circle at 50% 40%, var(--r-glow), transparent 70%)" },
+  emptyTitle: { fontFamily: HERO_FONT, fontSize: 22, fontWeight: 420, color: "var(--r-fg)", marginBottom: 8, letterSpacing: "-0.01em" },
+  emptyBody: { fontSize: 15, color: "var(--r-fg2)", lineHeight: 1.6, marginBottom: 18 },
+  sosBlock: { background: "var(--r-surf3)", border: "1px solid rgba(156,107,107,0.36)", borderRadius: 16, padding: 28, boxShadow: "var(--r-shadow-lg)" },
+  formRow: { display: "flex", flexDirection: "column", gap: 8 },
+  formLabel: { fontSize: 13, color: "var(--r-fg2,#8b8a94)", fontWeight: 500 },
+  accRow: { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--r-bord)", marginBottom: 8 },
 };
