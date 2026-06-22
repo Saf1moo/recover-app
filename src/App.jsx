@@ -17,7 +17,7 @@ const DEFAULT_ROUTINE_TARGETS = () => ({
 });
 
 const accountDefaults = () => ({
-  id: null, name: "", substance: "", color: "#34d399",
+  id: null, name: "", substance: "", color: "var(--r-success)",
   sobrietyStart: null,
   habits: [], relapses: [], rewards: [], claimedRewards: [], journal: [],
   routineTargets: DEFAULT_ROUTINE_TARGETS(),
@@ -58,21 +58,21 @@ function saveRoot(root) {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const MILESTONES = [
-  { days: 1, label: "24 hours", emoji: "🌱" }, { days: 3, label: "3 days", emoji: "✨" },
-  { days: 7, label: "1 week", emoji: "🔥" }, { days: 14, label: "2 weeks", emoji: "💪" },
-  { days: 30, label: "1 month", emoji: "🏆" }, { days: 60, label: "2 months", emoji: "🌟" },
-  { days: 90, label: "3 months", emoji: "💎" }, { days: 180, label: "6 months", emoji: "🦋" },
-  { days: 365, label: "1 year", emoji: "👑" },
+  { days: 1, label: "24 hours" }, { days: 3, label: "3 days" },
+  { days: 7, label: "1 week" }, { days: 14, label: "2 weeks" },
+  { days: 30, label: "1 month" }, { days: 60, label: "2 months" },
+  { days: 90, label: "3 months" }, { days: 180, label: "6 months" },
+  { days: 365, label: "1 year" },
 ];
 const BUILTIN_RELAPSE_TOOLS = [
-  { id: "breathe", icon: "🫁", title: "Box breathing", desc: "4 in, hold 4, out 4, hold 4. Repeat 4×. Activates your parasympathetic nervous system." },
-  { id: "call", icon: "📞", title: "Call your person", desc: "Contact your sponsor, therapist, or trusted friend right now. Connection counters craving." },
-  { id: "delay", icon: "⏱", title: "Urge surf — 20 min", desc: "Cravings peak then fall. Set a timer. Just delay acting on it." },
-  { id: "move", icon: "🏃", title: "Move your body", desc: "Walk, run, push-ups. Exercise releases dopamine and reduces cortisol within minutes." },
-  { id: "ground", icon: "🌍", title: "5-4-3-2-1 grounding", desc: "5 things you see, 4 you hear, 3 you touch, 2 you smell, 1 you taste." },
-  { id: "cold", icon: "❄️", title: "Cold water on face", desc: "Triggers the dive reflex — slows heart rate, lowers anxiety fast." },
-  { id: "write", icon: "📝", title: "Write it out", desc: "Write what you're feeling and what triggered this. Externalising reduces its power." },
-  { id: "tipp", icon: "🧊", title: "TIPP skill (DBT)", desc: "Temperature, Intense exercise, Paced breathing, Progressive relaxation." },
+  { id: "breathe", icon: "ph ph-wind", title: "Box breathing", desc: "4 in, hold 4, out 4, hold 4. Repeat 4×. Activates your parasympathetic nervous system." },
+  { id: "call", icon: "ph ph-phone-call", title: "Call your person", desc: "Contact your sponsor, therapist, or trusted friend right now. Connection counters craving." },
+  { id: "delay", icon: "ph ph-timer", title: "Urge surf — 20 min", desc: "Cravings peak then fall. Set a timer. Just delay acting on it." },
+  { id: "move", icon: "ph ph-person-simple-run", title: "Move your body", desc: "Walk, run, push-ups. Exercise releases dopamine and reduces cortisol within minutes." },
+  { id: "ground", icon: "ph ph-globe-hemisphere-west", title: "5-4-3-2-1 grounding", desc: "5 things you see, 4 you hear, 3 you touch, 2 you smell, 1 you taste." },
+  { id: "cold", icon: "ph ph-snowflake", title: "Cold water on face", desc: "Triggers the dive reflex — slows heart rate, lowers anxiety fast." },
+  { id: "write", icon: "ph ph-note-pencil", title: "Write it out", desc: "Write what you're feeling and what triggered this. Externalising reduces its power." },
+  { id: "tipp", icon: "ph ph-cube", title: "TIPP skill (DBT)", desc: "Temperature, Intense exercise, Paced breathing, Progressive relaxation." },
 ];
 const DEFAULT_HABITS = () => [
   { id: "h1", name: "Morning mindfulness", category: "mental", days: [], scheduledTimes: ["07:00"], levelsEnabled: false, currentLevel: 1, levels: [], completions: [] },
@@ -96,95 +96,85 @@ const DEFAULT_POST_REMINDERS = () => [
   { id: "pr2", text: "I am not a failure. Relapse is part of the recovery process for many people." },
   { id: "pr3", text: "I can start again right now, in this moment." },
 ];
-const CAT_HEX = { mental: "#a78bfa", physical: "#34d399", sleep: "#60a5fa", social: "#f97316", custom: "#f472b6" };
+const CAT_HEX = { mental: "#5B4A6A", physical: "var(--r-success)", sleep: "var(--r-info)", social: "#A4503C", custom: "#8C5A6E" };
 const GOAL_PERIODS = ["daily", "weekly", "monthly", "yearly"];
-const GOAL_COLORS = { daily: "#34d399", weekly: "#60a5fa", monthly: "#a78bfa", yearly: "#f59e0b" };
+const GOAL_COLORS = { daily: "var(--r-success)", weekly: "var(--r-info)", monthly: "#5B4A6A", yearly: "var(--r-caution)" };
 const LIFE_AREAS = [
-  { key: "health", label: "Health", color: "#34d399" },
-  { key: "faith", label: "Faith", color: "#a78bfa" },
-  { key: "relationships", label: "Relationships", color: "#f97316" },
-  { key: "career", label: "Career", color: "#60a5fa" },
-  { key: "finances", label: "Finances", color: "#f59e0b" },
-  { key: "personalGrowth", label: "Growth", color: "#f472b6" },
-  { key: "fun", label: "Fun", color: "#2dd4bf" },
+  { key: "health", label: "Health", color: "var(--r-success)" },
+  { key: "faith", label: "Faith", color: "#5B4A6A" },
+  { key: "relationships", label: "Relationships", color: "#A4503C" },
+  { key: "career", label: "Career", color: "var(--r-info)" },
+  { key: "finances", label: "Finances", color: "var(--r-caution)" },
+  { key: "personalGrowth", label: "Growth", color: "#8C5A6E" },
+  { key: "fun", label: "Fun", color: "#3A6B63" },
 ];
 const PERIOD_ORDER = ["yearly", "monthly", "weekly", "daily"];
 const DEFAULT_VISION = () => ({ myWhy: "", lifeVision: "", lifeAreas: { health: 5, faith: 5, relationships: 5, career: 5, finances: 5, personalGrowth: 5, fun: 5 } });
 const DEFAULT_ACCOUNTABILITY = () => ({ contract: null, futureLetters: [], weeklyReviews: [], wins: [], gratitude: [] });
 const DEFAULT_WATER_CONFIG = () => ({ glassSize: 250, dailyTarget: 8 });
 const EXERCISE_CATS = ["cardio", "strength", "flexibility", "sports", "other"];
-const EXERCISE_CAT_HEX = { cardio: "#f97316", strength: "#34d399", flexibility: "#a78bfa", sports: "#60a5fa", other: "#f59e0b" };
-const ACCOUNT_COLORS = ["#34d399", "#60a5fa", "#a78bfa", "#f97316", "#f472b6", "#f59e0b", "#f87171", "#2dd4bf"];
+const EXERCISE_CAT_HEX = { cardio: "#A4503C", strength: "var(--r-success)", flexibility: "#5B4A6A", sports: "var(--r-info)", other: "var(--r-caution)" };
+const ACCOUNT_COLORS = ["var(--r-success)", "var(--r-info)", "#5B4A6A", "#A4503C", "#8C5A6E", "var(--r-caution)", "var(--r-danger)", "#3A6B63"];
 const PRAYER_NAMES = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 // ─── "Sakīnah / Fajr" design system — tokens, themes, helpers ──────────────────
-const DEFAULT_THEME = () => ({ preset: "fajr", bg: "#0d0e13", surf: "#14151c", surf2: "#1b1c25", surf3: "#23242f", bord: "#1f2029", fg: "#ece9e4", fg2: "#8b8a94", fg3: "#5d5c66", glow: "#f2b06a", font: "dm-sans" });
+// "Almanac" — warm, light-first design system. Dark ("Lamplight") is opt-in only.
+const DEFAULT_THEME = () => ({ preset: "almanac", bg: "#F7F1E6", surf: "#FDFAF2", surf2: "#EFE7D7", surf3: "#FDFAF2", bord: "#E3D9C6", fg: "#221E18", fg2: "#5C544A", fg3: "#6F6657", glow: "transparent", font: "hanken" });
 const INTERNAL_EMAIL = "user@recover-app.internal";
 const THEME_PRESETS = [
-  // ── Base ──
-  { id: "fajr", name: "Fajr", desc: "Warm indigo pre-dawn. Light on the horizon.", category: "base", accent: "#34d399", glow: "#f2b06a",
-    bg: "#0d0e13", surf: "#14151c", surf2: "#1b1c25", surf3: "#23242f", bord: "#1f2029", fg: "#ece9e4", fg2: "#8b8a94", fg3: "#5d5c66" },
-  { id: "obsidian", name: "Obsidian", desc: "Cool slate calm. Restrained and exact.", category: "base", accent: "#60a5fa", glow: "#7cb8ff",
-    bg: "#0a0d12", surf: "#111620", surf2: "#18202c", surf3: "#202a38", bord: "#1c2531", fg: "#e6ebf2", fg2: "#838f9f", fg3: "#5f6b7a" },
-  { id: "forest", name: "Forest", desc: "Warm moss dark. Grounded, alive, quiet.", category: "base", accent: "#34d399", glow: "#9bd66a",
-    bg: "#0a0f0b", surf: "#111813", surf2: "#18211a", surf3: "#1f2a22", bord: "#1b251d", fg: "#e6eae3", fg2: "#828b7a", fg3: "#67705f" },
-  { id: "noir", name: "Noir", desc: "Warm charcoal monochrome. Nothing shouts.", category: "base", accent: "#e3e0d8", glow: "#cdab78",
-    bg: "#0a0a0b", surf: "#121214", surf2: "#1a1a1d", surf3: "#222226", bord: "#1e1e22", fg: "#ededea", fg2: "#8a8a8d", fg3: "#6d6d70" },
-  { id: "dawn", name: "Dawn", desc: "Light cream daybreak. Open, merciful, awake.", category: "base", lightRamp: true, accent: "#2f9e74", textAccent: "#1f7a52", glow: "#f0a85a",
-    bg: "#f4efe7", surf: "#fbf8f2", surf2: "#fffefb", surf3: "#ffffff", bord: "#e6ddcf", fg: "#2a2723", fg2: "#6f6757", fg3: "#a89f8e" },
-  // ── Exclusive ──
-  { id: "sakinah", name: "Sakīnah", desc: "Deep indigo, rose-gold dawn. Tranquil depth.", category: "exclusive", accent: "#d8a36b", glow: "#e9b985", fontTags: ["Fraunces"],
-    bg: "#0c0d16", surf: "#131520", surf2: "#1a1d2b", surf3: "#222536", bord: "#1e2130", fg: "#ece8e0", fg2: "#85869a", fg3: "#6a6b7c" },
-  { id: "plum", name: "Plum", desc: "Aubergine night, muted mauve. Soft and rare.", category: "exclusive", accent: "#c08ad0", glow: "#d6a0e0",
-    bg: "#100a14", surf: "#18111e", surf2: "#201728", surf3: "#281e32", bord: "#241a2c", fg: "#ece6ef", fg2: "#8a8095", fg3: "#6f6678" },
-  { id: "ember", name: "Ember", desc: "Warm brown-black, terracotta. Slow heat.", category: "exclusive", accent: "#e0875a", glow: "#f0a06a",
-    bg: "#110c0a", surf: "#1a1310", surf2: "#231a15", surf3: "#2c221c", bord: "#271d18", fg: "#efe7df", fg2: "#928175", fg3: "#76695f" },
+  // ── Light (default identity) ──
+  { id: "almanac", name: "Almanac", desc: "Warm paper, fountain-pen ink. Daylight, dignity.", category: "base", lightRamp: true, accent: "#234C5E", textAccent: "#234C5E", glow: "transparent",
+    bg: "#F7F1E6", surf: "#FDFAF2", surf2: "#EFE7D7", surf3: "#FDFAF2", bord: "#E3D9C6", fg: "#221E18", fg2: "#5C544A", fg3: "#6F6657" },
+  // ── Dark (opt-in only — never the first render) ──
+  { id: "lamplight", name: "Lamplight", desc: "The same page by lamplight. Opt-in dark.", category: "base", accent: "#6E97A8", textAccent: "#8FB6C6", glow: "transparent",
+    bg: "#1C1A16", surf: "#25221C", surf2: "#2E2A22", surf3: "#322D24", bord: "#3A352B", fg: "#ECE4D5", fg2: "#B7AD9A", fg3: "#8E8470" },
 ];
 const FONT_PACKAGES = [
-  { id: "dm-sans", name: "DM Sans", label: "Clean sans-serif", stack: "'DM Sans',system-ui,sans-serif", url: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" },
-  { id: "inter", name: "Inter", label: "Modern sans-serif", stack: "'Inter',system-ui,sans-serif", url: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" },
-  { id: "georgia", name: "Georgia", label: "Classic serif", stack: "Georgia,serif", url: null },
+  { id: "hanken", name: "Hanken Grotesk", label: "Humanist sans (default)", stack: "'Hanken Grotesk',system-ui,sans-serif", url: "https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" },
+  { id: "fraunces", name: "Fraunces", label: "Literary serif", stack: "'Fraunces',Georgia,serif", url: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&display=swap" },
   { id: "system", name: "System", label: "Native OS font", stack: "system-ui,-apple-system,sans-serif", url: null },
 ];
 
-// soul/hero typeface (continuous weight range so 340–500 resolve) + design tokens
+// display/hero typeface (Fraunces, loaded in index.html) + design tokens
 const HERO_FONT = "'Fraunces',Georgia,serif";
-const FRAUNCES_URL = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,340..500&display=swap";
+const FRAUNCES_URL = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&display=swap";
 const hexA = (h, a) => `${h}${a}`;
-const normalizeHex = (h) => { if (!h || h[0] !== "#") return "#34d399"; let c = h.slice(1); if (c.length === 3) c = c.split("").map(x => x + x).join(""); return "#" + (c + "000000").slice(0, 6).toLowerCase(); };
+const normalizeHex = (h) => { if (!h || h[0] !== "#") return "var(--r-success)"; let c = h.slice(1); if (c.length === 3) c = c.split("").map(x => x + x).join(""); return "#" + (c + "000000").slice(0, 6).toLowerCase(); };
 const relLum = (h) => { const c = normalizeHex(h).slice(1); const f = i => { const v = parseInt(c.substr(i, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4); };
-const onAccent = (h) => relLum(h) > 0.42 ? "#08120d" : "#ffffff";
+const onAccent = (h) => relLum(h) > 0.42 ? "#fff" : "#ffffff";
 const SP = { x0: 2, x1: 4, x2: 6, x3: 8, x4: 10, x5: 12, x6: 14, x7: 16, x8: 20, x9: 24, x10: 32, x11: 40, x12: 48, x13: 64, x14: 80 };
 const RAD = { xs: 10, sm: 8, md: 12, lg: 16, xl: 20, hero: 24, x2l: 28, pill: 999 };
 const ELEV = { sm: "var(--r-shadow-sm)", md: "var(--r-shadow-md)", lg: "var(--r-shadow-lg)", glowHero: "var(--r-glow-hero)", glowActive: "var(--r-glow-active)", inset: "var(--r-inset)" };
 const DUR = { instant: 80, fast: 150, normal: 240, slow: 360, ringFill: 900, countUp: 1000, bloom: 8000 };
 const EASE = { dawn: "cubic-bezier(.22,1,.36,1)", soft: "cubic-bezier(.4,0,.2,1)", expo: "cubic-bezier(.16,1,.3,1)" };
-const SCORE_DARK = { high: "#5ad6a0", mid: "#5fa0e8", low: "#e0992f", crit: "#cf6f6f" };
-const SCORE_LIGHT = { high: "#18815a", mid: "#2b6bad", low: "#946312", crit: "#a8413f" };
-const SEM = { success: "var(--r-accent)", info: "#6aa8ef", warn: "#e6a23c", chromeRose: "#9c6b6b", danger: "#e5484d", bizBlue: "#3b82f6" };
-let CURRENT_LIGHT = false;
+// Almanac semantic bands — moss / indigo / ochre / clay. Verified ≥4.5:1 on paper.
+const SCORE_LIGHT = { high: "#4C6A3A", mid: "#234C5E", low: "#8A5A12", crit: "#8C3F30" };
+const SCORE_DARK  = { high: "#8FAE6E", mid: "#8FB6C6", low: "#C79A4E", crit: "#C97A63" };
+const SEM = { success: "#4C6A3A", info: "#234C5E", warn: "#8A5A12", chromeRose: "#8C3F30", danger: "#8C3F30", bizBlue: "#234C5E" };
+let CURRENT_LIGHT = true;
 
 // Migrate legacy/stored themes to the current palette + depth keys (surf3/fg3/glow)
 function migrateTheme(t) {
   if (!t) return DEFAULT_THEME();
-  if (t.preset === "custom") return { surf3: t.surf2, fg3: t.fg2, glow: "#f2b06a", lightRamp: false, textAccent: null, ...t };
   const p = THEME_PRESETS.find(x => x.id === t.preset);
-  if (!p) return { ...DEFAULT_THEME(), font: t.font || "dm-sans" };
-  return { ...t, bg: p.bg, surf: p.surf, surf2: p.surf2, surf3: p.surf3, bord: p.bord, fg: p.fg, fg2: p.fg2, fg3: p.fg3, glow: p.glow, lightRamp: p.lightRamp || false, textAccent: p.textAccent || null, font: t.font || p.font || "dm-sans" };
+  if (!p) return { ...DEFAULT_THEME(), font: FONT_PACKAGES.find(f => f.id === t.font) ? t.font : "hanken" };
+  return { ...t, bg: p.bg, surf: p.surf, surf2: p.surf2, surf3: p.surf3, bord: p.bord, fg: p.fg, fg2: p.fg2, fg3: p.fg3, glow: p.glow, lightRamp: p.lightRamp || false, textAccent: p.textAccent || null, font: FONT_PACKAGES.find(f => f.id === t.font) ? t.font : "hanken" };
 }
 
 function buildThemeCSS({ T, A, G, ACT, surf3, fg3, light, fontStack }) {
+  // Warm, low, short shadows — paper resting on a desk, not floating glass. No glow.
   const sh = light
-    ? { sm: "0 1px 2px rgba(40,32,20,.06)", md: "0 8px 24px -8px rgba(40,32,20,.10),0 2px 6px rgba(40,32,20,.06)", lg: "0 24px 64px -18px rgba(40,32,20,.14),0 6px 16px rgba(40,32,20,.08)", inset: "inset 0 1px 0 rgba(255,255,255,.6)" }
-    : { sm: "0 1px 2px rgba(7,8,14,.45)", md: "0 6px 20px -6px rgba(7,8,14,.55),0 2px 6px rgba(7,8,14,.40)", lg: "0 22px 60px -16px rgba(7,8,14,.66),0 6px 16px rgba(7,8,14,.44)", inset: "inset 0 1px 0 rgba(255,255,255,.04)" };
+    ? { sm: "0 1px 2px rgba(58,46,30,.05)", md: "0 1px 2px rgba(58,46,30,.05),0 4px 12px rgba(58,46,30,.06)", lg: "0 2px 6px rgba(58,46,30,.06),0 14px 36px -10px rgba(58,46,30,.12)", inset: "none" }
+    : { sm: "0 1px 2px rgba(0,0,0,.30)", md: "0 1px 2px rgba(0,0,0,.30),0 6px 18px rgba(0,0,0,.34)", lg: "0 2px 8px rgba(0,0,0,.34),0 18px 44px -12px rgba(0,0,0,.50)", inset: "none" };
   return `:root{
 --r-bg:${T.bg};--r-surf:${T.surf};--r-surf2:${T.surf2};--r-surf3:${surf3};
 --r-bord:${T.bord};--r-fg:${T.fg};--r-fg2:${T.fg2};--r-fg3:${fg3};
 --r-accent:${A};--r-accent-text:${ACT};--r-on-accent:${onAccent(A)};--r-glow:${G};
+--r-success:${(light ? SCORE_LIGHT : SCORE_DARK).high};--r-info:${(light ? SCORE_LIGHT : SCORE_DARK).mid};--r-caution:${(light ? SCORE_LIGHT : SCORE_DARK).low};--r-danger:${(light ? SCORE_LIGHT : SCORE_DARK).crit};
 --r-font:${fontStack};--r-hero:${HERO_FONT};
 --r-shadow-sm:${sh.sm};--r-shadow-md:${sh.md};--r-shadow-lg:${sh.lg};--r-inset:${sh.inset};
---r-glow-hero:0 0 90px -8px ${G};
---r-glow-active:0 0 0 1px ${hexA(A, "40")},0 0 16px -4px ${hexA(A, "55")};
+--r-glow-hero:none;
+--r-glow-active:0 0 0 2px ${hexA(A, "55")};
 --r-ease-dawn:cubic-bezier(.22,1,.36,1);--r-ease-soft:cubic-bezier(.4,0,.2,1);--r-ease-expo:cubic-bezier(.16,1,.3,1);
 }
 body{background:var(--r-bg);color:var(--r-fg)}
@@ -222,6 +212,9 @@ const fmtDur = m => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`
 const fmtTime = t => { if (!t) return "—"; const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "pm" : "am"}`; };
 function scoreColor(s, light) { const R = (light === undefined ? CURRENT_LIGHT : light) ? SCORE_LIGHT : SCORE_DARK; return s >= 80 ? R.high : s >= 60 ? R.mid : s >= 40 ? R.low : R.crit; }
 const getTodayDay = () => DAY_NAMES[new Date().getDay()];
+const greetingFor = h => h < 5 ? "Still awake" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 21 ? "Good evening" : "Winding down";
+const hijriStr = d => { try { return new Intl.DateTimeFormat("en-TN-u-ca-islamic", { day: "numeric", month: "long", year: "numeric" }).format(d).replace(" AH", ""); } catch { return null; } };
+const PRAYER_LABEL = { fajr: "Fajr", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha" };
 const getWeekCompletions = (completions, weekStart) => {
   const end = new Date(weekStart + "T12:00"); end.setDate(end.getDate() + 6);
   const endStr = end.toISOString().split("T")[0];
@@ -278,9 +271,9 @@ function calcAvoidStreak(bh) {
 }
 function avoidStreakColor(bh) {
   const { value, label } = calcAvoidStreak(bh);
-  if (bh.unit === "hours") return value >= 72 ? "#34d399" : value >= 24 ? "#f59e0b" : "#f87171";
-  if (label === "h clean") return "#f87171";
-  return value >= 7 ? "#34d399" : value >= 3 ? "#f59e0b" : "#f87171";
+  if (bh.unit === "hours") return value >= 72 ? "var(--r-success)" : value >= 24 ? "var(--r-caution)" : "var(--r-danger)";
+  if (label === "h clean") return "var(--r-danger)";
+  return value >= 7 ? "var(--r-success)" : value >= 3 ? "var(--r-caution)" : "var(--r-danger)";
 }
 function calcHabitRate(habit, days) {
   const norm = normalizeHabit(habit);
@@ -510,6 +503,61 @@ function LineChart({ data, height = 90 }) {
   );
 }
 
+// Prayer "sun-arc" — daytime arc with five salah nodes + a live sun marker (Sunlitt-informed).
+// SVG is decorative (aria-hidden); the labelled buttons below are the accessible control.
+function SunArc({ prayers, prayerTargets, onLog }) {
+  const W = 330, H = 116;
+  const P0 = [14, 104], P1 = [W / 2, 2], P2 = [W - 14, 104];
+  const bez = t => { const u = 1 - t; return [u * u * P0[0] + 2 * u * t * P1[0] + t * t * P2[0], u * u * P0[1] + 2 * u * t * P1[1] + t * t * P2[1]]; };
+  const mid = n => (timeToMins(prayerTargets[n].earliest) + timeToMins(prayerTargets[n].latest)) / 2;
+  const dayStart = timeToMins(prayerTargets.fajr.earliest), dayEnd = timeToMins(prayerTargets.isha.latest);
+  const span = Math.max(1, dayEnd - dayStart);
+  const tOf = m => Math.max(0, Math.min(1, (m - dayStart) / span));
+  const now = new Date(), nowMins = now.getHours() * 60 + now.getMinutes();
+  const prayed = n => (prayers?.[n]?.score || 0) > 0;
+  const missed = n => prayers?.[n]?.missed;
+  const nextName = PRAYER_NAMES.find(n => !prayed(n) && !missed(n) && mid(n) >= nowMins) || PRAYER_NAMES.find(n => !prayed(n) && !missed(n));
+  const [sx, sy] = bez(tOf(nowMins));
+  const arcPath = `M${P0[0]} ${P0[1]} Q${P1[0]} ${P1[1]} ${P2[0]} ${P2[1]}`;
+  const prayedCount = PRAYER_NAMES.filter(prayed).length;
+  let countdown = null;
+  if (nextName) { const diff = mid(nextName) - nowMins; if (diff > 0) { const h = Math.floor(diff / 60), m = diff % 60; countdown = `in ${h ? h + "h " : ""}${m}m`; } else countdown = "now"; }
+  const nodeColor = n => prayed(n) ? "var(--r-success)" : missed(n) ? "var(--r-danger)" : n === nextName ? "var(--r-accent)" : "var(--r-bord)";
+  return (
+    <div style={{ ...S.card, borderRadius: 20, padding: "18px 20px 16px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
+        <span style={{ fontFamily: HERO_FONT, fontWeight: 500, fontSize: 16, color: "var(--r-fg2)" }}>Today's prayers</span>
+        <span className="r-tnum" style={{ fontSize: 12, color: "var(--r-fg2)", letterSpacing: "0.02em" }}>{prayedCount} of 5 prayed</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="112" preserveAspectRatio="none" aria-hidden="true" style={{ display: "block" }}>
+        <path d={`${arcPath} L${P2[0]} ${H} L${P0[0]} ${H} Z`} fill="var(--r-caution)" opacity="0.06" clipPath="url(#sunclip)" />
+        <clipPath id="sunclip"><rect x="0" y="0" width={sx} height={H} /></clipPath>
+        <path d={arcPath} fill="none" stroke="var(--r-bord)" strokeWidth="2" />
+        {PRAYER_NAMES.map(n => { const [x, y] = bez(tOf(mid(n))); const fill = prayed(n); return (
+          <circle key={n} cx={x} cy={y} r={n === nextName ? 7 : 6} fill={fill ? "var(--r-success)" : "var(--r-surf)"} stroke={nodeColor(n)} strokeWidth={fill ? 0 : 2.5} />
+        ); })}
+        <circle cx={sx} cy={sy} r="5" fill="var(--r-caution)" />
+      </svg>
+      <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+        {PRAYER_NAMES.map(n => (
+          <button key={n} onClick={() => onLog(n)} aria-pressed={prayed(n)}
+            aria-label={`${PRAYER_LABEL[n]} — ${prayed(n) ? "prayed, tap to undo" : missed(n) ? "missed" : "not yet, tap to mark prayed"}`}
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 2px", background: "transparent", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "var(--r-font)" }}>
+            <i className={prayed(n) ? "ph-fill ph-check-circle" : missed(n) ? "ph ph-x-circle" : n === nextName ? "ph ph-circle-dashed" : "ph ph-circle"} style={{ fontSize: 14, color: nodeColor(n) }} aria-hidden="true" />
+            <span style={{ fontSize: 11, fontWeight: n === nextName ? 700 : 500, color: prayed(n) ? "var(--r-success)" : n === nextName ? "var(--r-accent)" : "var(--r-fg2)" }}>{PRAYER_LABEL[n]}</span>
+          </button>
+        ))}
+      </div>
+      {nextName && (
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 10, paddingTop: 12, borderTop: "1px solid var(--r-bord)" }}>
+          <span style={{ fontFamily: HERO_FONT, fontWeight: 500, fontSize: 19 }}>{PRAYER_LABEL[nextName]}</span>
+          <span className="r-tnum" style={{ fontSize: 13, color: "var(--r-fg2)", fontWeight: 500 }}>{countdown}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Business helpers ─────────────────────────────────────────────────────────
 const BIZ_BLUE = "#3B82F6";
 const BIZ_GREEN = "#22C55E";
@@ -548,7 +596,7 @@ function BizAvatar({ name, idx, sz = 32 }) {
 function BizEmptyState({ icon, title, sub }) {
   return (
     <div style={{ textAlign: "center", padding: "56px 24px" }}>
-      <div style={{ fontSize: 28, marginBottom: 10 }}>{icon}</div>
+      <div style={{ fontSize: 30, marginBottom: 12, color: "var(--r-fg3)" }} aria-hidden="true"><i className={icon} /></div>
       <div style={{ fontSize: 14, fontWeight: 600, color: "var(--r-fg)", marginBottom: 4 }}>{title}</div>
       <div style={{ fontSize: 12, color: "var(--r-fg2)", lineHeight: 1.6 }}>{sub}</div>
     </div>
@@ -846,13 +894,13 @@ export default function App() {
         const [hh, mm] = st.split(":").map(Number);
         const t = new Date(); t.setHours(hh, mm, 0, 0);
         if (t < new Date()) t.setDate(t.getDate() + 1);
-        notifRef.current.push(setTimeout(() => sendNotif(`⏰ ${h.name}`, "Your scheduled habit is due."), t - new Date()));
+        notifRef.current.push(setTimeout(() => sendNotif(`${h.name}`, "Your scheduled habit is due."), t - new Date()));
       });
     });
     const [bh, bm] = routineTargets.bedtime.split(":").map(Number);
     const bt = new Date(); bt.setHours(bh, bm - 30, 0, 0);
     if (bt < new Date()) bt.setDate(bt.getDate() + 1);
-    notifRef.current.push(setTimeout(() => sendNotif("🌙 Bedtime", `Wind down — target: ${fmtTime(routineTargets.bedtime)}`), bt - new Date()));
+    notifRef.current.push(setTimeout(() => sendNotif("Bedtime", `Wind down — target: ${fmtTime(routineTargets.bedtime)}`), bt - new Date()));
     return () => notifRef.current.forEach(clearTimeout);
   }, [habits, routineTargets]);
 
@@ -865,6 +913,22 @@ export default function App() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Escape closes the topmost open modal/sheet (WCAG 2.1.2 — no keyboard trap)
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key !== "Escape") return;
+      if (modal) { setModal(null); setPostRelapseId(null); }
+      else if (habitModal) setHabitModal(null);
+      else if (badHabitModal) setBadHabitModal(null);
+      else if (slipModal) setSlipModal(null);
+      else if (schedActModal) setSchedActModal(false);
+      else if (bizModal) bizCloseModal();
+      else if (isMobile && sidebarOpen) setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [modal, habitModal, badHabitModal, slipModal, schedActModal, bizModal, isMobile, sidebarOpen]);
 
   useEffect(() => {
     document.body.style.overflow = (isMobile && sidebarOpen) ? "hidden" : "";
@@ -880,13 +944,15 @@ export default function App() {
       if (!link) { link = document.createElement("link"); link.id = "r-font-link"; link.rel = "stylesheet"; document.head.appendChild(link); }
       link.href = pkg.url;
     }
-    const preset = THEME_PRESETS.find(p => p.id === theme.preset);
-    const A = normalizeHex(account?.color || "#34d399");
+    const preset = THEME_PRESETS.find(p => p.id === theme.preset) || THEME_PRESETS[0];
+    // Almanac uses ONE deliberate, contrast-safe accent (fountain-pen indigo / lamplight teal),
+    // decoupled from the legacy per-account colour so text/buttons always pass WCAG on paper.
+    const A = normalizeHex(preset.accent);
     const surf3 = theme.surf3 || preset?.surf3 || theme.surf2;
     const fg3 = theme.fg3 || preset?.fg3 || theme.fg2;
-    const G = theme.glow || preset?.glow || A;
+    const G = "transparent";
     const light = theme.lightRamp ?? preset?.lightRamp ?? false;
-    const ACT = light ? (theme.textAccent || preset?.textAccent || A) : A;
+    const ACT = preset.textAccent || A;
     CURRENT_LIGHT = light;
     let style = document.getElementById("r-theme-vars");
     if (!style) { style = document.createElement("style"); style.id = "r-theme-vars"; document.head.appendChild(style); }
@@ -1267,7 +1333,7 @@ export default function App() {
     return (
       <div style={S.setupWrap}>
         <div style={S.setupCard}>
-          <div style={S.setupEmoji}>🔒</div>
+          <div style={S.setupEmoji} aria-hidden="true"><i className="ph ph-lock-key" /></div>
           <h1 style={S.setupTitle}>{isNewUser ? "Set your PIN" : "Welcome back"}</h1>
           <p style={S.setupSub}>
             {isNewUser ? "No account found. Choose a 4–8 digit PIN to create one." : "Enter your PIN to access your recovery data."}
@@ -1295,8 +1361,8 @@ export default function App() {
               onKeyDown={e => { if (e.key === "Enter") handlePinLogin(); }}
             />
           )}
-          {authError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{authError}</div>}
-          <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17" }} onClick={handlePinLogin}>
+          {authError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{authError}</div>}
+          <button style={{ ...S.primaryBtn, background: "var(--r-accent)", color: "#fff" }} onClick={handlePinLogin}>
             {isNewUser ? "Create account" : "Unlock"}
           </button>
           {isNewUser && (
@@ -1316,30 +1382,30 @@ export default function App() {
       <div style={S.setupWrap}>
         <div style={S.setupCard}>
           {sd.step === 0 && (<>
-            <div style={S.setupEmoji}>🌿</div>
+            <div style={S.setupEmoji} aria-hidden="true"><i className="ph ph-leaf" /></div>
             <h1 style={S.setupTitle}>Recovery starts here</h1>
             <p style={S.setupSub}>Your private, all-in-one recovery companion.</p>
             <input style={S.input} placeholder="Name this journey…" value={sd.name} onChange={e => setSetupDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
-            <div style={{ fontSize: 10, color: "#444", margin: "12px 0 6px" }}>Pick a colour</div>
+            <div style={{ fontSize: 10, color: "var(--r-fg2)", margin: "12px 0 6px" }}>Pick a colour</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               {ACCOUNT_COLORS.map(c => (<div key={c} onClick={() => setSetupDraft(d => ({ ...d, color: c }))} style={{ width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", border: sd.color === c ? "3px solid #fff" : "3px solid transparent" }} />))}
             </div>
-            <button style={{ ...S.primaryBtn, background: sd.color, color: "#0d0d0f" }} onClick={() => setSetupDraft(d => ({ ...d, step: 1 }))} disabled={!sd.name.trim()}>Next →</button>
+            <button style={{ ...S.primaryBtn, background: sd.color, color: "#fff" }} onClick={() => setSetupDraft(d => ({ ...d, step: 1 }))} disabled={!sd.name.trim()}>Next →</button>
           </>)}
           {sd.step === 1 && (<>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>💬</div>
+            <div style={S.setupEmoji} aria-hidden="true"><i className="ph ph-chat-circle" /></div>
             <div style={S.setupTitle}>What are you working on?</div>
             <p style={S.setupSub}>e.g. alcohol, cigarettes, gambling, social media</p>
             <input style={S.input} placeholder="e.g. alcohol" value={sd.substance} onChange={e => setSetupDraft(d => ({ ...d, substance: e.target.value }))} autoFocus />
-            <button style={{ ...S.primaryBtn, marginTop: 12, background: sd.color, color: "#0d0d0f" }} onClick={() => setSetupDraft(d => ({ ...d, step: 2 }))} disabled={!sd.substance.trim()}>Next →</button>
+            <button style={{ ...S.primaryBtn, marginTop: 12, background: sd.color, color: "#fff" }} onClick={() => setSetupDraft(d => ({ ...d, step: 2 }))} disabled={!sd.substance.trim()}>Next →</button>
             <button style={{ ...S.primaryBtn, marginTop: 8, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)" }} onClick={() => setSetupDraft(d => ({ ...d, step: 0 }))}>← Back</button>
           </>)}
           {sd.step === 2 && (<>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📅</div>
+            <div style={S.setupEmoji} aria-hidden="true"><i className="ph ph-calendar-blank" /></div>
             <div style={S.setupTitle}>When did this sobriety begin?</div>
             <p style={S.setupSub}>It's okay if it's today. Every moment is a valid start.</p>
             <input type="date" style={S.input} value={sd.date} max={getTodayStr()} onChange={e => setSetupDraft(d => ({ ...d, date: e.target.value }))} />
-            <button style={{ ...S.primaryBtn, marginTop: 12, background: sd.color, color: "#0d0d0f" }} onClick={createJourney}>Start my journey →</button>
+            <button style={{ ...S.primaryBtn, marginTop: 12, background: sd.color, color: "#fff" }} onClick={createJourney}>Start my journey →</button>
             <button style={{ ...S.primaryBtn, marginTop: 8, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)" }} onClick={() => setSetupDraft(d => ({ ...d, step: 1 }))}>← Back</button>
           </>)}
         </div>
@@ -1347,7 +1413,7 @@ export default function App() {
     );
   }
 
-  const accentColor = account.color || "#34d399";
+  const accentColor = "#234C5E"; // Almanac indigo ink — matches --r-accent; safe for `+ "18"` alpha concat
 
   const sortedTodayHabits = [...todayHabits].sort((a, b) => {
     const ta = a.scheduledTimes[0] || null;
@@ -1365,31 +1431,35 @@ export default function App() {
   });
 
   const navGroups = [
-    { label: null, items: [{ id: "dashboard", icon: "◉", label: "Dashboard" }] },
+    { label: null, items: [{ id: "dashboard", icon: "ph ph-house", label: "Today" }] },
     { label: "DAILY", items: [
-      { id: "routine", icon: "🌙", label: "Routine" },
-      { id: "habits", icon: "☑", label: "Habits" },
-      { id: "schedule", icon: "📅", label: "Schedule" },
-      { id: "health", icon: "💧", label: "Health" },
+      { id: "routine", icon: "ph ph-moon-stars", label: "Routine" },
+      { id: "habits", icon: "ph ph-check-square", label: "Habits" },
+      { id: "schedule", icon: "ph ph-calendar-blank", label: "Schedule" },
+      { id: "health", icon: "ph ph-drop", label: "Health" },
     ]},
     { label: "PROGRESS", items: [
-      { id: "goals", icon: "◎", label: "Goals" },
-      { id: "rewards", icon: "★", label: "Rewards" },
-      { id: "journal", icon: "✎", label: "Journal" },
+      { id: "goals", icon: "ph ph-target", label: "Goals" },
+      { id: "rewards", icon: "ph ph-seal-check", label: "Rewards" },
+      { id: "journal", icon: "ph ph-pen-nib", label: "Journal" },
     ]},
     { label: "SUPPORT", items: [
-      { id: "relapse", icon: "⚡", label: "Relapse" },
+      { id: "relapse", icon: "ph ph-lifebuoy", label: "Support" },
     ]},
   ];
 
   return (
     <div style={S.app}>
+      {/* Screen-reader announcer for view changes (no-router SPA — WCAG 4.1.3) */}
+      <div role="status" aria-live="polite" style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
+        {section === "business" ? `Business · ${bizView}` : view} view
+      </div>
       {/* ── Mobile top bar ── */}
       {isMobile && (
         <div style={S.mobileHeader}>
-          <button style={S.hamburger} onClick={() => setSidebarOpen(o => !o)}>☰</button>
-          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.02em" }}>🌿 Recover</span>
-          <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "monospace", color: accentColor }}>{daysSober}d</div>
+          <button style={S.hamburger} onClick={() => setSidebarOpen(o => !o)} aria-label="Open menu"><i className="ph ph-list" /></button>
+          <span style={{ fontFamily: "var(--r-hero)", fontSize: 18, fontWeight: 500, letterSpacing: "-0.01em" }}>Recover</span>
+          <div className="r-tnum" style={{ fontSize: 17, fontWeight: 500, fontFamily: "var(--r-hero)", color: accentColor }}>{daysSober}d</div>
         </div>
       )}
 
@@ -1400,7 +1470,7 @@ export default function App() {
       <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, height: "auto", transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.8)", width: 240 } : {}) }}>
         {/* Logo */}
         <div style={{ padding: "16px 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={S.logo}>{section === "business" ? "💼 IhsanEd" : "🌿 Recover"}</div>
+          <div style={{ ...S.logo, display: "flex", alignItems: "center", gap: 8 }}><i className={section === "business" ? "ph ph-briefcase" : "ph ph-leaf"} style={{ fontSize: 19, color: accentColor }} aria-hidden="true" />{section === "business" ? "IhsanEd" : "Recover"}</div>
           {isMobile && <button style={{ background: "none", border: "none", color: "var(--r-fg2)", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 0 }} onClick={() => setSidebarOpen(false)}>×</button>}
         </div>
 
@@ -1408,7 +1478,7 @@ export default function App() {
         <div style={{ padding: "0 12px 12px", borderBottom: "1px solid var(--r-bord)" }}>
           <div style={{ display: "flex", background: "var(--r-surf2)", borderRadius: 8, padding: 3, gap: 3 }}>
             {["personal","business"].map(s => (
-              <button key={s} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", background: section === s ? (s === "business" ? BIZ_BLUE : accentColor) : "transparent", color: section === s ? (s === "business" ? "#fff" : "#0d1f17") : "var(--r-fg2)", transition: "all 0.15s", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", letterSpacing: "-0.01em" }}
+              <button key={s} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", background: section === s ? (s === "business" ? BIZ_BLUE : accentColor) : "transparent", color: section === s ? (s === "business" ? "#fff" : "#fff") : "var(--r-fg2)", transition: "all 0.15s", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", letterSpacing: "-0.01em" }}
                 onClick={() => { setSection(s); if (isMobile) setSidebarOpen(false); }}>
                 {s === "personal" ? "Personal" : "Business"}
               </button>
@@ -1420,7 +1490,7 @@ export default function App() {
           {/* Account profile */}
           <div style={{ padding: "10px 12px 10px", borderBottom: "1px solid var(--r-bord)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 8px", borderRadius: 9, background: "var(--r-surf2)" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: accentColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#0d1f17", flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: accentColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
                 {(account.name || "R").charAt(0).toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1438,8 +1508,8 @@ export default function App() {
                 {group.items.map(n => {
                   const active = view === n.id;
                   return (
-                    <button key={n.id} style={{ ...S.navBtn, ...(active ? { background: accentColor + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }} onClick={() => { setView(n.id); if (isMobile) setSidebarOpen(false); }}>
-                      <span style={{ ...S.navIcon, color: active ? accentColor : "var(--r-fg2)" }}>{n.icon}</span>
+                    <button key={n.id} aria-current={active ? "page" : undefined} style={{ ...S.navBtn, ...(active ? { background: accentColor + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }} onClick={() => { setView(n.id); if (isMobile) setSidebarOpen(false); }}>
+                      <span style={{ ...S.navIcon, color: active ? accentColor : "var(--r-fg2)" }} aria-hidden="true"><i className={active ? n.icon.replace("ph ph-", "ph-fill ph-") : n.icon} style={{ fontSize: 18 }} /></span>
                       <span style={{ color: active ? "var(--r-fg)" : "var(--r-fg2)" }}>{n.label}</span>
                       <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: active ? 20 : 0, transform: "translateY(-50%)", background: accentColor, borderRadius: 2, boxShadow: active ? "var(--r-glow-active)" : "none", transition: "height 260ms var(--r-ease-dawn)" }} />
                     </button>
@@ -1451,22 +1521,22 @@ export default function App() {
 
           {/* Personal bottom actions */}
           <div style={{ padding: "12px 10px", paddingBottom: "max(12px, env(safe-area-inset-bottom))", borderTop: "1px solid var(--r-bord)", flexShrink: 0 }}>
-            <button style={{ ...S.navBtn, color: "#f87171", marginBottom: 2 }} onClick={() => { setModal("relapseLog"); if (isMobile) setSidebarOpen(false); }}>
-              <span style={{ ...S.navIcon, color: "#f87171" }}>⚠</span>
+            <button style={{ ...S.navBtn, color: "var(--r-danger)", marginBottom: 2 }} onClick={() => { setModal("relapseLog"); if (isMobile) setSidebarOpen(false); }}>
+              <span style={{ ...S.navIcon, color: "var(--r-danger)" }} aria-hidden="true"><i className="ph ph-warning-circle" style={{ fontSize: 18 }} /></span>
               <span>Log a relapse</span>
             </button>
             <button style={{ ...S.navBtn, ...(view === "settings" ? { background: accentColor + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }} onClick={() => { setView("settings"); if (isMobile) setSidebarOpen(false); }}>
-              <span style={{ ...S.navIcon, color: view === "settings" ? accentColor : "var(--r-fg2)" }}>⚙</span>
+              <span style={{ ...S.navIcon, color: view === "settings" ? accentColor : "var(--r-fg2)" }} aria-hidden="true"><i className={view==="settings"?"ph-fill ph-gear":"ph ph-gear"} style={{fontSize:18}} /></span>
               <span style={{ color: view === "settings" ? "var(--r-fg)" : "var(--r-fg2)" }}>Settings</span>
               <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: view === "settings" ? 20 : 0, transform: "translateY(-50%)", background: accentColor, borderRadius: 2, boxShadow: view === "settings" ? "var(--r-glow-active)" : "none", transition: "height 260ms var(--r-ease-dawn)" }} />
             </button>
             <button style={{ ...S.navBtn, marginTop: 2 }} onClick={handleLock}>
-              <span style={{ ...S.navIcon, color: "var(--r-fg2)" }}>🔒</span>
+              <span style={{ ...S.navIcon, color: "var(--r-fg2)" }} aria-hidden="true"><i className="ph ph-lock-simple" style={{ fontSize: 18 }} /></span>
               <span style={{ color: "var(--r-fg2)", fontSize: 12 }}>
                 Lock
-                {syncStatus === "syncing" && <span style={{ marginLeft: 6, fontSize: 10, color: "#60a5fa" }}>↑ syncing</span>}
-                {syncStatus === "synced" && <span style={{ marginLeft: 6, fontSize: 10, color: "#34d399" }}>✓ synced</span>}
-                {syncStatus === "error" && <span style={{ marginLeft: 6, fontSize: 10, color: "#f87171" }}>⚠ sync failed</span>}
+                {syncStatus === "syncing" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--r-info)" }}>↑ syncing</span>}
+                {syncStatus === "synced" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--r-success)" }}>✓ synced</span>}
+                {syncStatus === "error" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--r-danger)" }}>⚠ sync failed</span>}
               </span>
             </button>
           </div>
@@ -1474,12 +1544,12 @@ export default function App() {
 
         {section === "business" && (() => {
           const bizNavItems = [
-            { id: "biz-dashboard", icon: "◉", label: "Dashboard" },
-            { id: "biz-groups", icon: "👥", label: "Group Classes" },
-            { id: "biz-oneone", icon: "👤", label: "One-on-One" },
-            { id: "biz-schedule", icon: "📅", label: "Schedule" },
-            { id: "biz-students", icon: "✎", label: "Students" },
-            { id: "biz-records", icon: "★", label: "Records" },
+            { id: "biz-dashboard", icon: "ph ph-squares-four", label: "Dashboard" },
+            { id: "biz-groups", icon: "ph ph-users-three", label: "Group Classes" },
+            { id: "biz-oneone", icon: "ph ph-user", label: "One-on-One" },
+            { id: "biz-schedule", icon: "ph ph-calendar-blank", label: "Schedule" },
+            { id: "biz-students", icon: "ph ph-student", label: "Students" },
+            { id: "biz-records", icon: "ph ph-receipt", label: "Records" },
           ];
           return (<>
             <nav style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0", overscrollBehavior: "contain" }}>
@@ -1488,7 +1558,7 @@ export default function App() {
                 return (
                   <button key={n.id} style={{ ...S.navBtn, ...(active ? { background: BIZ_BLUE + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }}
                     onClick={() => { bizGoTo(n.id); if (isMobile) setSidebarOpen(false); }}>
-                    <span style={{ ...S.navIcon, color: active ? BIZ_BLUE : "var(--r-fg2)" }}>{n.icon}</span>
+                    <span style={{ ...S.navIcon, color: active ? BIZ_BLUE : "var(--r-fg2)" }} aria-hidden="true"><i className={n.icon} style={{ fontSize: 18 }} /></span>
                     <span style={{ color: active ? "var(--r-fg)" : "var(--r-fg2)" }}>{n.label}</span>
                     <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: active ? 20 : 0, transform: "translateY(-50%)", background: BIZ_BLUE, borderRadius: 2, transition: "height 260ms var(--r-ease-dawn)" }} />
                   </button>
@@ -1497,7 +1567,7 @@ export default function App() {
             </nav>
             <div style={{ padding: "12px 10px", paddingBottom: "max(12px, env(safe-area-inset-bottom))", borderTop: "1px solid var(--r-bord)", flexShrink: 0 }}>
               <button style={{ ...S.navBtn, marginTop: 2 }} onClick={handleLock}>
-                <span style={{ ...S.navIcon, color: "var(--r-fg2)" }}>🔒</span>
+                <span style={{ ...S.navIcon, color: "var(--r-fg2)" }} aria-hidden="true"><i className="ph ph-lock-simple" style={{ fontSize: 18 }} /></span>
                 <span style={{ color: "var(--r-fg2)", fontSize: 12 }}>Lock</span>
               </button>
             </div>
@@ -1506,7 +1576,7 @@ export default function App() {
       </aside>
 
       {/* ── Main ── */}
-      <main style={{ ...S.main, ...(isMobile ? { marginTop: 52 } : {}) }}>
+      <main id="main-content" tabIndex={-1} aria-label={view} style={{ ...S.main, ...(isMobile ? { marginTop: 52 } : {}), outline: "none" }}>
 
         {section === "personal" && (<>
 
@@ -1529,137 +1599,121 @@ export default function App() {
           const topGoals = activeGoals.slice(0, 3);
           const lifeAreasArr = LIFE_AREAS.map(la => ({ ...la, value: (vision.lifeAreas?.[la.key] ?? 5) * 10 }));
           const nm = MILESTONES.find(m => m.days > daysSober);
+          const milPct = nm ? Math.min(100, daysSober / nm.days * 100) : 0;
+          const longest = calcLongestStreak([...(account?.relapses || []).map(r => r.date?.split("T")[0]), today].filter(Boolean));
+          const now = new Date();
+          const sinceStr = account?.sobrietyStart ? new Date(account.sobrietyStart).toLocaleDateString("en-AU", { day: "numeric", month: "long" }) : null;
+          const hijri = hijriStr(now);
+          const greet = greetingFor(now.getHours());
+          const firstName = (account?.name || "").trim().split(" ")[0] || "";
+          const grounding = [
+            "“And whoever relies upon Allah — then He is sufficient for him.”",
+            "One day, one prayer, one breath at a time.",
+            "The streak resets. You don't.",
+            "Showing up today is the whole work.",
+          ][daysSober % 4];
           return (
-            <div style={S.content}>
-              <DashboardHero
-                daysSober={daysSober}
-                soberStart={account?.sobrietyStart}
-                scores={{ routine: todayCombinedScore, salah: todayPrayerScore, sleep: todaySleepScore }}
-                isMobile={isMobile}
-                onPanic={() => { setPanicStep(0); setModal("panic"); }}
-                nextMilestone={nm}
-              />
-
-              {/* 2-column body */}
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, alignItems: "start" }}>
-                {/* Left column */}
-                <div>
-                  {nm && (
-                    <div style={S.card}>
-                      <div style={S.cardLabel}>Next milestone — {nm.emoji} {nm.label}</div>
-                      <div style={S.progressWrap}>
-                        <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${Math.min(100, daysSober / nm.days * 100)}%`, background: `linear-gradient(90deg,${accentColor},#60a5fa)` }} /></div>
-                        <div style={S.progressText}>{nm.days - daysSober}d to go</div>
-                      </div>
-                    </div>
-                  )}
-                  {todayLog ? (
-                    <div style={{ ...S.card, borderLeft: "3px solid #60a5fa" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                        <div style={S.cardLabel}>Last night's sleep</div>
-                        <button style={S.linkBtn} onClick={() => setView("routine")}>View →</button>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                        <div>
-                          <div style={{ fontSize: 28, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace", letterSpacing: "-0.02em" }}>{fmtDur(todayLog.durationMins)}</div>
-                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 3 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
-                        </div>
-                        <div style={{ marginLeft: "auto" }}><CircleRing value={todaySleepScore} size={56} strokeWidth={5} /></div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ ...S.card, cursor: "pointer", borderStyle: "dashed", borderLeft: "3px dashed #60a5fa44" }} onClick={() => setModal("sleepLog")}>
-                      <div style={S.cardLabel}>Sleep</div>
-                      <div style={{ fontSize: 13, color: "var(--r-fg2)" }}>Log last night's sleep →</div>
-                    </div>
-                  )}
-                  {schedTotal > 0 && (
-                    <div style={{ ...S.card, borderLeft: "3px solid #a78bfa" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                        <div style={S.cardLabel}>Today's schedule</div>
-                        <button style={S.linkBtn} onClick={() => setView("schedule")}>View all →</button>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                        <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${schedPct}%`, background: `linear-gradient(90deg,#a78bfa,#60a5fa)` }} /></div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>{schedDone}/{schedTotal}</span>
-                      </div>
-                      {sortedTodayHabits.slice(0, 4).map(h => {
-                        const done = h.completions.includes(today);
-                        return (
-                          <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "5px 0", borderBottom: "0.5px solid var(--r-bord)" }}>
-                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "#a78bfa" : "transparent", border: `1.5px solid ${done ? "#a78bfa" : "#444"}`, flexShrink: 0 }} />
-                            <span style={{ fontSize: 12, color: done ? "var(--r-fg2)" : "var(--r-fg)", textDecoration: done ? "line-through" : "none", flex: 1 }}>{h.name}</span>
-                            {h.scheduledTimes[0] && <span style={{ fontSize: 10, color: "var(--r-fg2)", fontFamily: "monospace" }}>{fmtTime(h.scheduledTimes[0])}</span>}
-                          </div>
-                        );
-                      })}
-                      {schedTotal > 4 && <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 8 }}>+{schedTotal - 4} more items</div>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Right column */}
-                <div>
-                  {topGoals.length > 0 && (
-                    <div style={{ ...S.card, borderLeft: "3px solid #f59e0b" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                        <div style={S.cardLabel}>Active goals</div>
-                        <button style={S.linkBtn} onClick={() => setView("goals")}>All →</button>
-                      </div>
-                      {topGoals.map(g => {
-                        const priColor = g.priority === "high" ? "#f87171" : g.priority === "low" ? "#555" : "#f59e0b";
-                        return (
-                          <div key={g.id} style={{ padding: "8px 0", borderBottom: "0.5px solid var(--r-bord)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
-                              <div style={{ width: 5, height: 5, borderRadius: 1, background: priColor, flexShrink: 0 }} />
-                              <span style={{ fontSize: 13, flex: 1, fontWeight: 500 }}>{g.title}</span>
-                              <span style={{ fontSize: 10, color: GOAL_COLORS[g.period] || "var(--r-fg2)", background: (GOAL_COLORS[g.period] || accentColor) + "18", padding: "1px 7px", borderRadius: 10 }}>{g.period}</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div style={{ flex: 1, height: 3, background: "var(--r-bord)", borderRadius: 2 }}>
-                                <div style={{ height: "100%", width: `${g.progress || 0}%`, background: GOAL_COLORS[g.period] || accentColor, borderRadius: 2 }} />
-                              </div>
-                              <span style={{ fontSize: 10, color: "var(--r-fg2)", fontFamily: "monospace" }}>{g.progress || 0}%</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <div style={S.card}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                      <div style={S.cardLabel}>Life areas</div>
-                      <button style={S.linkBtn} onClick={() => { setView("goals"); setGoalsTab("vision"); }}>Edit →</button>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
-                      {lifeAreasArr.map(la => (
-                        <div key={la.key} style={{ textAlign: "center" }}>
-                          <CircleRing value={la.value} size={44} strokeWidth={4} />
-                          <div style={{ fontSize: 9, color: "var(--r-fg2)", marginTop: 4, letterSpacing: "0.02em" }}>{la.label}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={S.card}>
-                    <div style={S.cardLabel}>Milestones</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 5 }}>
-                      {MILESTONES.map(m => { const ok = daysSober >= m.days; return (<div key={m.days} style={{ ...S.milestoneChip, opacity: ok ? 1 : 0.18, background: ok ? accentColor + "14" : "transparent", borderColor: ok ? accentColor + "55" : "var(--r-bord)" }}><span style={{ fontSize: 14 }}>{m.emoji}</span><span style={S.mLabel}>{m.label}</span></div>); })}
-                    </div>
-                  </div>
+            <div style={{ ...S.content, maxWidth: 640 }}>
+              {/* Header band */}
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontFamily: HERO_FONT, fontWeight: 460, fontSize: "clamp(2rem,1.6rem + 1.8vw,2.75rem)", lineHeight: 1.05, letterSpacing: "-0.01em" }}>
+                  {greet}{firstName ? <>,<br />{firstName}</> : ""}
+                </h1>
+                <div style={{ fontSize: 14, color: "var(--r-fg3)", marginTop: 8, letterSpacing: "0.01em" }}>
+                  {hijri && <span style={{ color: "var(--r-fg2)", fontWeight: 600 }}>{hijri}</span>}
+                  {hijri ? " · " : ""}{now.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}
                 </div>
               </div>
 
+              {/* Streak hero */}
+              <div style={{ ...S.card, borderRadius: 20, padding: "22px 24px" }}>
+                <div style={{ fontSize: 14, color: "var(--r-fg3)", fontWeight: 600 }}>Days clear</div>
+                <div className="r-tnum" style={{ fontFamily: HERO_FONT, fontWeight: 480, fontSize: "clamp(3.25rem,2.4rem + 3.6vw,5rem)", lineHeight: 0.95, letterSpacing: "-0.02em", color: "var(--r-success)", margin: "2px 0 4px" }}>{daysSober}</div>
+                <div style={{ height: 6, background: "var(--r-surf2)", borderRadius: 999, overflow: "hidden", marginTop: 12 }}>
+                  <div style={{ height: "100%", width: `${milPct}%`, background: "var(--r-success)", borderRadius: 999 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: "var(--r-fg3)", letterSpacing: "0.02em" }}>
+                  <span>{sinceStr ? `Since ${sinceStr}` : "Begin today"}{daysSober >= longest && daysSober > 0 ? <span style={{ color: "var(--r-success)", fontWeight: 600 }}> · longest yet</span> : ""}</span>
+                  {nm && <span className="r-tnum">{nm.days - daysSober} to {nm.label}</span>}
+                </div>
+                <button style={{ ...S.panicBtn, width: "100%", justifyContent: "center", marginTop: 16 }} onClick={() => { setPanicStep(0); setModal("panic"); }}>
+                  <i className="ph ph-lifebuoy" style={{ fontSize: 17 }} aria-hidden="true" />I need a moment
+                </button>
+              </div>
+
+              {/* Prayer sun-arc */}
+              <div style={{ marginTop: 16 }}>
+                <SunArc prayers={todayPrayers} prayerTargets={routineTargets.prayerTargets} onLog={n => {
+                  const already = (todayPrayers?.[n]?.score || 0) > 0;
+                  updatePrayer(n, already ? { time: null, missed: false } : { time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`, missed: false });
+                }} />
+              </div>
+
+              {/* Today's intentions */}
+              <div style={{ marginTop: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <h2 style={{ fontFamily: HERO_FONT, fontWeight: 500, fontSize: "clamp(1.25rem,1.1rem + 0.6vw,1.5rem)" }}>Today's intentions</h2>
+                  <span className="r-tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--r-fg2)" }}>{todayDone}/{todayHabits.length || 0}</span>
+                </div>
+                {sortedTodayHabits.length === 0 ? (
+                  <div style={{ ...S.card }}><div style={S.empty}>No habits scheduled today. <button style={S.linkBtn} onClick={() => setView("habits")}>Add some →</button></div></div>
+                ) : (
+                  <div style={{ ...S.card, padding: "4px 20px" }}>
+                    {sortedTodayHabits.map((h, i) => {
+                      const done = h.completions.includes(today);
+                      return (
+                        <button key={h.id} onClick={() => toggleHabit(h.id)} aria-pressed={done}
+                          style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", minHeight: 56, padding: "14px 0", border: "none", borderTop: i ? "1px solid var(--r-bord)" : "none", background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: "var(--r-font)" }}>
+                          <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: done ? "none" : "1.5px solid var(--r-bord)", background: done ? "var(--r-success)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                            {done && <i className="ph-bold ph-check" style={{ fontSize: 13 }} />}
+                          </span>
+                          <span style={{ flex: 1, fontSize: 16, fontWeight: 500, color: done ? "var(--r-fg3)" : "var(--r-fg)", textDecoration: done ? "line-through" : "none", textDecorationColor: "var(--r-bord)" }}>{h.name}</span>
+                          {h.scheduledTimes[0] && <span className="r-tnum" style={{ fontSize: 12, color: "var(--r-fg3)" }}>{fmtTime(h.scheduledTimes[0])}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Sleep glance */}
+              {todayLog ? (
+                <button onClick={() => setView("routine")} style={{ ...S.card, display: "flex", alignItems: "center", gap: 16, width: "100%", marginTop: 16, cursor: "pointer", textAlign: "left", fontFamily: "var(--r-font)" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: "var(--r-fg3)", fontWeight: 600, marginBottom: 4 }}>Last night's sleep</div>
+                    <div style={{ fontFamily: HERO_FONT, fontSize: 26, fontWeight: 480, color: "var(--r-fg)", letterSpacing: "-0.01em" }}>{fmtDur(todayLog.durationMins)}</div>
+                    <div className="r-tnum" style={{ fontSize: 12, color: "var(--r-fg3)", marginTop: 3 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
+                  </div>
+                  <CircleRing value={todaySleepScore} size={56} strokeWidth={5} />
+                </button>
+              ) : (
+                <button onClick={() => setModal("sleepLog")} style={{ ...S.card, display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginTop: 16, cursor: "pointer", textAlign: "left", fontFamily: "var(--r-font)" }}>
+                  <span style={{ fontSize: 15, color: "var(--r-fg2)", fontWeight: 500 }}>Log last night's sleep</span>
+                  <i className="ph ph-moon-stars" style={{ fontSize: 22, color: "var(--r-accent)" }} aria-hidden="true" />
+                </button>
+              )}
+
+              {/* Reflective prompt */}
+              <div style={{ ...S.card, marginTop: 16 }}>
+                <p style={{ fontFamily: HERO_FONT, fontWeight: 460, fontSize: "clamp(1.0625rem,1rem + 0.3vw,1.1875rem)", lineHeight: 1.4, color: "var(--r-fg)" }}>“What is one thing steadying you today?”</p>
+                <button style={{ ...S.secondaryBtn, width: "auto", marginTop: 14, display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999 }} onClick={() => setView("journal")}>
+                  <i className="ph ph-pen-nib" style={{ fontSize: 16 }} aria-hidden="true" />Write a line
+                </button>
+              </div>
+
               {availRew.length > 0 && (
-                <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.04)" }}>
-                  <div style={S.cardLabel}>🎁 Rewards unlocked!</div>
+                <div style={{ ...S.card, marginTop: 16, borderColor: "#D8C9A6" }}>
+                  <div style={{ ...S.cardLabel, display: "flex", alignItems: "center", gap: 8 }}><i className="ph-fill ph-gift" style={{ color: "var(--r-caution)" }} aria-hidden="true" />Rewards unlocked</div>
                   {availRew.map(r => (
                     <div key={r.id} style={S.rewardRow}>
-                      <span style={{ fontSize: 13 }}>{r.name} <span style={{ color: "#555", fontSize: 11 }}>({r.days}d)</span></span>
-                      <button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button>
+                      <span style={{ fontSize: 14 }}>{r.name} <span style={{ color: "var(--r-fg2)", fontSize: 12 }}>({r.days}d)</span></span>
+                      <button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim</button>
                     </div>
                   ))}
                 </div>
               )}
+
+              <p style={{ textAlign: "center", fontSize: 13, color: "var(--r-fg3)", marginTop: 26, fontStyle: "italic", lineHeight: 1.5 }}>{grounding}</p>
             </div>
           );
         })()}
@@ -1675,46 +1729,46 @@ export default function App() {
               <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 12, padding: "6px 0 12px" }}>
                 <div style={{ textAlign: "center" }}>
                   <CircleRing value={todaySleepScore ?? 0} size={80} strokeWidth={7} />
-                  <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>Sleep</div>
+                  <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 5 }}>Sleep</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
                   <CircleRing value={todayCombinedScore ?? 0} size={96} strokeWidth={8} />
-                  <div style={{ fontSize: 11, color: "#aaa", fontWeight: 600, marginTop: 5 }}>Routine</div>
+                  <div style={{ fontSize: 11, color: "var(--r-fg3)", fontWeight: 600, marginTop: 5 }}>Routine</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
                   <CircleRing value={todayPrayerScore ?? 0} size={80} strokeWidth={7} />
-                  <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>Prayer</div>
+                  <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 5 }}>Prayer</div>
                 </div>
               </div>
-              <div style={{ height: "0.5px", background: "#161618", margin: "2px 0 14px" }} />
+              <div style={{ height: "0.5px", background: "var(--r-bord)", margin: "2px 0 14px" }} />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
                 <div>
                   <div style={S.cardLabel}>7-day avg</div>
                   <div style={{ display: "flex", gap: 20, marginTop: 6 }}>
                     <div style={{ textAlign: "center" }}>
                       <CircleRing value={avg7Score ?? 0} size={56} strokeWidth={5} />
-                      <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>Sleep</div>
+                      <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3 }}>Sleep</div>
                     </div>
                     <div style={{ textAlign: "center" }}>
                       <CircleRing value={avg7PrayerScore ?? 0} size={56} strokeWidth={5} />
-                      <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>Prayer</div>
+                      <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3 }}>Prayer</div>
                     </div>
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Streak</div>
-                  <div style={{ fontSize: 34, fontWeight: 700, fontFamily: "monospace", lineHeight: 1, color: routineStreak >= 7 ? "#34d399" : routineStreak >= 3 ? "#f59e0b" : "#60a5fa" }}>
+                  <div style={{ fontSize: 10, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Streak</div>
+                  <div style={{ fontSize: 34, fontWeight: 700, fontFamily: "var(--r-hero)", lineHeight: 1, color: routineStreak >= 7 ? "var(--r-success)" : routineStreak >= 3 ? "var(--r-caution)" : "var(--r-info)" }}>
                     {routineStreak}
                   </div>
-                  <div style={{ fontSize: 10, color: "#333", marginTop: 3 }}>day{routineStreak !== 1 ? "s" : ""} · score &gt; 70</div>
+                  <div style={{ fontSize: 10, color: "var(--r-bord)", marginTop: 3 }}>day{routineStreak !== 1 ? "s" : ""} · score &gt; 70</div>
                 </div>
               </div>
             </div>
 
             {/* ── Sub-navigation ── */}
             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-              {[["sleep", "🌙 Sleep"], ["prayer", "🕌 Prayer"]].map(([tab, label]) => (
-                <button key={tab} onClick={() => setRoutineTab(tab)} style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "none", borderBottom: `2px solid ${routineTab === tab ? (tab === "sleep" ? "#60a5fa" : "#a78bfa") : "transparent"}`, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: routineTab === tab ?(tab === "sleep" ? "rgba(96,165,250,0.1)" : "rgba(167,139,250,0.1)") : "#0a0a0c", color: routineTab === tab ? (tab === "sleep" ? "#60a5fa" : "#a78bfa") : "#444" }}>
+              {[["sleep", "Sleep"], ["prayer", "Prayer"]].map(([tab, label]) => (
+                <button key={tab} onClick={() => setRoutineTab(tab)} aria-pressed={routineTab === tab} style={{ flex: 1, padding: "10px 12px", borderRadius: 999, border: `1px solid ${routineTab === tab ? "var(--r-accent)" : "var(--r-bord)"}`, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: routineTab === tab ? "var(--r-accent)" : "var(--r-surf)", color: routineTab === tab ? "var(--r-on-accent)" : "var(--r-fg2)" }}>
                   {label}
                 </button>
               ))}
@@ -1727,12 +1781,12 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 16, padding: "8px 0" }}>
                   <div style={{ textAlign: "center" }}>
                     <CircleRing value={todaySleepScore ?? 0} size={88} strokeWidth={8} />
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>Today</div>
+                    <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 6 }}>Today</div>
                     {todaySleepScore === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>not logged</div>}
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <CircleRing value={avg7Score ?? 0} size={88} strokeWidth={8} />
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>7-day avg</div>
+                    <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 6 }}>7-day avg</div>
                     {avg7Score === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>no data</div>}
                   </div>
                 </div>
@@ -1745,8 +1799,8 @@ export default function App() {
                 {todayLog && !logBed && !logWake ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <div>
-                      <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(todayLog.durationMins)}</div>
-                      <div style={{ fontSize: 11, color: "#555", marginTop: 3 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--r-info)", fontFamily: "var(--r-hero)" }}>{fmtDur(todayLog.durationMins)}</div>
+                      <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 3 }}>{fmtTime(todayLog.bedtime)} → {fmtTime(todayLog.waketime)}</div>
                     </div>
                     <div style={{ marginLeft: "auto" }}><CircleRing value={todaySleepScore ?? 0} size={52} strokeWidth={5} /></div>
                   </div>
@@ -1761,10 +1815,10 @@ export default function App() {
                       const score = calcSleepScore(logBed, logWake, dur, routineTargets);
                       const vs = dur - sleepDur(routineTargets.bedtime, routineTargets.waketime);
                       return (
-                        <div style={{ background: "#060608", borderRadius: 9, padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", border: "0.5px solid #161618" }}>
+                        <div style={{ background: "var(--r-bord)", borderRadius: 9, padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", border: "0.5px solid #161618" }}>
                           <div>
-                            <div style={{ fontSize: 20, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(dur)}</div>
-                            <div style={{ fontSize: 11, color: vs >= 0 ? "#34d399" : "#f87171", marginTop: 3 }}>{vs >= 0 ? "+" : "−"}{fmtDur(Math.abs(vs))} vs target</div>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--r-info)", fontFamily: "var(--r-hero)" }}>{fmtDur(dur)}</div>
+                            <div style={{ fontSize: 11, color: vs >= 0 ? "var(--r-success)" : "var(--r-danger)", marginTop: 3 }}>{vs >= 0 ? "+" : "−"}{fmtDur(Math.abs(vs))} vs target</div>
                           </div>
                           <CircleRing value={score} size={54} strokeWidth={5} />
                         </div>
@@ -1806,10 +1860,10 @@ export default function App() {
                   const vs = log.durationMins - sleepDur(routineTargets.bedtime, routineTargets.waketime);
                   return (
                     <div key={log.date} style={S.sleepLogRow}>
-                      <div style={{ fontSize: 11, color: "#444", width: 64, flexShrink: 0 }}>{new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</div>
+                      <div style={{ fontSize: 11, color: "var(--r-fg2)", width: 64, flexShrink: 0 }}>{new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, color: "#777" }}>{fmtTime(log.bedtime)} → {fmtTime(log.waketime)}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(log.durationMins)}<span style={{ fontSize: 10, fontWeight: 400, color: vs >= 0 ? "#34d399" : "#f87171", marginLeft: 5 }}>{vs >= 0 ? "+" : "−"}{fmtDur(Math.abs(vs))}</span></div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--r-info)", fontFamily: "var(--r-hero)" }}>{fmtDur(log.durationMins)}<span style={{ fontSize: 10, fontWeight: 400, color: vs >= 0 ? "var(--r-success)" : "var(--r-danger)", marginLeft: 5 }}>{vs >= 0 ? "+" : "−"}{fmtDur(Math.abs(vs))}</span></div>
                       </div>
                       <div style={{ flexShrink: 0 }}><CircleRing value={s} size={36} strokeWidth={4} /></div>
                     </div>
@@ -1825,12 +1879,12 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 16, padding: "8px 0" }}>
                   <div style={{ textAlign: "center" }}>
                     <CircleRing value={todayPrayerScore ?? 0} size={88} strokeWidth={8} />
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>Today</div>
+                    <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 6 }}>Today</div>
                     {todayPrayerScore === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>not logged</div>}
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <CircleRing value={avg7PrayerScore ?? 0} size={88} strokeWidth={8} />
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>7-day avg</div>
+                    <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 6 }}>7-day avg</div>
                     {avg7PrayerScore === null && <div style={{ fontSize: 10, color: "#2a2a2a", marginTop: 2 }}>no data</div>}
                   </div>
                 </div>
@@ -1842,22 +1896,22 @@ export default function App() {
                   const prayer = todayPrayers[p];
                   const target = routineTargets.prayerTargets[p];
                   const statusIcon = prayer?.missed
-                    ? <span style={{ color: "#f87171", fontSize: 15 }}>✗</span>
-                    : prayer?.score === 20 ? <span style={{ color: "#34d399", fontSize: 15 }}>✓</span>
-                    : prayer?.score === 10 ? <span style={{ color: "#f59e0b", fontSize: 15 }}>~</span>
+                    ? <span style={{ color: "var(--r-danger)", fontSize: 15 }}>✗</span>
+                    : prayer?.score === 20 ? <span style={{ color: "var(--r-success)", fontSize: 15 }}>✓</span>
+                    : prayer?.score === 10 ? <span style={{ color: "var(--r-caution)", fontSize: 15 }}>~</span>
                     : <span style={{ color: "#2a2a2a", fontSize: 15 }}>—</span>;
                   return (
                     <div key={p} style={{ padding: "10px 0", borderBottom: idx < PRAYER_NAMES.length - 1 ? "0.5px solid #111" : "none" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
                         <div>
                           <span style={{ fontSize: 13, fontWeight: 600 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
-                          <span style={{ fontSize: 10, color: "#444", marginLeft: 8 }}>{fmtTime(target.earliest)} – {fmtTime(target.latest)}</span>
+                          <span style={{ fontSize: 10, color: "var(--r-fg2)", marginLeft: 8 }}>{fmtTime(target.earliest)} – {fmtTime(target.latest)}</span>
                         </div>
                         {statusIcon}
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <input type="time" style={{ ...S.input, flex: 1, opacity: prayer?.missed ? 0.3 : 1, pointerEvents: prayer?.missed ? "none" : "auto" }} value={prayer?.time || ""} onChange={e => updatePrayer(p, { time: e.target.value, missed: false })} />
-                        <button style={{ ...S.catBtn, borderColor: prayer?.missed ? "#f87171" : "#2a2a2a", color: prayer?.missed ? "#f87171" : "#555", background: prayer?.missed ? "rgba(248,113,113,0.08)" : "transparent", padding: "7px 10px", fontSize: 11, whiteSpace: "nowrap" }} onClick={() => updatePrayer(p, { time: null, missed: !prayer?.missed })}>
+                        <button style={{ ...S.catBtn, borderColor: prayer?.missed ? "var(--r-danger)" : "#2a2a2a", color: prayer?.missed ? "var(--r-danger)" : "var(--r-fg2)", background: prayer?.missed ? "rgba(248,113,113,0.08)" : "transparent", padding: "7px 10px", fontSize: 11, whiteSpace: "nowrap" }} onClick={() => updatePrayer(p, { time: null, missed: !prayer?.missed })}>
                           {prayer?.missed ? "Unmark" : "Missed"}
                         </button>
                       </div>
@@ -1876,8 +1930,8 @@ export default function App() {
                     {PRAYER_NAMES.map((p, idx) => {
                       const t = routineTargets.prayerTargets[p];
                       return <div key={p} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: idx < PRAYER_NAMES.length - 1 ? "0.5px solid #111" : "none" }}>
-                        <span style={{ fontSize: 12, color: "#888" }}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
-                        <span style={{ fontSize: 12, fontFamily: "monospace", color: accentColor }}>{fmtTime(t.earliest)} – {fmtTime(t.latest)}</span>
+                        <span style={{ fontSize: 12, color: "var(--r-fg3)" }}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
+                        <span style={{ fontSize: 12, fontFamily: "var(--r-hero)", color: accentColor }}>{fmtTime(t.earliest)} – {fmtTime(t.latest)}</span>
                       </div>;
                     })}
                   </div>
@@ -1885,7 +1939,7 @@ export default function App() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                     {PRAYER_NAMES.map(p => (
                       <div key={p}>
-                        <div style={{ fontSize: 12, color: "#888", fontWeight: 600, marginBottom: 7 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</div>
+                        <div style={{ fontSize: 12, color: "var(--r-fg3)", fontWeight: 600, marginBottom: 7 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                           <div style={S.formRow}><label style={S.formLabel}>Earliest</label><input type="time" style={S.input} value={prayerTargetsDraft?.[p]?.earliest || ""} onChange={e => setPrayerTargetsDraft(d => ({ ...d, [p]: { ...d[p], earliest: e.target.value } }))} /></div>
                           <div style={S.formRow}><label style={S.formLabel}>Latest</label><input type="time" style={S.input} value={prayerTargetsDraft?.[p]?.latest || ""} onChange={e => setPrayerTargetsDraft(d => ({ ...d, [p]: { ...d[p], latest: e.target.value } }))} /></div>
@@ -1915,21 +1969,21 @@ export default function App() {
                         <div key={p}>
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                             <span style={{ fontSize: 12 }}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
-                            <span style={{ fontSize: 10, color: "#555" }}>{onTime}/{total} on time</span>
+                            <span style={{ fontSize: 10, color: "var(--r-fg2)" }}>{onTime}/{total} on time</span>
                           </div>
-                          <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", background: "#161618" }}>
-                            {onTime > 0 && <div style={{ width: `${(onTime / total) * 100}%`, background: "#34d399" }} />}
-                            {late > 0 && <div style={{ width: `${(late / total) * 100}%`, background: "#f59e0b" }} />}
-                            {missed > 0 && <div style={{ width: `${(missed / total) * 100}%`, background: "#f87171", opacity: 0.6 }} />}
+                          <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", background: "var(--r-bord)" }}>
+                            {onTime > 0 && <div style={{ width: `${(onTime / total) * 100}%`, background: "var(--r-accent)" }} />}
+                            {late > 0 && <div style={{ width: `${(late / total) * 100}%`, background: "var(--r-caution)" }} />}
+                            {missed > 0 && <div style={{ width: `${(missed / total) * 100}%`, background: "var(--r-danger)", opacity: 0.6 }} />}
                           </div>
                         </div>
                       );
                     })}
                     <div style={{ display: "flex", gap: 16, marginTop: 2 }}>
-                      {[["#34d399", "On time"], ["#f59e0b", "Late"], ["#f87171", "Missed"]].map(([col, label]) => (
+                      {[["var(--r-success)", "On time"], ["var(--r-caution)", "Late"], ["var(--r-danger)", "Missed"]].map(([col, label]) => (
                         <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <div style={{ width: 8, height: 8, borderRadius: 2, background: col }} />
-                          <span style={{ fontSize: 10, color: "#555" }}>{label}</span>
+                          <span style={{ fontSize: 10, color: "var(--r-fg2)" }}>{label}</span>
                         </div>
                       ))}
                     </div>
@@ -1944,11 +1998,11 @@ export default function App() {
                     const { total } = calcPrayerScore(log.prayers, routineTargets.prayerTargets);
                     return (
                       <div key={log.date} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "0.5px solid #111" }}>
-                        <div style={{ fontSize: 11, color: "#444", width: 70, flexShrink: 0 }}>{new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</div>
+                        <div style={{ fontSize: 11, color: "var(--r-fg2)", width: 70, flexShrink: 0 }}>{new Date(log.date + "T12:00").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</div>
                         <div style={{ display: "flex", gap: 6, flex: 1, alignItems: "center" }}>
                           {PRAYER_NAMES.map(p => {
                             const prayer = log.prayers?.[p];
-                            const col = !prayer ? "#1e1e20" : prayer.missed ? "#f87171" : prayer.score === 20 ? "#34d399" : "#f59e0b";
+                            const col = !prayer ? "var(--r-bord)" : prayer.missed ? "var(--r-danger)" : prayer.score === 20 ? "var(--r-success)" : "var(--r-caution)";
                             return <div key={p} title={p.charAt(0).toUpperCase() + p.slice(1)} style={{ width: 9, height: 9, borderRadius: "50%", background: col }} />;
                           })}
                         </div>
@@ -1969,7 +2023,7 @@ export default function App() {
             {/* Tab toggle */}
             <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
               {[["good", `Good Habits (${todayDone}/${todayHabits.length})`], ["break", `Breaking (${badHabits.length})`]].map(([t, label]) => (
-                <button key={t} onClick={() => setHabitsTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${habitsTab === t ? accentColor : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: habitsTab === t ? accentColor + "18" : "var(--r-surf)", color: habitsTab === t ? accentColor : "#444" }}>{label}</button>
+                <button key={t} onClick={() => setHabitsTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${habitsTab === t ? accentColor : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: habitsTab === t ? accentColor + "18" : "var(--r-surf)", color: habitsTab === t ? accentColor : "var(--r-fg2)" }}>{label}</button>
               ))}
             </div>
 
@@ -1982,7 +2036,7 @@ export default function App() {
               {normalizedHabits.length === 0 ? (
                 <div style={S.card}><div style={S.empty}>No habits yet. Add one below.</div></div>
               ) : normalizedHabits.map(h => {
-                const col = CAT_HEX[h.category] || "#a78bfa";
+                const col = CAT_HEX[h.category] || "#5B4A6A";
                 const weekCount = getWeekCompletions(h.completions, weekStartStr);
                 const lvlCfg = h.levelsEnabled ? h.levels.find(l => l.level === h.currentLevel) : null;
                 return (
@@ -1991,19 +2045,19 @@ export default function App() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</span>
-                          {h.levelsEnabled && <span style={{ fontSize: 10, color: "#a78bfa", background: "rgba(167,139,250,0.12)", border: "0.5px solid rgba(167,139,250,0.3)", padding: "1px 7px", borderRadius: 10 }}>Lv.{h.currentLevel}</span>}
+                          {h.levelsEnabled && <span style={{ fontSize: 10, color: "#5B4A6A", background: "rgba(167,139,250,0.12)", border: "0.5px solid rgba(167,139,250,0.3)", padding: "1px 7px", borderRadius: 10 }}>Lv.{h.currentLevel}</span>}
                         </div>
                         <div style={{ display: "flex", gap: 8, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
                           <span style={{ fontSize: 10, color: col, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h.category}</span>
-                          {h.days.length > 0 && <span style={{ fontSize: 10, color: "#555" }}>{h.days.join(" · ")}</span>}
+                          {h.days.length > 0 && <span style={{ fontSize: 10, color: "var(--r-fg2)" }}>{h.days.join(" · ")}</span>}
                           {h.days.length === 0 && <span style={{ fontSize: 10, color: "#3a3a3a" }}>every day</span>}
-                          {h.scheduledTimes.length > 0 && <span style={{ fontSize: 10, color: "#555", fontFamily: "monospace" }}>{h.scheduledTimes.map(fmtTime).join(", ")}</span>}
+                          {h.scheduledTimes.length > 0 && <span style={{ fontSize: 10, color: "var(--r-fg2)", fontFamily: "var(--r-hero)" }}>{h.scheduledTimes.map(fmtTime).join(", ")}</span>}
                         </div>
                         {h.levelsEnabled && lvlCfg && (
-                          <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
+                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 5 }}>
                             {lvlCfg.description && <span style={{ marginRight: 8 }}>{lvlCfg.description}</span>}
                             {lvlCfg.upPerWeek != null && (
-                              <span style={{ color: weekCount >= lvlCfg.upPerWeek ? "#34d399" : lvlCfg.downPerWeek != null && weekCount < lvlCfg.downPerWeek ? "#f87171" : "#60a5fa" }}>
+                              <span style={{ color: weekCount >= lvlCfg.upPerWeek ? "var(--r-success)" : lvlCfg.downPerWeek != null && weekCount < lvlCfg.downPerWeek ? "var(--r-danger)" : "var(--r-info)" }}>
                                 {weekCount}/{lvlCfg.upPerWeek} this week
                               </span>
                             )}
@@ -2038,21 +2092,21 @@ export default function App() {
                           <span style={{ fontSize: 12, color: col, fontWeight: 700 }}>{streak.value}{streak.label}</span>
                         </div>
                         {(bh.trigger || bh.replacement) && (
-                          <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
-                            {bh.trigger && <span>Trigger: <span style={{ color: "#888" }}>{bh.trigger}</span></span>}
-                            {bh.trigger && bh.replacement && <span style={{ color: "#333", margin: "0 6px" }}>→</span>}
-                            {bh.replacement && <span>Replace: <span style={{ color: "#888" }}>{bh.replacement}</span></span>}
+                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 5 }}>
+                            {bh.trigger && <span>Trigger: <span style={{ color: "var(--r-fg3)" }}>{bh.trigger}</span></span>}
+                            {bh.trigger && bh.replacement && <span style={{ color: "var(--r-bord)", margin: "0 6px" }}>→</span>}
+                            {bh.replacement && <span>Replace: <span style={{ color: "var(--r-fg3)" }}>{bh.replacement}</span></span>}
                           </div>
                         )}
                         {bh.ifThen && (
-                          <div style={{ fontSize: 11, color: "#555", marginTop: 3, fontStyle: "italic" }}>"{bh.ifThen}"</div>
+                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 3, fontStyle: "italic" }}>"{bh.ifThen}"</div>
                         )}
                         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                          <button style={{ ...S.primaryBtn, width: "auto", padding: "6px 12px", fontSize: 11, background: "#34d39922", color: "#34d399", border: "1px solid #34d39944" }}
+                          <button style={{ ...S.primaryBtn, width: "auto", padding: "6px 12px", fontSize: 11, background: "#234C5E22", color: "var(--r-success)", border: "1px solid #234C5E44" }}
                             onClick={() => upd({ badHabits: badHabits.map(x => x.id !== bh.id ? x : { ...x, resisted: [...(x.resisted || []), { id: "r" + Date.now(), ts: Date.now() }] }) })}>
                             Resisted{resistedToday > 0 ? ` (${resistedToday})` : ""}
                           </button>
-                          <button style={{ ...S.primaryBtn, width: "auto", padding: "6px 12px", fontSize: 11, background: "#f8717122", color: "#f87171", border: "1px solid #f8717144" }}
+                          <button style={{ ...S.primaryBtn, width: "auto", padding: "6px 12px", fontSize: 11, background: "#8C3F3018", color: "var(--r-danger)", border: "1px solid #8C3F3033" }}
                             onClick={() => { setSlipModal(bh.id); setSlipNote(""); }}>
                             I slipped
                           </button>
@@ -2089,9 +2143,9 @@ export default function App() {
             .sort((a, b) => { const ta = a.times?.[0] || a.time || null, tb = b.times?.[0] || b.time || null; if (!ta && !tb) return 0; if (!ta) return 1; if (!tb) return -1; return ta.localeCompare(tb); });
           const viewMeds = medications.filter(m => m.time && (!m.days?.length || m.days.includes(schedDayName)));
           const allItems = [
-            ...viewHabits.map(h => ({ _type: "habit", id: h.id, name: h.name, time: h.scheduledTimes[0] || null, col: CAT_HEX[h.category] || "#a78bfa", data: h })),
-            ...viewActivities.map(a => ({ _type: "activity", id: a.id, name: a.name, time: a.times?.[0] || a.time || null, col: "#60a5fa", data: a })),
-            ...viewMeds.map(m => ({ _type: "med", id: m.id, name: m.name + (m.notes ? ` — ${m.notes}` : ""), time: m.time, col: "#2dd4bf", data: m })),
+            ...viewHabits.map(h => ({ _type: "habit", id: h.id, name: h.name, time: h.scheduledTimes[0] || null, col: CAT_HEX[h.category] || "#5B4A6A", data: h })),
+            ...viewActivities.map(a => ({ _type: "activity", id: a.id, name: a.name, time: a.times?.[0] || a.time || null, col: "var(--r-info)", data: a })),
+            ...viewMeds.map(m => ({ _type: "med", id: m.id, name: m.name + (m.notes ? ` — ${m.notes}` : ""), time: m.time, col: "#3A6B63", data: m })),
           ].sort((a, b) => { if (!a.time && !b.time) return 0; if (!a.time) return 1; if (!b.time) return -1; return a.time.localeCompare(b.time); });
           const schedComps = scheduleCompletions[schedDate] || {};
           const medComps = medicationLogs[schedDate] || [];
@@ -2118,7 +2172,7 @@ export default function App() {
                   const isActive = date === schedDate;
                   const isT = date === today;
                   return (
-                    <button key={date} onClick={() => setScheduleViewDate(date)} style={{ flex: 1, minWidth: 36, padding: "6px 2px", borderRadius: 7, border: `1px solid ${isActive ? accentColor : "#161618"}`, fontSize: 11, fontWeight: isT ? 700 : 400, cursor: "pointer", fontFamily: "var(--r-font)", background: isActive ? accentColor + "18" : "transparent", color: isActive ? accentColor : isT ? "#aaa" : "#444", textAlign: "center" }}>
+                    <button key={date} onClick={() => setScheduleViewDate(date)} style={{ flex: 1, minWidth: 36, padding: "6px 2px", borderRadius: 7, border: `1px solid ${isActive ? accentColor : "var(--r-bord)"}`, fontSize: 11, fontWeight: isT ? 700 : 400, cursor: "pointer", fontFamily: "var(--r-font)", background: isActive ? accentColor + "18" : "transparent", color: isActive ? accentColor : isT ? "var(--r-fg3)" : "var(--r-fg2)", textAlign: "center" }}>
                       <div style={{ fontSize: 9, marginBottom: 1 }}>{DAY_NAMES[d.getDay()].slice(0, 1)}</div>
                       <div>{d.getDate()}</div>
                     </button>
@@ -2146,23 +2200,23 @@ export default function App() {
                     return (
                       <div key={item._type + item.id} style={{ ...S.scheduleRow, borderLeftColor: item.col, opacity: done ? 0.45 : 1 }}>
                         <div style={{ width: 54, flexShrink: 0, textAlign: "right", paddingRight: 10 }}>
-                          {item.time ? <span style={{ fontSize: 11, color: done ? "#444" : item.col, fontFamily: "monospace", fontWeight: 600 }}>{fmtTime(item.time)}</span> : <span style={{ fontSize: 10, color: "#333" }}>—</span>}
+                          {item.time ? <span style={{ fontSize: 11, color: done ? "var(--r-fg2)" : item.col, fontFamily: "var(--r-hero)", fontWeight: 600 }}>{fmtTime(item.time)}</span> : <span style={{ fontSize: 10, color: "var(--r-bord)" }}>—</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 13, fontWeight: 500, textDecoration: done ? "line-through" : "none" }}>{item.name}</span>
-                            {h?.levelsEnabled && <span style={{ fontSize: 9, color: "#a78bfa", background: "rgba(167,139,250,0.12)", padding: "1px 5px", borderRadius: 8 }}>Lv.{h.currentLevel}</span>}
-                            {item._type === "med" && <span style={{ fontSize: 9, color: "#2dd4bf", background: "rgba(45,212,191,0.1)", padding: "1px 5px", borderRadius: 8 }}>med</span>}
+                            {h?.levelsEnabled && <span style={{ fontSize: 9, color: "#5B4A6A", background: "rgba(167,139,250,0.12)", padding: "1px 5px", borderRadius: 8 }}>Lv.{h.currentLevel}</span>}
+                            {item._type === "med" && <span style={{ fontSize: 9, color: "#3A6B63", background: "rgba(45,212,191,0.1)", padding: "1px 5px", borderRadius: 8 }}>med</span>}
                           </div>
                           {h?.levelsEnabled && lvlCfg && (
-                            <div style={{ fontSize: 10, marginTop: 2, color: upReady ? "#34d399" : downRisk ? "#f87171" : "#555" }}>
+                            <div style={{ fontSize: 10, marginTop: 2, color: upReady ? "var(--r-success)" : downRisk ? "var(--r-danger)" : "var(--r-fg2)" }}>
                               {weekCount}/{lvlCfg.upPerWeek ?? "?"} this week{upReady && " · ready to level up!"}{downRisk && " · at risk of drop"}
                             </div>
                           )}
-                          {item._type === "activity" && <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{item.data.type === "oneTime" ? "one-time" : !item.data.days?.length ? "daily" : item.data.days.join(" · ")}</div>}
+                          {item._type === "activity" && <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 1 }}>{item.data.type === "oneTime" ? "one-time" : !item.data.days?.length ? "daily" : item.data.days.join(" · ")}</div>}
                         </div>
                         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          <button style={{ ...S.checkBtn, background: done ? "#34d399" : "transparent", borderColor: done ? "#34d399" : isToday ? "#333" : "#1a1a1e", cursor: isToday ? "pointer" : "default", opacity: isToday ? 1 : 0.35 }} onClick={() => isToday && toggleItem(item)}>{done ? "✓" : ""}</button>
+                          <button style={{ ...S.checkBtn, background: done ? "var(--r-success)" : "transparent", borderColor: done ? "var(--r-success)" : isToday ? "var(--r-bord)" : "var(--r-surf2)", cursor: isToday ? "pointer" : "default", opacity: isToday ? 1 : 0.35 }} onClick={() => isToday && toggleItem(item)}>{done ? "✓" : ""}</button>
                           {item._type === "activity" && <button style={S.deleteBtn} onClick={() => deleteSchedActivity(item.id)}>×</button>}
                         </div>
                       </div>
@@ -2178,7 +2232,7 @@ export default function App() {
                     <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "0.5px solid #111" }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13 }}>{act.name}</div>
-                        <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{act.type === "oneTime" ? `one-time · ${act.date}` : !act.days?.length ? "daily" : act.days.join(" · ")}{(act.times?.[0] || act.time) && ` · ${fmtTime(act.times?.[0] || act.time)}`}</div>
+                        <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 1 }}>{act.type === "oneTime" ? `one-time · ${act.date}` : !act.days?.length ? "daily" : act.days.join(" · ")}{(act.times?.[0] || act.time) && ` · ${fmtTime(act.times?.[0] || act.time)}`}</div>
                       </div>
                       <button style={S.deleteBtn} onClick={() => deleteSchedActivity(act.id)}>×</button>
                     </div>
@@ -2213,8 +2267,8 @@ export default function App() {
             <div style={S.content}>
               <h2 style={S.pageTitle}>Health &amp; Body</h2>
               <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
-                {[["water","💧 Water"],["meds","💊 Meds"],["exercise","🏃 Exercise"],["body","⚖ Body"]].map(([t, label]) => (
-                  <button key={t} onClick={() => setHealthTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${healthTab === t ? "#2dd4bf" : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: healthTab === t ? "rgba(45,212,191,0.08)" : "var(--r-surf)", color: healthTab === t ? "#2dd4bf" : "#444" }}>{label}</button>
+                {[["water","Water"],["meds","Meds"],["exercise","Exercise"],["body","Body"]].map(([t, label]) => (
+                  <button key={t} onClick={() => setHealthTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${healthTab === t ? "#3A6B63" : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: healthTab === t ? "rgba(45,212,191,0.08)" : "var(--r-surf)", color: healthTab === t ? "#3A6B63" : "var(--r-fg2)" }}>{label}</button>
                 ))}
               </div>
 
@@ -2235,13 +2289,13 @@ export default function App() {
                     <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
                       <CircleRing value={waterPct} size={88} strokeWidth={8} />
                       <div>
-                        <div style={{ fontSize: 32, fontWeight: 700, fontFamily: "monospace", color: "#2dd4bf", lineHeight: 1 }}>{todayWater}<span style={{ fontSize: 14, color: "#444", marginLeft: 4 }}>/ {waterConfig.dailyTarget}</span></div>
-                        <div style={{ fontSize: 11, color: "#555", marginTop: 4 }}>{waterConfig.glassSize}ml · {Math.round(todayWater * waterConfig.glassSize)}ml today</div>
-                        <div style={{ fontSize: 11, color: waterStreak > 0 ? "#2dd4bf" : "#333", marginTop: 3 }}>{waterStreak > 0 ? `🔥 ${waterStreak} day streak` : "Start your streak"}</div>
+                        <div style={{ fontSize: 32, fontWeight: 700, fontFamily: "var(--r-hero)", color: "#3A6B63", lineHeight: 1 }}>{todayWater}<span style={{ fontSize: 14, color: "var(--r-fg2)", marginLeft: 4 }}>/ {waterConfig.dailyTarget}</span></div>
+                        <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 4 }}>{waterConfig.glassSize}ml · {Math.round(todayWater * waterConfig.glassSize)}ml today</div>
+                        <div style={{ fontSize: 11, color: waterStreak > 0 ? "var(--r-success)" : "var(--r-fg3)", marginTop: 3 }}>{waterStreak > 0 ? `${waterStreak} day streak` : "Start your streak"}</div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button style={{ flex: 3, padding: "12px", borderRadius: 8, border: "1.5px solid #2dd4bf", background: "rgba(45,212,191,0.08)", color: "#2dd4bf", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "var(--r-font)" }} onClick={() => logWater(1)}>+ glass</button>
+                      <button style={{ flex: 3, padding: "12px", borderRadius: 8, border: "1.5px solid #2dd4bf", background: "rgba(45,212,191,0.08)", color: "#3A6B63", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "var(--r-font)" }} onClick={() => logWater(1)}>+ glass</button>
                       <button style={{ flex: 1, padding: "12px", borderRadius: 8, border: "1px solid #222", background: "transparent", color: "var(--r-fg2)", fontSize: 14, cursor: "pointer", fontFamily: "var(--r-font)" }} onClick={() => logWater(-1)}>−</button>
                     </div>
                   </>)}
@@ -2256,8 +2310,8 @@ export default function App() {
                       const pct2 = waterConfig.dailyTarget ? Math.min(1, count / waterConfig.dailyTarget) : 0;
                       return (
                         <div key={ds} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                          <div style={{ width: "100%", height: Math.max(3, Math.round(pct2 * 44)), background: pct2 >= 1 ? "#2dd4bf" : pct2 > 0 ? "#2dd4bf55" : "#161618", borderRadius: 3, marginTop: "auto" }} />
-                          <div style={{ fontSize: 9, color: ds === today ? "#2dd4bf" : "#333" }}>{DAY_NAMES[d.getDay()].slice(0,1)}</div>
+                          <div style={{ width: "100%", height: Math.max(3, Math.round(pct2 * 44)), background: pct2 >= 1 ? "#3A6B63" : pct2 > 0 ? "#2dd4bf55" : "var(--r-bord)", borderRadius: 3, marginTop: "auto" }} />
+                          <div style={{ fontSize: 9, color: ds === today ? "#3A6B63" : "var(--r-bord)" }}>{DAY_NAMES[d.getDay()].slice(0,1)}</div>
                         </div>
                       );
                     })}
@@ -2276,10 +2330,10 @@ export default function App() {
                     const done = todayMedLogs.includes(med.id);
                     return (
                       <div key={med.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "0.5px solid #111" }}>
-                        <button style={{ ...S.checkBtn, background: done ? "#2dd4bf" : "transparent", borderColor: done ? "#2dd4bf" : "#333", flexShrink: 0 }} onClick={() => toggleMedication(med.id, today)}>{done ? "✓" : ""}</button>
+                        <button style={{ ...S.checkBtn, background: done ? "var(--r-success)" : "transparent", borderColor: done ? "#3A6B63" : "var(--r-bord)", flexShrink: 0 }} onClick={() => toggleMedication(med.id, today)}>{done ? "✓" : ""}</button>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13, textDecoration: done ? "line-through" : "none", opacity: done ? 0.5 : 1 }}>{med.name}</div>
-                          <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{med.time && <span style={{ marginRight: 8, fontFamily: "monospace" }}>{fmtTime(med.time)}</span>}{med.notes}</div>
+                          <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 1 }}>{med.time && <span style={{ marginRight: 8, fontFamily: "var(--r-hero)" }}>{fmtTime(med.time)}</span>}{med.notes}</div>
                         </div>
                         <button style={{ ...S.linkBtn, fontSize: 11 }} onClick={() => { setMedDraft({ name: med.name, time: med.time || "", days: med.days || [], notes: med.notes || "" }); setEditMedId(med.id); }}>Edit</button>
                         <button style={S.deleteBtn} onClick={() => upd({ medications: medications.filter(m => m.id !== med.id) })}>×</button>
@@ -2289,7 +2343,7 @@ export default function App() {
                 </div>
                 {medDraft && (
                   <div style={{ ...S.card, borderColor: "rgba(45,212,191,0.3)" }}>
-                    <div style={{ fontSize: 12, color: "#2dd4bf", fontWeight: 600, marginBottom: 12 }}>{editMedId ? "Edit" : "Add"} medication</div>
+                    <div style={{ fontSize: 12, color: "#3A6B63", fontWeight: 600, marginBottom: 12 }}>{editMedId ? "Edit" : "Add"} medication</div>
                     <input style={S.input} placeholder="Name (e.g. Vitamin D, 500mg Metformin…)" value={medDraft.name} onChange={e => setMedDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
                       <div style={S.formRow}><label style={S.formLabel}>Time (optional)</label><input type="time" style={S.input} value={medDraft.time || ""} onChange={e => setMedDraft(d => ({ ...d, time: e.target.value }))} /></div>
@@ -2298,11 +2352,11 @@ export default function App() {
                     <div style={{ marginTop: 10 }}>
                       <div style={{ ...S.formLabel, marginBottom: 6 }}>Days (blank = every day)</div>
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                        {DAY_NAMES.map(day => <button key={day} style={{ ...S.catBtn, borderColor: medDraft.days.includes(day) ? "#2dd4bf" : "#222", color: medDraft.days.includes(day) ? "#2dd4bf" : "#444", background: medDraft.days.includes(day) ? "rgba(45,212,191,0.1)" : "transparent" }} onClick={() => setMedDraft(d => ({ ...d, days: d.days.includes(day) ? d.days.filter(x => x !== day) : [...d.days, day] }))}>{day}</button>)}
+                        {DAY_NAMES.map(day => <button key={day} style={{ ...S.catBtn, borderColor: medDraft.days.includes(day) ? "#3A6B63" : "var(--r-bord)", color: medDraft.days.includes(day) ? "#3A6B63" : "var(--r-fg2)", background: medDraft.days.includes(day) ? "rgba(45,212,191,0.1)" : "transparent" }} onClick={() => setMedDraft(d => ({ ...d, days: d.days.includes(day) ? d.days.filter(x => x !== day) : [...d.days, day] }))}>{day}</button>)}
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                      <button style={{ ...S.primaryBtn, flex: 1, background: "#2dd4bf", color: "#0d1f17" }} onClick={saveMedication}>Save</button>
+                      <button style={{ ...S.primaryBtn, flex: 1, background: "#3A6B63", color: "#fff" }} onClick={saveMedication}>Save</button>
                       <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)" }} onClick={() => { setMedDraft(null); setEditMedId(null); }}>Cancel</button>
                     </div>
                   </div>
@@ -2312,8 +2366,8 @@ export default function App() {
                     <div style={S.cardLabel}>7-day adherence</div>
                     <div style={{ overflowX: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead><tr><td style={{ fontSize: 10, color: "#333", padding: "3px 6px 6px 0", width: 90 }} />{Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return <td key={i} style={{ fontSize: 9, color: "#444", textAlign: "center", padding: "3px 4px" }}>{DAY_NAMES[d.getDay()].slice(0,1)}</td>; })}</tr></thead>
-                        <tbody>{medications.map(med => <tr key={med.id}><td style={{ fontSize: 11, color: "#666", padding: "4px 6px 4px 0", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{med.name}</td>{Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(12,0,0,0); const ds = d.toISOString().split("T")[0]; const taken = (medicationLogs[ds] || []).includes(med.id); const isT = ds === today; return <td key={i} style={{ textAlign: "center", padding: "4px" }}><div style={{ width: 14, height: 14, borderRadius: "50%", background: taken ? "#2dd4bf" : "#161618", border: `1px solid ${isT ? "#2dd4bf44" : "transparent"}`, margin: "0 auto", cursor: isT ? "pointer" : "default" }} onClick={() => isT && toggleMedication(med.id, today)} /></td>; })}</tr>)}</tbody>
+                        <thead><tr><td style={{ fontSize: 10, color: "var(--r-bord)", padding: "3px 6px 6px 0", width: 90 }} />{Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return <td key={i} style={{ fontSize: 9, color: "var(--r-fg2)", textAlign: "center", padding: "3px 4px" }}>{DAY_NAMES[d.getDay()].slice(0,1)}</td>; })}</tr></thead>
+                        <tbody>{medications.map(med => <tr key={med.id}><td style={{ fontSize: 11, color: "var(--r-fg2)", padding: "4px 6px 4px 0", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{med.name}</td>{Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(12,0,0,0); const ds = d.toISOString().split("T")[0]; const taken = (medicationLogs[ds] || []).includes(med.id); const isT = ds === today; return <td key={i} style={{ textAlign: "center", padding: "4px" }}><div style={{ width: 14, height: 14, borderRadius: "50%", background: taken ? "#3A6B63" : "var(--r-bord)", border: `1px solid ${isT ? "#2dd4bf44" : "transparent"}`, margin: "0 auto", cursor: isT ? "pointer" : "default" }} onClick={() => isT && toggleMedication(med.id, today)} /></td>; })}</tr>)}</tbody>
                       </table>
                     </div>
                   </div>
@@ -2325,17 +2379,17 @@ export default function App() {
                 <div style={S.card}>
                   <div style={S.cardLabel}>This week</div>
                   <div style={{ display: "flex", gap: 10 }}>
-                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Volume</div><div style={{ ...S.sleepTargetVal, color: "#34d399" }}>{fmtDur(thisWeekExerciseMins)}</div></div>
-                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Sessions</div><div style={{ ...S.sleepTargetVal, color: "#34d399" }}>{weekExSessions}</div></div>
+                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Volume</div><div style={{ ...S.sleepTargetVal, color: "var(--r-success)" }}>{fmtDur(thisWeekExerciseMins)}</div></div>
+                    <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Sessions</div><div style={{ ...S.sleepTargetVal, color: "var(--r-success)" }}>{weekExSessions}</div></div>
                   </div>
                 </div>
                 {exerciseDraft ? (
                   <div style={{ ...S.card, borderColor: "rgba(52,211,153,0.3)" }}>
-                    <div style={{ fontSize: 12, color: "#34d399", fontWeight: 600, marginBottom: 12 }}>Log exercise</div>
+                    <div style={{ fontSize: 12, color: "var(--r-success)", fontWeight: 600, marginBottom: 12 }}>Log exercise</div>
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ ...S.formLabel, marginBottom: 6 }}>Category</div>
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                        {EXERCISE_CATS.map(cat => <button key={cat} style={{ ...S.catBtn, borderColor: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] : "#222", color: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] : "#444", background: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] + "18" : "transparent" }} onClick={() => setExerciseDraft(d => ({ ...d, category: cat }))}>{cat}</button>)}
+                        {EXERCISE_CATS.map(cat => <button key={cat} style={{ ...S.catBtn, borderColor: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] : "var(--r-bord)", color: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] : "var(--r-fg2)", background: exerciseDraft.category === cat ? EXERCISE_CAT_HEX[cat] + "18" : "transparent" }} onClick={() => setExerciseDraft(d => ({ ...d, category: cat }))}>{cat}</button>)}
                       </div>
                     </div>
                     <input style={S.input} placeholder="Type (e.g. running, bench press, yoga…)" value={exerciseDraft.type || ""} onChange={e => setExerciseDraft(d => ({ ...d, type: e.target.value }))} />
@@ -2350,20 +2404,20 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  <button style={{ ...S.primaryBtn, background: "transparent", border: "1px dashed #34d39955", color: "#34d399", marginBottom: 10 }} onClick={() => setExerciseDraft({ type: "", category: "cardio", durationMins: "", date: today, notes: "" })}>+ Log exercise</button>
+                  <button style={{ ...S.primaryBtn, background: "transparent", border: "1px dashed #234C5E55", color: "var(--r-success)", marginBottom: 10 }} onClick={() => setExerciseDraft({ type: "", category: "cardio", durationMins: "", date: today, notes: "" })}>+ Log exercise</button>
                 )}
                 <div style={S.card}>
                   <div style={S.cardLabel}>History</div>
                   {exerciseLogs.length === 0 ? <div style={S.empty}>No exercise logged yet.</div> : [...exerciseLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 50).map(entry => {
-                    const col = EXERCISE_CAT_HEX[entry.category] || "#34d399";
+                    const col = EXERCISE_CAT_HEX[entry.category] || "var(--r-success)";
                     return (
                       <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "0.5px solid #111" }}>
                         <div style={{ width: 4, alignSelf: "stretch", background: col, borderRadius: 2, flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13 }}>{entry.type}</div>
-                          <div style={{ fontSize: 10, color: "#444", marginTop: 1 }}>{entry.category} · {fmtDur(entry.durationMins)}{entry.notes && ` · ${entry.notes}`}</div>
+                          <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 1 }}>{entry.category} · {fmtDur(entry.durationMins)}{entry.notes && ` · ${entry.notes}`}</div>
                         </div>
-                        <div style={{ fontSize: 11, color: "#444" }}>{new Date(entry.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
+                        <div style={{ fontSize: 11, color: "var(--r-fg2)" }}>{new Date(entry.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
                         <button style={S.deleteBtn} onClick={() => upd({ exerciseLogs: exerciseLogs.filter(x => x.id !== entry.id) })}>×</button>
                       </div>
                     );
@@ -2376,8 +2430,8 @@ export default function App() {
                 {latestMetric && (
                   <div style={S.card}>
                     <div style={S.cardLabel}>Current weight</div>
-                    <div style={{ fontSize: 36, fontWeight: 700, fontFamily: "monospace", color: accentColor, lineHeight: 1 }}>{latestMetric.weight}<span style={{ fontSize: 14, color: "#444", marginLeft: 5 }}>{latestMetric.unit}</span></div>
-                    <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>Logged {new Date(latestMetric.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "long" })}</div>
+                    <div style={{ fontSize: 36, fontWeight: 700, fontFamily: "var(--r-hero)", color: accentColor, lineHeight: 1 }}>{latestMetric.weight}<span style={{ fontSize: 14, color: "var(--r-fg2)", marginLeft: 5 }}>{latestMetric.unit}</span></div>
+                    <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 4 }}>Logged {new Date(latestMetric.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "long" })}</div>
                   </div>
                 )}
                 {bodyMetrics.length >= 2 && (
@@ -2388,7 +2442,7 @@ export default function App() {
                     <div style={{ fontSize: 12, color: accentColor, fontWeight: 600, marginBottom: 12 }}>Log weight</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       <div style={S.formRow}><label style={S.formLabel}>Weight</label><input type="number" step="0.1" min="0" style={S.input} placeholder="e.g. 75.5" value={metricDraft.weight || ""} onChange={e => setMetricDraft(d => ({ ...d, weight: e.target.value }))} autoFocus /></div>
-                      <div style={S.formRow}><label style={S.formLabel}>Unit</label><div style={{ display: "flex", gap: 5, marginTop: 2 }}>{["kg","lbs"].map(u => <button key={u} style={{ ...S.catBtn, flex: 1, borderColor: metricDraft.unit === u ? accentColor : "#222", color: metricDraft.unit === u ? accentColor : "#444", background: metricDraft.unit === u ? accentColor + "18" : "transparent" }} onClick={() => setMetricDraft(d => ({ ...d, unit: u }))}>{u}</button>)}</div></div>
+                      <div style={S.formRow}><label style={S.formLabel}>Unit</label><div style={{ display: "flex", gap: 5, marginTop: 2 }}>{["kg","lbs"].map(u => <button key={u} style={{ ...S.catBtn, flex: 1, borderColor: metricDraft.unit === u ? accentColor : "var(--r-bord)", color: metricDraft.unit === u ? accentColor : "var(--r-fg2)", background: metricDraft.unit === u ? accentColor + "18" : "transparent" }} onClick={() => setMetricDraft(d => ({ ...d, unit: u }))}>{u}</button>)}</div></div>
                     </div>
                     <div style={{ marginTop: 10, ...S.formRow }}><label style={S.formLabel}>Date</label><input type="date" style={S.input} max={today} value={metricDraft.date || today} onChange={e => setMetricDraft(d => ({ ...d, date: e.target.value }))} /></div>
                     <div style={{ marginTop: 10, ...S.formRow }}><label style={S.formLabel}>Notes (optional)</label><input style={S.input} placeholder="e.g. morning, after gym…" value={metricDraft.notes || ""} onChange={e => setMetricDraft(d => ({ ...d, notes: e.target.value }))} /></div>
@@ -2409,12 +2463,12 @@ export default function App() {
                       return (
                         <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "0.5px solid #111" }}>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "monospace" }}>{entry.weight} {entry.unit}</div>
-                            {entry.notes && <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>{entry.notes}</div>}
+                            <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "var(--r-hero)" }}>{entry.weight} {entry.unit}</div>
+                            {entry.notes && <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 1 }}>{entry.notes}</div>}
                           </div>
                           <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: 11, color: "#444" }}>{new Date(entry.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
-                            {delta !== null && <div style={{ fontSize: 10, color: delta < 0 ? "#34d399" : delta > 0 ? "#f87171" : "#555", marginTop: 1 }}>{delta > 0 ? "+" : ""}{delta.toFixed(1)}</div>}
+                            <div style={{ fontSize: 11, color: "var(--r-fg2)" }}>{new Date(entry.date + "T12:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
+                            {delta !== null && <div style={{ fontSize: 10, color: delta < 0 ? "var(--r-success)" : delta > 0 ? "var(--r-danger)" : "var(--r-fg2)", marginTop: 1 }}>{delta > 0 ? "+" : ""}{delta.toFixed(1)}</div>}
                           </div>
                           <button style={S.deleteBtn} onClick={() => upd({ bodyMetrics: bodyMetrics.filter(x => x.id !== entry.id) })}>×</button>
                         </div>
@@ -2429,7 +2483,7 @@ export default function App() {
 
         {/* ════ GOALS & ACCOUNTABILITY ════ */}
         {view === "goals" && (() => {
-          const priColors = { high: "#f87171", med: "#f59e0b", low: "#34d399" };
+          const priColors = { high: "var(--r-danger)", med: "var(--r-caution)", low: "var(--r-success)" };
           const thisWeekStr = getWeekStr();
           const contract = accountability.contract;
           const thisWeekReview = (accountability.weeklyReviews || []).find(r => r.weekStr === thisWeekStr);
@@ -2453,7 +2507,7 @@ export default function App() {
               {/* Sub-tab nav */}
               <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
                 {[["vision","Vision"],["goals","Goals"],["streaks","Streaks"],["accountability","Accountability"]].map(([t, label]) => (
-                  <button key={t} onClick={() => setGoalsTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${goalsTab === t ? accentColor : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: goalsTab === t ? accentColor + "18" : "var(--r-surf)", color: goalsTab === t ? accentColor : "#444", whiteSpace: "nowrap" }}>{label}</button>
+                  <button key={t} onClick={() => setGoalsTab(t)} style={{ flex: 1, padding: "8px 4px", borderRadius: 7, border: "none", borderBottom: `2px solid ${goalsTab === t ? accentColor : "transparent"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: goalsTab === t ? accentColor + "18" : "var(--r-surf)", color: goalsTab === t ? accentColor : "var(--r-fg2)", whiteSpace: "nowrap" }}>{label}</button>
                 ))}
               </div>
 
@@ -2489,7 +2543,7 @@ export default function App() {
                       <button style={{ ...S.primaryBtn, marginTop: 8 }} onClick={() => { upd({ vision: { ...vision, lifeVision: visionDraft.lifeVision } }); setEditingVision(null); }}>Save</button>
                     </>
                   ) : vision.lifeVision ? (
-                    <p style={{ fontSize: 13, color: "#aaa", lineHeight: 1.8, margin: 0 }}>{vision.lifeVision}</p>
+                    <p style={{ fontSize: 13, color: "var(--r-fg3)", lineHeight: 1.8, margin: 0 }}>{vision.lifeVision}</p>
                   ) : (
                     <div style={S.empty}>Paint your ideal life in words. What does it look like in 1–3 years?</div>
                   )}
@@ -2506,8 +2560,8 @@ export default function App() {
                       {LIFE_AREAS.map(area => (
                         <div key={area.key} style={{ textAlign: "center" }}>
                           <CircleRing value={(vision.lifeAreas[area.key] || 0) * 10} size={56} strokeWidth={5} />
-                          <div style={{ fontSize: 9, color: "#555", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{area.label}</div>
-                          <div style={{ fontSize: 11, fontFamily: "monospace", color: area.color, marginTop: 1 }}>{vision.lifeAreas[area.key] || 0}</div>
+                          <div style={{ fontSize: 9, color: "var(--r-fg2)", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{area.label}</div>
+                          <div style={{ fontSize: 11, fontFamily: "var(--r-hero)", color: area.color, marginTop: 1 }}>{vision.lifeAreas[area.key] || 0}</div>
                         </div>
                       ))}
                     </div>
@@ -2517,7 +2571,7 @@ export default function App() {
                         <div key={area.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <div style={{ width: 76, fontSize: 12, color: area.color }}>{area.label}</div>
                           <input type="range" min="1" max="10" value={lifeAreasDraft?.[area.key] || 5} onChange={e => setLifeAreasDraft(d => ({ ...d, [area.key]: Number(e.target.value) }))} style={{ flex: 1, accentColor: area.color }} />
-                          <div style={{ width: 18, fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: area.color, textAlign: "right" }}>{lifeAreasDraft?.[area.key] || 5}</div>
+                          <div style={{ width: 18, fontSize: 14, fontWeight: 700, fontFamily: "var(--r-hero)", color: area.color, textAlign: "right" }}>{lifeAreasDraft?.[area.key] || 5}</div>
                         </div>
                       ))}
                       <button style={S.primaryBtn} onClick={() => { upd({ vision: { ...vision, lifeAreas: lifeAreasDraft } }); setEditingVision(null); }}>Save ratings</button>
@@ -2529,7 +2583,7 @@ export default function App() {
                 <div style={{ ...S.card, borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.03)" }}>
                   <div style={S.cardLabel}>Motivation &amp; reminders</div>
                   {reminders.length === 0 && <div style={{ ...S.empty, marginBottom: 10 }}>Add quotes, reasons, names of people you're doing this for.</div>}
-                  {reminders.map(r => (<div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #1a1a1a" }}><span style={{ fontSize: 13, color: "#f59e0b", fontStyle: "italic", lineHeight: 1.6, flex: 1 }}>"{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ reminders: reminders.filter(x => x.id !== r.id) })}>×</button></div>))}
+                  {reminders.map(r => (<div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #1a1a1a" }}><span style={{ fontSize: 13, color: "var(--r-caution)", fontStyle: "italic", lineHeight: 1.6, flex: 1 }}>"{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ reminders: reminders.filter(x => x.id !== r.id) })}>×</button></div>))}
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input style={{ ...S.input, flex: 1 }} placeholder="Add a reminder or quote…" value={newRem} onChange={e => setNewRem(e.target.value)} onKeyDown={e => e.key === "Enter" && addReminder()} /><button style={{ ...S.primaryBtn, width: "auto", padding: "9px 14px" }} onClick={addReminder}>Add</button></div>
                 </div>
               </>)}
@@ -2539,13 +2593,13 @@ export default function App() {
                 {/* Period filter */}
                 <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
                   {PERIOD_ORDER.map(p => (
-                    <button key={p} onClick={() => { setGoalsPeriod(p); setGoalDraft(null); setEditGoalId(null); }} style={{ flex: 1, padding: "7px 4px", borderRadius: 6, border: `1px solid ${goalsPeriod === p ? GOAL_COLORS[p] + "66" : "#161618"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: goalsPeriod === p ? GOAL_COLORS[p] + "18" : "transparent", color: goalsPeriod === p ? GOAL_COLORS[p] : "#444" }}>{p}</button>
+                    <button key={p} onClick={() => { setGoalsPeriod(p); setGoalDraft(null); setEditGoalId(null); }} style={{ flex: 1, padding: "7px 4px", borderRadius: 6, border: `1px solid ${goalsPeriod === p ? GOAL_COLORS[p] + "66" : "var(--r-bord)"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: goalsPeriod === p ? GOAL_COLORS[p] + "18" : "transparent", color: goalsPeriod === p ? GOAL_COLORS[p] : "var(--r-fg2)" }}>{p}</button>
                   ))}
                 </div>
                 {/* Area filter */}
                 <div style={{ display: "flex", gap: 4, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>
-                  <button style={{ ...S.catBtn, borderColor: !goalsAreaFilter ? accentColor : "#222", color: !goalsAreaFilter ? accentColor : "#444", background: !goalsAreaFilter ? accentColor + "18" : "transparent", whiteSpace: "nowrap" }} onClick={() => setGoalsAreaFilter("")}>All</button>
-                  {LIFE_AREAS.map(a => (<button key={a.key} style={{ ...S.catBtn, borderColor: goalsAreaFilter === a.key ? a.color : "#222", color: goalsAreaFilter === a.key ? a.color : "#444", background: goalsAreaFilter === a.key ? a.color + "18" : "transparent", whiteSpace: "nowrap" }} onClick={() => setGoalsAreaFilter(goalsAreaFilter === a.key ? "" : a.key)}>{a.label}</button>))}
+                  <button style={{ ...S.catBtn, borderColor: !goalsAreaFilter ? accentColor : "var(--r-bord)", color: !goalsAreaFilter ? accentColor : "var(--r-fg2)", background: !goalsAreaFilter ? accentColor + "18" : "transparent", whiteSpace: "nowrap" }} onClick={() => setGoalsAreaFilter("")}>All</button>
+                  {LIFE_AREAS.map(a => (<button key={a.key} style={{ ...S.catBtn, borderColor: goalsAreaFilter === a.key ? a.color : "var(--r-bord)", color: goalsAreaFilter === a.key ? a.color : "var(--r-fg2)", background: goalsAreaFilter === a.key ? a.color + "18" : "transparent", whiteSpace: "nowrap" }} onClick={() => setGoalsAreaFilter(goalsAreaFilter === a.key ? "" : a.key)}>{a.label}</button>))}
                 </div>
                 {/* Goals list */}
                 {filteredGoals.length === 0 && <div style={S.card}><div style={S.empty}>No {goalsPeriod} goals{goalsAreaFilter ? ` in ${LIFE_AREAS.find(a => a.key === goalsAreaFilter)?.label}` : ""}.</div></div>}
@@ -2557,24 +2611,24 @@ export default function App() {
                   return (
                     <div key={g.id} style={{ ...S.card, borderLeft: `3px solid ${pc}`, opacity: done ? 0.7 : 1 }}>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <div style={{ ...S.goalCheck, background: done ? pc : "transparent", borderColor: pc, flexShrink: 0, marginTop: 2 }} onClick={() => toggleGoal(g.id)}>{done && <span style={{ color: "#0d0d0f", fontSize: 11 }}>✓</span>}</div>
+                        <div style={{ ...S.goalCheck, background: done ? pc : "transparent", borderColor: pc, flexShrink: 0, marginTop: 2 }} onClick={() => toggleGoal(g.id)}>{done && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, textDecoration: done ? "line-through" : "none", lineHeight: 1.4 }}>{g.title}</div>
                           <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
                             <span style={{ fontSize: 10, color: priColors[g.priority], background: priColors[g.priority] + "18", padding: "1px 7px", borderRadius: 10, border: `0.5px solid ${priColors[g.priority]}44` }}>{g.priority}</span>
                             {areaInfo && <span style={{ fontSize: 10, color: areaInfo.color }}>{areaInfo.label}</span>}
-                            {g.dueDate && <span style={{ fontSize: 10, color: "#444" }}>due {g.dueDate}</span>}
-                            {parentGoal && <span style={{ fontSize: 10, color: "#333" }}>↑ {parentGoal.title}</span>}
+                            {g.dueDate && <span style={{ fontSize: 10, color: "var(--r-fg2)" }}>due {g.dueDate}</span>}
+                            {parentGoal && <span style={{ fontSize: 10, color: "var(--r-bord)" }}>↑ {parentGoal.title}</span>}
                           </div>
-                          {g.notes && <div style={{ fontSize: 11, color: "#444", marginTop: 5, lineHeight: 1.5 }}>{g.notes}</div>}
+                          {g.notes && <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 5, lineHeight: 1.5 }}>{g.notes}</div>}
                           <div style={{ marginTop: 8 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#444", marginBottom: 3 }}><span>Progress</span><span style={{ color: g.progress >= 100 ? "#34d399" : "#aaa" }}>{g.progress}%</span></div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--r-fg2)", marginBottom: 3 }}><span>Progress</span><span style={{ color: g.progress >= 100 ? "var(--r-success)" : "var(--r-fg3)" }}>{g.progress}%</span></div>
                             <input type="range" min="0" max="100" value={g.progress} onChange={e => upd({ goals: goals.map(x => x.id === g.id ? { ...x, progress: Number(e.target.value) } : x) })} style={{ width: "100%", accentColor: pc, cursor: "pointer" }} />
                           </div>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
                           <button style={{ ...S.linkBtn, fontSize: 11 }} onClick={() => { setGoalDraft({ title: g.title, priority: g.priority, dueDate: g.dueDate, notes: g.notes, lifeArea: g.lifeArea, parentId: g.parentId }); setEditGoalId(g.id); }}>Edit</button>
-                          <button style={{ ...S.linkBtn, fontSize: 11, color: "#444" }} onClick={() => upd({ goals: goals.map(x => x.id === g.id ? { ...x, archived: true } : x) })}>Archive</button>
+                          <button style={{ ...S.linkBtn, fontSize: 11, color: "var(--r-fg2)" }} onClick={() => upd({ goals: goals.map(x => x.id === g.id ? { ...x, archived: true } : x) })}>Archive</button>
                           <button style={S.deleteBtn} onClick={() => upd({ goals: goals.filter(x => x.id !== g.id) })}>×</button>
                         </div>
                       </div>
@@ -2590,7 +2644,7 @@ export default function App() {
                       <div style={S.formRow}>
                         <label style={S.formLabel}>Priority</label>
                         <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                          {["high","med","low"].map(p => <button key={p} style={{ ...S.catBtn, flex: 1, borderColor: goalDraft.priority === p ? priColors[p] : "#222", color: goalDraft.priority === p ? priColors[p] : "#444", background: goalDraft.priority === p ? priColors[p] + "18" : "transparent" }} onClick={() => setGoalDraft(d => ({ ...d, priority: p }))}>{p}</button>)}
+                          {["high","med","low"].map(p => <button key={p} style={{ ...S.catBtn, flex: 1, borderColor: goalDraft.priority === p ? priColors[p] : "var(--r-bord)", color: goalDraft.priority === p ? priColors[p] : "var(--r-fg2)", background: goalDraft.priority === p ? priColors[p] + "18" : "transparent" }} onClick={() => setGoalDraft(d => ({ ...d, priority: p }))}>{p}</button>)}
                         </div>
                       </div>
                       <div style={S.formRow}>
@@ -2601,8 +2655,8 @@ export default function App() {
                     <div style={{ marginTop: 10, ...S.formRow }}>
                       <label style={S.formLabel}>Life area</label>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
-                        <button style={{ ...S.catBtn, borderColor: !goalDraft.lifeArea ? accentColor : "#222", color: !goalDraft.lifeArea ? accentColor : "#444" }} onClick={() => setGoalDraft(d => ({ ...d, lifeArea: "" }))}>None</button>
-                        {LIFE_AREAS.map(a => <button key={a.key} style={{ ...S.catBtn, borderColor: goalDraft.lifeArea === a.key ? a.color : "#222", color: goalDraft.lifeArea === a.key ? a.color : "#444", background: goalDraft.lifeArea === a.key ? a.color + "18" : "transparent" }} onClick={() => setGoalDraft(d => ({ ...d, lifeArea: a.key }))}>{a.label}</button>)}
+                        <button style={{ ...S.catBtn, borderColor: !goalDraft.lifeArea ? accentColor : "var(--r-bord)", color: !goalDraft.lifeArea ? accentColor : "var(--r-fg2)" }} onClick={() => setGoalDraft(d => ({ ...d, lifeArea: "" }))}>None</button>
+                        {LIFE_AREAS.map(a => <button key={a.key} style={{ ...S.catBtn, borderColor: goalDraft.lifeArea === a.key ? a.color : "var(--r-bord)", color: goalDraft.lifeArea === a.key ? a.color : "var(--r-fg2)", background: goalDraft.lifeArea === a.key ? a.color + "18" : "transparent" }} onClick={() => setGoalDraft(d => ({ ...d, lifeArea: a.key }))}>{a.label}</button>)}
                       </div>
                     </div>
                     {parentCandidates.length > 0 && (
@@ -2619,7 +2673,7 @@ export default function App() {
                       <textarea style={{ ...S.textarea, marginTop: 4, minHeight: 56 }} value={goalDraft.notes || ""} onChange={e => setGoalDraft(d => ({ ...d, notes: e.target.value }))} />
                     </div>
                     <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                      <button style={{ ...S.primaryBtn, flex: 1, background: GOAL_COLORS[goalsPeriod], color: "#0d0d0f" }} onClick={() => {
+                      <button style={{ ...S.primaryBtn, flex: 1, background: GOAL_COLORS[goalsPeriod], color: "#fff" }} onClick={() => {
                         if (!goalDraft.title?.trim()) return;
                         const existing = editGoalId ? goals.find(x => x.id === editGoalId) : null;
                         const g = { id: editGoalId || "g" + Date.now(), title: goalDraft.title.trim(), text: goalDraft.title.trim(), period: goalsPeriod, parentId: goalDraft.parentId || null, dueDate: goalDraft.dueDate || "", priority: goalDraft.priority || "med", notes: goalDraft.notes || "", progress: existing?.progress || 0, lifeArea: goalDraft.lifeArea || "", done: existing?.done || [], archived: false, createdAt: existing?.createdAt || new Date().toISOString() };
@@ -2657,9 +2711,9 @@ export default function App() {
                 return (<>
                   {weakest && normalizedHabits.length > 0 && (
                     <div style={{ ...S.card, borderColor: "rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.04)" }}>
-                      <div style={{ fontSize: 10, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Needs most attention</div>
+                      <div style={{ fontSize: 10, color: "var(--r-danger)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Needs most attention</div>
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{weakest.name}</div>
-                      <div style={{ fontSize: 11, color: "#f87171" }}>{calcHabitRate(weakest, 30)}% completion last 30 days</div>
+                      <div style={{ fontSize: 11, color: "var(--r-danger)" }}>{calcHabitRate(weakest, 30)}% completion last 30 days</div>
                     </div>
                   )}
                   {normalizedHabits.length === 0 ? (
@@ -2669,7 +2723,7 @@ export default function App() {
                     const longest = calcLongestStreak(h.completions);
                     const weekRate = calcHabitRate(h, 7);
                     const monthRate = calcHabitRate(h, 30);
-                    const col = CAT_HEX[h.category] || "#a78bfa";
+                    const col = CAT_HEX[h.category] || "#5B4A6A";
                     return (
                       <div key={h.id} style={{ ...S.card, borderLeft: `3px solid ${col}` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
@@ -2678,14 +2732,14 @@ export default function App() {
                             <div style={{ fontSize: 10, color: col, textTransform: "uppercase", marginTop: 2 }}>{h.category}</div>
                           </div>
                           <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: streak >= 7 ? "#34d399" : streak >= 3 ? "#f59e0b" : "#aaa", lineHeight: 1 }}>{streak}</div>
-                            <div style={{ fontSize: 9, color: "#444" }}>day streak</div>
+                            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "var(--r-hero)", color: streak >= 7 ? "var(--r-success)" : streak >= 3 ? "var(--r-caution)" : "var(--r-fg3)", lineHeight: 1 }}>{streak}</div>
+                            <div style={{ fontSize: 9, color: "var(--r-fg2)" }}>day streak</div>
                           </div>
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Longest</div><div style={{ ...S.sleepTargetVal, color: "#a78bfa" }}>{longest}d</div></div>
-                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>This week</div><div style={{ ...S.sleepTargetVal, color: weekRate >= 80 ? "#34d399" : weekRate >= 50 ? "#f59e0b" : "#f87171" }}>{weekRate}%</div></div>
-                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>This month</div><div style={{ ...S.sleepTargetVal, color: monthRate >= 80 ? "#34d399" : monthRate >= 50 ? "#f59e0b" : "#f87171" }}>{monthRate}%</div></div>
+                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>Longest</div><div style={{ ...S.sleepTargetVal, color: "#5B4A6A" }}>{longest}d</div></div>
+                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>This week</div><div style={{ ...S.sleepTargetVal, color: weekRate >= 80 ? "var(--r-success)" : weekRate >= 50 ? "var(--r-caution)" : "var(--r-danger)" }}>{weekRate}%</div></div>
+                          <div style={S.sleepTarget}><div style={S.sleepTargetLabel}>This month</div><div style={{ ...S.sleepTargetVal, color: monthRate >= 80 ? "var(--r-success)" : monthRate >= 50 ? "var(--r-caution)" : "var(--r-danger)" }}>{monthRate}%</div></div>
                         </div>
                         <HeatmapGrid getScore={d => h.completions.includes(d) ? 100 : (h.completions.length ? 0 : null)} />
                       </div>
@@ -2700,15 +2754,15 @@ export default function App() {
                 <div style={S.card}>
                   <div style={S.cardLabel}>Commitment contract</div>
                   {contract?.locked ? (
-                    <div style={{ background: "#060608", border: "0.5px solid rgba(52,211,153,0.3)", borderRadius: 10, padding: "16px" }}>
+                    <div style={{ background: "var(--r-bord)", border: "0.5px solid rgba(52,211,153,0.3)", borderRadius: 10, padding: "16px" }}>
                       <div style={{ fontSize: 13, lineHeight: 1.75, color: "#ddd", marginBottom: 14 }}>{contract.text}</div>
-                      <div style={{ height: "0.5px", background: "#1a1a1e", marginBottom: 12 }} />
+                      <div style={{ height: "0.5px", background: "var(--r-surf2)", marginBottom: 12 }} />
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                         <div>
-                          <div style={{ fontSize: 13, color: "#34d399", fontStyle: "italic" }}>— {contract.signature}</div>
-                          <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{contract.signedDate}</div>
+                          <div style={{ fontSize: 13, color: "var(--r-success)", fontStyle: "italic" }}>— {contract.signature}</div>
+                          <div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 2 }}>{contract.signedDate}</div>
                         </div>
-                        <div style={{ fontSize: 22 }}>✍</div>
+                        <div style={{ fontSize: 22, color:"var(--r-accent)" }} aria-hidden="true"><i className="ph ph-pen-nib" /></div>
                       </div>
                     </div>
                   ) : contractDraft ? (
@@ -2716,7 +2770,7 @@ export default function App() {
                       <textarea style={{ ...S.textarea, marginBottom: 8 }} placeholder="Write your commitment. What are you promising yourself?" rows={4} value={contractDraft.text || ""} onChange={e => setContractDraft(d => ({ ...d, text: e.target.value }))} />
                       <input style={{ ...S.input, marginBottom: 8 }} placeholder="Sign with your name" value={contractDraft.signature || ""} onChange={e => setContractDraft(d => ({ ...d, signature: e.target.value }))} />
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button style={{ ...S.primaryBtn, flex: 1, background: "#34d399", color: "#0d1f17" }} onClick={() => { if (!contractDraft.text?.trim() || !contractDraft.signature?.trim()) return; upd({ accountability: { ...accountability, contract: { ...contractDraft, locked: true, signedDate: getTodayStr() } } }); setContractDraft(null); }}>Sign &amp; lock permanently</button>
+                        <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-accent)", color: "#fff" }} onClick={() => { if (!contractDraft.text?.trim() || !contractDraft.signature?.trim()) return; upd({ accountability: { ...accountability, contract: { ...contractDraft, locked: true, signedDate: getTodayStr() } } }); setContractDraft(null); }}>Sign &amp; lock permanently</button>
                         <button style={{ ...S.primaryBtn, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)" }} onClick={() => setContractDraft(null)}>Cancel</button>
                       </div>
                     </>
@@ -2752,13 +2806,13 @@ export default function App() {
                     return (
                       <div key={letter.id} style={{ padding: "10px 0", borderBottom: "0.5px solid #111" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                          <span style={{ fontSize: 11, color: unlocked ? "#34d399" : "#555" }}>{unlocked ? "Unlocked" : `Sealed until ${letter.unlockDate}`}</span>
+                          <span style={{ fontSize: 11, color: unlocked ? "var(--r-success)" : "var(--r-fg2)" }}>{unlocked ? "Unlocked" : `Sealed until ${letter.unlockDate}`}</span>
                           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                            <span style={{ fontSize: 10, color: "#333" }}>Written {letter.writtenDate}</span>
+                            <span style={{ fontSize: 10, color: "var(--r-bord)" }}>Written {letter.writtenDate}</span>
                             <button style={S.deleteBtn} onClick={() => upd({ accountability: { ...accountability, futureLetters: (accountability.futureLetters || []).filter(l => l.id !== letter.id) } })}>×</button>
                           </div>
                         </div>
-                        {unlocked ? <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.75 }}>{letter.text}</div> : <div style={{ fontSize: 12, color: "#2a2a2a", fontStyle: "italic" }}>This letter is sealed.</div>}
+                        {unlocked ? <div style={{ fontSize: 13, color: "var(--r-fg3)", lineHeight: 1.75 }}>{letter.text}</div> : <div style={{ fontSize: 12, color: "#2a2a2a", fontStyle: "italic" }}>This letter is sealed.</div>}
                       </div>
                     );
                   })}
@@ -2770,19 +2824,19 @@ export default function App() {
                   {thisWeekReview && !weeklyReviewDraft ? (
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                        <span style={{ fontSize: 11, color: "#34d399" }}>This week completed ✓</span>
+                        <span style={{ fontSize: 11, color: "var(--r-success)" }}>This week completed ✓</span>
                         <button style={S.linkBtn} onClick={() => setWRD({ wentWell: thisWeekReview.wentWell, didntGo: thisWeekReview.didntGo, focus: thisWeekReview.focus })}>Edit</button>
                       </div>
                       {[["Went well", thisWeekReview.wentWell], ["Didn't go well", thisWeekReview.didntGo], ["Focus next week", thisWeekReview.focus]].map(([label, val]) => (
                         <div key={label} style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>{label}</div>
-                          <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.6 }}>{val || "—"}</div>
+                          <div style={{ fontSize: 10, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>{label}</div>
+                          <div style={{ fontSize: 13, color: "var(--r-fg3)", lineHeight: 1.6 }}>{val || "—"}</div>
                         </div>
                       ))}
                     </div>
                   ) : weeklyReviewDraft ? (
                     <div>
-                      {[["What went well this week?", "wentWell", "#34d399"], ["What didn't go well?", "didntGo", "#f87171"], ["Focus for next week?", "focus", "#60a5fa"]].map(([q, key, col]) => (
+                      {[["What went well this week?", "wentWell", "var(--r-success)"], ["What didn't go well?", "didntGo", "var(--r-danger)"], ["Focus for next week?", "focus", "var(--r-info)"]].map(([q, key, col]) => (
                         <div key={key} style={{ marginBottom: 12 }}>
                           <div style={{ fontSize: 12, color: col, marginBottom: 5 }}>{q}</div>
                           <textarea style={{ ...S.textarea, minHeight: 60 }} value={weeklyReviewDraft[key] || ""} onChange={e => setWRD(d => ({ ...d, [key]: e.target.value }))} />
@@ -2799,10 +2853,10 @@ export default function App() {
                   )}
                   {(accountability.weeklyReviews || []).filter(r => r.weekStr !== thisWeekStr).length > 0 && (
                     <div style={{ marginTop: 14 }}>
-                      <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Past reviews</div>
+                      <div style={{ fontSize: 10, color: "var(--r-bord)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Past reviews</div>
                       {[...(accountability.weeklyReviews || [])].filter(r => r.weekStr !== thisWeekStr).sort((a, b) => b.weekStr.localeCompare(a.weekStr)).slice(0, 5).map(r => (
-                        <div key={r.id} style={{ padding: "7px 0", borderBottom: "0.5px solid #111", fontSize: 11, color: "#444" }}>
-                          Week of {r.weekStr} — <span style={{ color: "#aaa" }}>{r.focus || r.wentWell || "—"}</span>
+                        <div key={r.id} style={{ padding: "7px 0", borderBottom: "0.5px solid #111", fontSize: 11, color: "var(--r-fg2)" }}>
+                          Week of {r.weekStr} — <span style={{ color: "var(--r-fg3)" }}>{r.focus || r.wentWell || "—"}</span>
                         </div>
                       ))}
                     </div>
@@ -2818,10 +2872,10 @@ export default function App() {
                   </div>
                   {(accountability.wins || []).length === 0 ? <div style={S.empty}>No wins yet. Every step counts.</div> : (accountability.wins || []).slice(0, 30).map(w => (
                     <div key={w.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 0", borderBottom: "0.5px solid #111" }}>
-                      <span style={{ color: "#f59e0b", fontSize: 14, flexShrink: 0 }}>★</span>
+                      <span style={{ color: "var(--r-caution)", fontSize: 14, flexShrink: 0 }}>★</span>
                       <span style={{ fontSize: 13, flex: 1, lineHeight: 1.5 }}>{w.text}</span>
                       <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
-                        <span style={{ fontSize: 10, color: "#333" }}>{w.date}</span>
+                        <span style={{ fontSize: 10, color: "var(--r-bord)" }}>{w.date}</span>
                         <button style={S.deleteBtn} onClick={() => upd({ accountability: { ...accountability, wins: (accountability.wins || []).filter(x => x.id !== w.id) } })}>×</button>
                       </div>
                     </div>
@@ -2833,17 +2887,17 @@ export default function App() {
                   <div style={S.cardLabel}>Gratitude log</div>
                   {todayGratitude ? (
                     <div>
-                      <div style={{ fontSize: 11, color: "#34d399", marginBottom: 8 }}>Today logged ✓</div>
-                      {todayGratitude.items.map((item, i) => <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0" }}><span style={{ color: "#a78bfa", fontSize: 12, flexShrink: 0 }}>{i + 1}.</span><span style={{ fontSize: 13, color: "#aaa" }}>{item}</span></div>)}
+                      <div style={{ fontSize: 11, color: "var(--r-success)", marginBottom: 8 }}>Today logged ✓</div>
+                      {todayGratitude.items.map((item, i) => <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0" }}><span style={{ color: "#5B4A6A", fontSize: 12, flexShrink: 0 }}>{i + 1}.</span><span style={{ fontSize: 13, color: "var(--r-fg3)" }}>{item}</span></div>)}
                       <button style={{ ...S.linkBtn, marginTop: 8, fontSize: 12 }} onClick={() => setGratitudeDraft(todayGratitude.items.length >= 3 ? todayGratitude.items : [...todayGratitude.items, ...["","",""].slice(0, 3 - todayGratitude.items.length)])}>Update today</button>
                     </div>
                   ) : (
                     <div>
-                      <div style={{ fontSize: 12, color: "#555", marginBottom: 10 }}>3 things you're grateful for today</div>
+                      <div style={{ fontSize: 12, color: "var(--r-fg2)", marginBottom: 10 }}>3 things you're grateful for today</div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
                         {[0,1,2].map(i => (
                           <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                            <span style={{ color: "#a78bfa", fontSize: 12, width: 16, flexShrink: 0 }}>{i + 1}.</span>
+                            <span style={{ color: "#5B4A6A", fontSize: 12, width: 16, flexShrink: 0 }}>{i + 1}.</span>
                             <input style={{ ...S.input, flex: 1 }} placeholder="Grateful for…" value={gratitudeDraft[i] || ""} onChange={e => setGratitudeDraft(d => d.map((x, j) => j === i ? e.target.value : x))} />
                           </div>
                         ))}
@@ -2853,11 +2907,11 @@ export default function App() {
                   )}
                   {(accountability.gratitude || []).filter(g => g.date !== getTodayStr()).slice(0, 7).length > 0 && (
                     <div style={{ marginTop: 14 }}>
-                      <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Recent</div>
+                      <div style={{ fontSize: 10, color: "var(--r-bord)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Recent</div>
                       {[...(accountability.gratitude || [])].filter(g => g.date !== getTodayStr()).slice(0, 7).map(g => (
                         <div key={g.id} style={{ padding: "8px 0", borderBottom: "0.5px solid #111" }}>
-                          <div style={{ fontSize: 10, color: "#444", marginBottom: 4 }}>{g.date}</div>
-                          {g.items.map((item, i) => <div key={i} style={{ fontSize: 12, color: "#666", lineHeight: 1.5 }}>{i + 1}. {item}</div>)}
+                          <div style={{ fontSize: 10, color: "var(--r-fg2)", marginBottom: 4 }}>{g.date}</div>
+                          {g.items.map((item, i) => <div key={i} style={{ fontSize: 12, color: "var(--r-fg2)", lineHeight: 1.5 }}>{i + 1}. {item}</div>)}
                         </div>
                       ))}
                     </div>
@@ -2873,21 +2927,21 @@ export default function App() {
           <div style={S.content}>
             <h2 style={S.pageTitle}>Relapse toolkit</h2>
             <div style={{ ...S.card, borderColor: "rgba(249,115,22,0.35)", background: "rgba(249,115,22,0.04)", marginBottom: 12 }}>
-              <div style={S.cardLabel}>⚡ Crisis tools</div>
-              <p style={{ color: "#f97316", fontSize: 13, lineHeight: 1.65, margin: 0 }}>Cravings peak within 20 min then fall. Use these right now.</p>
+              <div style={S.cardLabel}>Crisis tools</div>
+              <p style={{ color: "#A4503C", fontSize: 13, lineHeight: 1.65, margin: 0 }}>Cravings peak within 20 min then fall. Use these right now.</p>
             </div>
-            {BUILTIN_RELAPSE_TOOLS.map(a => (<div key={a.id} style={S.actionCard}><div style={{ fontSize: 20, flexShrink: 0 }}>{a.icon}</div><div><div style={S.actionTitle}>{a.title}</div><div style={S.actionDesc}>{a.desc}</div></div></div>))}
+            {BUILTIN_RELAPSE_TOOLS.map(a => (<div key={a.id} style={S.actionCard}><div style={{ flexShrink: 0, color: "var(--r-accent)" }} aria-hidden="true"><i className={a.icon} style={{ fontSize: 22 }} /></div><div><div style={S.actionTitle}>{a.title}</div><div style={S.actionDesc}>{a.desc}</div></div></div>))}
             <div style={{ ...S.card, borderColor: "rgba(167,139,250,0.25)", marginTop: 8 }}>
-              <div style={S.cardLabel}>⚙ My post-relapse protocol</div>
-              <p style={{ fontSize: 12, color: "#555", marginBottom: 12, lineHeight: 1.6 }}>These actions and reminders will be shown immediately after you log a relapse.</p>
-              <div style={{ fontSize: 11, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Immediate actions to do</div>
-              {postRelapseActions.map(a => (<div key={a.id} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, fontSize: 13, color: "#aaa" }}><span style={{ color: "#a78bfa" }}>→</span><span style={{ flex: 1 }}>{a.text}</span><button style={S.deleteBtn} onClick={() => upd({ postRelapseActions: postRelapseActions.filter(x => x.id !== a.id) })}>×</button></div>))}
+              <div style={S.cardLabel}>My post-relapse protocol</div>
+              <p style={{ fontSize: 12, color: "var(--r-fg2)", marginBottom: 12, lineHeight: 1.6 }}>These actions and reminders will be shown immediately after you log a relapse.</p>
+              <div style={{ fontSize: 11, color: "#5B4A6A", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Immediate actions to do</div>
+              {postRelapseActions.map(a => (<div key={a.id} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, fontSize: 13, color: "var(--r-fg3)" }}><span style={{ color: "#5B4A6A" }}>→</span><span style={{ flex: 1 }}>{a.text}</span><button style={S.deleteBtn} onClick={() => upd({ postRelapseActions: postRelapseActions.filter(x => x.id !== a.id) })}>×</button></div>))}
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}><input style={{ ...S.input, flex: 1, fontSize: 12 }} placeholder="Add an immediate action…" value={newPostAction} onChange={e => setNewPostAction(e.target.value)} onKeyDown={e => e.key === "Enter" && addPostAction()} /><button style={{ ...S.primaryBtn, width: "auto", padding: "8px 12px" }} onClick={addPostAction}>Add</button></div>
-              <div style={{ fontSize: 11, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Post-relapse reminders</div>
-              {postRelapseReminders.map(r => (<div key={r.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8, fontSize: 13, color: "#aaa", fontStyle: "italic" }}><span style={{ color: "#f59e0b" }}>"</span><span style={{ flex: 1, lineHeight: 1.55 }}>{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ postRelapseReminders: postRelapseReminders.filter(x => x.id !== r.id) })}>×</button></div>))}
+              <div style={{ fontSize: 11, color: "var(--r-caution)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Post-relapse reminders</div>
+              {postRelapseReminders.map(r => (<div key={r.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8, fontSize: 13, color: "var(--r-fg3)", fontStyle: "italic" }}><span style={{ color: "var(--r-caution)" }}>"</span><span style={{ flex: 1, lineHeight: 1.55 }}>{r.text}"</span><button style={S.deleteBtn} onClick={() => upd({ postRelapseReminders: postRelapseReminders.filter(x => x.id !== r.id) })}>×</button></div>))}
               <div style={{ display: "flex", gap: 8 }}><input style={{ ...S.input, flex: 1, fontSize: 12 }} placeholder="Add an affirmation or reminder…" value={newPostReminder} onChange={e => setNewPostReminder(e.target.value)} onKeyDown={e => e.key === "Enter" && addPostReminder()} /><button style={{ ...S.primaryBtn, width: "auto", padding: "8px 12px" }} onClick={addPostReminder}>Add</button></div>
             </div>
-            <div style={S.card}><div style={S.cardLabel}>Relapse history</div>{!(account?.relapses?.length) ? <div style={S.empty}>No relapses recorded. Keep going 💪</div> : [...(account.relapses || [])].reverse().map((r, i) => (<div key={i} style={{ padding: "10px 0", borderBottom: "0.5px solid #161616" }}><div style={{ fontSize: 11, color: "#f97316", marginBottom: 3 }}>{new Date(r.date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</div>{r.note && <div style={{ fontSize: 12, color: "#888", lineHeight: 1.55 }}>{r.note}</div>}{r.tools?.length > 0 && <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>Tools used: {r.tools.join(", ")}</div>}</div>))}</div>
+            <div style={S.card}><div style={S.cardLabel}>Relapse history</div>{!(account?.relapses?.length) ? <div style={S.empty}>No relapses recorded. Keep going.</div> : [...(account.relapses || [])].reverse().map((r, i) => (<div key={i} style={{ padding: "10px 0", borderBottom: "0.5px solid #161616" }}><div style={{ fontSize: 11, color: "#A4503C", marginBottom: 3 }}>{new Date(r.date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</div>{r.note && <div style={{ fontSize: 12, color: "var(--r-fg3)", lineHeight: 1.55 }}>{r.note}</div>}{r.tools?.length > 0 && <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 2 }}>Tools used: {r.tools.join(", ")}</div>}</div>))}</div>
           </div>
         )}
 
@@ -2925,15 +2979,15 @@ export default function App() {
                           <div style={{ fontSize: 13, fontWeight: 500, color: isClaimed ? "var(--r-fg2)" : "var(--r-fg)", textDecoration: isClaimed ? "line-through" : "none" }}>{r.name}</div>
                           <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 2 }}>
                             {r.days}d milestone
-                            {isLocked && <span style={{ marginLeft: 6, color: "#60a5fa" }}>· {r.days - daysSober}d to go</span>}
-                            {isClaimed && <span style={{ marginLeft: 6, color: "#34d399" }}>· claimed</span>}
+                            {isLocked && <span style={{ marginLeft: 6, color: "var(--r-info)" }}>· {r.days - daysSober}d to go</span>}
+                            {isClaimed && <span style={{ marginLeft: 6, color: "var(--r-success)" }}>· claimed</span>}
                           </div>
                         </div>
                         {isUnlocked && <button style={S.claimBtn} onClick={() => claimReward(r.id)}>Claim ✓</button>}
-                        {isLocked && <div style={{ fontSize: 13, opacity: 0.3 }}>🔒</div>}
-                        {isClaimed && <div style={{ fontSize: 13 }}>✅</div>}
+                        {isLocked && <div style={{ fontSize: 14, opacity: 0.4, color: "var(--r-fg3)" }} aria-hidden="true"><i className="ph ph-lock-simple" /></div>}
+                        {isClaimed && <div style={{ fontSize: 14, color: "var(--r-success)" }} aria-hidden="true"><i className="ph-fill ph-check-circle" /></div>}
                         <button style={{ ...S.deleteBtn, color: "var(--r-fg2)", fontSize: 13, padding: "2px 6px" }} onClick={() => { setEditRewId(r.id); setEditRewDraft({ name: r.name, days: r.days }); }}>✎</button>
-                        <button style={{ ...S.deleteBtn, color: "#f87171", fontSize: 13, padding: "2px 6px" }} onClick={() => { if (window.confirm(`Delete "${r.name}"?`)) deleteReward(r.id); }}>✕</button>
+                        <button style={{ ...S.deleteBtn, color: "var(--r-danger)", fontSize: 13, padding: "2px 6px" }} onClick={() => { if (window.confirm(`Delete "${r.name}"?`)) deleteReward(r.id); }}>✕</button>
                       </div>
                     )}
                   </div>
@@ -3004,7 +3058,7 @@ export default function App() {
                       <div style={{ padding: "10px 12px", background: "var(--r-surf)" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--r-fg)", letterSpacing: "-0.01em" }}>{p.name}</div>
-                          {active && <div style={{ width: 16, height: 16, borderRadius: "50%", background: accentColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#0d1f17", fontWeight: 800, flexShrink: 0 }}>✓</div>}
+                          {active && <div style={{ width: 16, height: 16, borderRadius: "50%", background: accentColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff", fontWeight: 800, flexShrink: 0 }}>✓</div>}
                         </div>
                         <div style={{ fontSize: 11, color: "var(--r-fg2)", lineHeight: 1.4 }}>{p.desc}</div>
                         {p.fontTags && (
@@ -3064,8 +3118,8 @@ export default function App() {
                       {[["bg","Background"],["surf","Surface"],["bord","Border"],["fg","Text"],["fg2","Muted text"]].map(([key, label]) => (
                         <div key={key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <span style={{ fontSize: 12, color: "var(--r-fg2)", width: 90 }}>{label}</span>
-                          <input type="color" value={theme[key] || "#000000"} onChange={e => updTheme({ [key]: e.target.value, preset: "custom" })} style={{ width: 36, height: 28, padding: 2, borderRadius: 5, border: "1px solid var(--r-bord)", background: "transparent", cursor: "pointer" }} />
-                          <span style={{ fontSize: 11, color: "var(--r-fg2)", fontFamily: "monospace" }}>{theme[key]}</span>
+                          <input type="color" value={theme[key] || "var(--r-bord)"} onChange={e => updTheme({ [key]: e.target.value, preset: "custom" })} style={{ width: 36, height: 28, padding: 2, borderRadius: 5, border: "1px solid var(--r-bord)", background: "transparent", cursor: "pointer" }} />
+                          <span style={{ fontSize: 11, color: "var(--r-fg2)", fontFamily: "var(--r-hero)" }}>{theme[key]}</span>
                         </div>
                       ))}
                     </div>
@@ -3108,7 +3162,7 @@ export default function App() {
                 <div style={{ ...S.card, borderColor: "rgba(248,113,113,0.2)", marginTop: 4 }}>
                   <div style={S.cardLabel}>Danger zone</div>
                   <p style={{ fontSize: 12, color: "var(--r-fg2)", margin: "6px 0 12px", lineHeight: 1.6 }}>Permanently delete all your data. This cannot be undone.</p>
-                  <button style={{ ...S.primaryBtn, background: "transparent", border: "1px solid rgba(248,113,113,0.4)", color: "#f87171" }} onClick={() => { if (window.confirm("Delete ALL data? This cannot be undone.")) { localStorage.removeItem(ROOT_KEY); window.location.reload(); } }}>Delete all data</button>
+                  <button style={{ ...S.primaryBtn, background: "transparent", border: "1px solid rgba(248,113,113,0.4)", color: "var(--r-danger)" }} onClick={() => { if (window.confirm("Delete ALL data? This cannot be undone.")) { localStorage.removeItem(ROOT_KEY); window.location.reload(); } }}>Delete all data</button>
                 </div>
               </>)}
             </div>
@@ -3122,7 +3176,7 @@ export default function App() {
       {modal === "sleepLog" && (
         <div style={S.overlay} onClick={() => setModal(null)}>
           <div style={S.modalBox} onClick={e => e.stopPropagation()}>
-            <div style={S.modalTitle}>🌙 Log your sleep</div>
+            <div style={S.modalTitle}>Log your sleep</div>
             <p style={S.modalSub}>Scored on duration and alignment with your {fmtTime(routineTargets.bedtime)} → {fmtTime(routineTargets.waketime)} target.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={S.formRow}><label style={S.formLabel}>Bedtime</label><input type="time" style={S.input} value={logBed} onChange={e => setLogBed(e.target.value)} /></div>
@@ -3132,10 +3186,10 @@ export default function App() {
                 const score = calcSleepScore(logBed, logWake, dur, routineTargets);
                 const vs = dur - sleepDur(routineTargets.bedtime, routineTargets.waketime);
                 return (
-                  <div style={{ background: "#0a0a0c", borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ background: "var(--r-surf2)", borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: "#60a5fa", fontFamily: "monospace" }}>{fmtDur(dur)}</div>
-                      <div style={{ fontSize: 11, color: vs >= 0 ? "#34d399" : "#f87171", marginTop: 3 }}>{vs >= 0 ? "+" : "-"}{fmtDur(Math.abs(vs))} vs target</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "var(--r-info)", fontFamily: "var(--r-hero)" }}>{fmtDur(dur)}</div>
+                      <div style={{ fontSize: 11, color: vs >= 0 ? "var(--r-success)" : "var(--r-danger)", marginTop: 3 }}>{vs >= 0 ? "+" : "-"}{fmtDur(Math.abs(vs))} vs target</div>
                     </div>
                     <CircleRing value={score} size={60} strokeWidth={6} />
                   </div>
@@ -3154,24 +3208,24 @@ export default function App() {
         <div style={S.overlay} onClick={() => setModal(null)}>
           <div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
-              {["Crisis tools", "My reminders"].map((label, i) => (<div key={i} style={{ flex: 1, padding: "5px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, textAlign: "center", background: panicStep === i ? (i === 0 ? "#f87171" : "#f59e0b") : "#1a1a1e", color: panicStep === i ? (i === 0 ? "#fff" : "#0d0d0f") : "#444" }}>{i + 1} — {label}</div>))}
+              {["Crisis tools", "My reminders"].map((label, i) => (<div key={i} style={{ flex: 1, padding: "5px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, textAlign: "center", background: panicStep === i ? (i === 0 ? "var(--r-danger)" : "var(--r-caution)") : "var(--r-surf2)", color: panicStep === i ? (i === 0 ? "#fff" : "#fff") : "var(--r-fg2)" }}>{i + 1} — {label}</div>))}
             </div>
             {panicStep === 0 && (<>
-              <div style={S.modalTitle}>🆘 You are stronger than this craving</div>
+              <div style={S.modalTitle}>You are stronger than this craving</div>
               <p style={S.modalSub}>Cravings peak within 20 minutes then drop. Try one of these right now:</p>
-              {BUILTIN_RELAPSE_TOOLS.slice(0, 4).map(a => (<div key={a.id} style={{ ...S.actionCard, marginBottom: 8 }}><div style={{ fontSize: 20 }}>{a.icon}</div><div><div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{a.title}</div><div style={{ fontSize: 12, color: "#666", lineHeight: 1.5 }}>{a.desc}</div></div></div>))}
+              {BUILTIN_RELAPSE_TOOLS.slice(0, 4).map(a => (<div key={a.id} style={{ ...S.actionCard, marginBottom: 8 }}><div style={{ color: "var(--r-accent)" }} aria-hidden="true"><i className={a.icon} style={{ fontSize: 20 }} /></div><div><div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{a.title}</div><div style={{ fontSize: 13, color: "var(--r-fg2)", lineHeight: 1.5 }}>{a.desc}</div></div></div>))}
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button style={{ ...S.primaryBtn, background: "#f59e0b", color: "#0d0d0f", flex: 1 }} onClick={() => setPanicStep(1)}>Read my reminders →</button>
+                <button style={{ ...S.primaryBtn, background: "var(--r-caution)", color: "#fff", flex: 1 }} onClick={() => setPanicStep(1)}>Read my reminders →</button>
                 <button style={{ ...S.primaryBtn, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)", flex: 1 }} onClick={() => setModal(null)}>I'm okay now</button>
               </div>
             </>)}
             {panicStep === 1 && (<>
-              <div style={S.modalTitle}>💛 Remember why you started</div>
-              {reminders.length === 0 ? (<div style={{ ...S.card, textAlign: "center" }}><p style={{ color: "#444", fontSize: 13 }}>No reminders saved yet.</p><button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => { setModal(null); setView("goals"); }}>Add reminders in Goals →</button></div>) : reminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.07)", border: "0.5px solid rgba(245,158,11,0.2)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "#f59e0b", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
+              <div style={S.modalTitle}>Remember why you started</div>
+              {reminders.length === 0 ? (<div style={{ ...S.card, textAlign: "center" }}><p style={{ color: "var(--r-fg2)", fontSize: 13 }}>No reminders saved yet.</p><button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => { setModal(null); setView("goals"); }}>Add reminders in Goals →</button></div>) : reminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.07)", border: "0.5px solid rgba(245,158,11,0.2)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "var(--r-caution)", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                 <button style={{ ...S.primaryBtn, background: "var(--r-surf2,#1a1a1e)", color: "var(--r-fg2,#666)", flex: 1 }} onClick={() => setPanicStep(0)}>← Back</button>
                 <button style={{ ...S.primaryBtn, background: "#dc2626", flex: 1 }} onClick={() => setModal("relapseLog")}>Log relapse</button>
-                <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17", flex: 1 }} onClick={() => setModal(null)}>I made it ✓</button>
+                <button style={{ ...S.primaryBtn, background: "var(--r-accent)", color: "#fff", flex: 1 }} onClick={() => setModal(null)}>I made it ✓</button>
               </div>
             </>)}
           </div>
@@ -3181,7 +3235,7 @@ export default function App() {
       {modal === "relapseLog" && (
         <div style={S.overlay} onClick={() => setModal(null)}>
           <div style={S.modalBox} onClick={e => e.stopPropagation()}>
-            <div style={S.modalTitle}>⚠ Log a relapse</div>
+            <div style={S.modalTitle}>Log a relapse</div>
             <p style={S.modalSub}>This resets your counter. Every relapse teaches something — you'll be taken through your post-relapse protocol next.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
               {BUILTIN_RELAPSE_TOOLS.map(a => (<label key={a.id} style={{ display: "flex", alignItems: "center", cursor: "pointer", color: "#bbb", fontSize: 13 }}><input type="checkbox" checked={checkedTools.includes(a.title)} onChange={e => setCheckedTools(e.target.checked ? [...checkedTools, a.title] : checkedTools.filter(x => x !== a.title))} style={{ marginRight: 8 }} />{a.icon} {a.title}</label>))}
@@ -3198,27 +3252,27 @@ export default function App() {
       {modal === "postRelapse" && (
         <div style={S.overlay}>
           <div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 11, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Post-relapse protocol</div>
+            <div style={{ fontSize: 11, color: "var(--r-danger)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Post-relapse protocol</div>
             <div style={S.modalTitle}>What to do right now</div>
             <p style={S.modalSub}>Work through each action below. Take your time — there's no rush. Tick each one off as you complete it.</p>
-            <div style={{ fontSize: 11, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Immediate actions</div>
+            <div style={{ fontSize: 11, color: "#5B4A6A", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Immediate actions</div>
             {postRelapseActions.length === 0 && (<div style={{ ...S.empty, marginBottom: 12 }}>No custom actions set. <button style={S.linkBtn} onClick={() => { setModal(null); setView("relapse"); }}>Add them in the Relapse tab →</button></div>)}
             {postRelapseActions.map(a => {
               const done = checkedPost.includes(a.id);
-              return (<div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, padding: "12px 14px", borderRadius: 10, background: done ? "rgba(52,211,153,0.07)" : "#0f0f11", border: `0.5px solid ${done ? "#34d39944" : "#1a1a1e"}`, cursor: "pointer" }} onClick={() => setCheckedPost(prev => prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id])}>
-                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${done ? "#34d399" : "#333"}`, background: done ? "#34d399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{done && <span style={{ color: "#0d0d0f", fontSize: 13, fontWeight: 700 }}>✓</span>}</div>
-                <span style={{ fontSize: 14, lineHeight: 1.55, textDecoration: done ? "line-through" : "none", opacity: done ? 0.5 : 1, color: done ? "#666" : "#ddd" }}>{a.text}</span>
+              return (<div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, padding: "12px 14px", borderRadius: 10, background: done ? "rgba(52,211,153,0.07)" : "var(--r-surf2)", border: `0.5px solid ${done ? "#234C5E44" : "var(--r-surf2)"}`, cursor: "pointer" }} onClick={() => setCheckedPost(prev => prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id])}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${done ? "var(--r-success)" : "var(--r-bord)"}`, background: done ? "var(--r-success)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{done && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}</div>
+                <span style={{ fontSize: 14, lineHeight: 1.55, textDecoration: done ? "line-through" : "none", opacity: done ? 0.5 : 1, color: done ? "var(--r-fg2)" : "#ddd" }}>{a.text}</span>
               </div>);
             })}
             {postRelapseReminders.length > 0 && (<>
-              <div style={{ fontSize: 11, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.07em", margin: "16px 0 10px" }}>Remember this</div>
-              {postRelapseReminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.06)", border: "0.5px solid rgba(245,158,11,0.18)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "#f59e0b", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
+              <div style={{ fontSize: 11, color: "var(--r-caution)", textTransform: "uppercase", letterSpacing: "0.07em", margin: "16px 0 10px" }}>Remember this</div>
+              {postRelapseReminders.map(r => (<div key={r.id} style={{ background: "rgba(245,158,11,0.06)", border: "0.5px solid rgba(245,158,11,0.18)", borderRadius: 9, padding: "12px 14px", marginBottom: 8 }}><p style={{ fontSize: 14, color: "var(--r-caution)", fontStyle: "italic", margin: 0, lineHeight: 1.65 }}>"{r.text}"</p></div>))}
             </>)}
             <div style={{ marginTop: 16, marginBottom: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#555", marginBottom: 4 }}><span>Actions completed</span><span>{checkedPost.length}/{postRelapseActions.length}</span></div>
-              <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${postRelapseActions.length ? Math.round(checkedPost.length / postRelapseActions.length * 100) : 0}%`, background: "linear-gradient(90deg,#a78bfa,#34d399)" }} /></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--r-fg2)", marginBottom: 4 }}><span>Actions completed</span><span>{checkedPost.length}/{postRelapseActions.length}</span></div>
+              <div style={S.progressBg}><div style={{ ...S.progressBar, width: `${postRelapseActions.length ? Math.round(checkedPost.length / postRelapseActions.length * 100) : 0}%`, background: "var(--r-success)" }} /></div>
             </div>
-            <button style={{ ...S.primaryBtn, background: "#34d399", color: "#0d1f17", marginTop: 8 }} onClick={() => { setModal(null); setCheckedPost([]); setView("dashboard"); }}>
+            <button style={{ ...S.primaryBtn, background: "var(--r-accent)", color: "#fff", marginTop: 8 }} onClick={() => { setModal(null); setCheckedPost([]); setView("dashboard"); }}>
               {checkedPost.length >= postRelapseActions.length ? "Protocol complete — back to dashboard ✓" : "I'm done for now"}
             </button>
           </div>
@@ -3248,7 +3302,7 @@ export default function App() {
               <div style={{ ...S.formLabel, marginBottom: 6 }}>Days (leave blank = every day)</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {DAY_NAMES.map(day => (
-                  <button key={day} style={{ ...S.catBtn, borderColor: habitDraft.days.includes(day) ? accentColor : "#222", color: habitDraft.days.includes(day) ? accentColor : "#444", background: habitDraft.days.includes(day) ? accentColor + "22" : "transparent" }}
+                  <button key={day} style={{ ...S.catBtn, borderColor: habitDraft.days.includes(day) ? accentColor : "var(--r-bord)", color: habitDraft.days.includes(day) ? accentColor : "var(--r-fg2)", background: habitDraft.days.includes(day) ? accentColor + "22" : "transparent" }}
                     onClick={() => setHabitDraft(d => ({ ...d, days: d.days.includes(day) ? d.days.filter(x => x !== day) : [...d.days, day] }))}>
                     {day}
                   </button>
@@ -3268,11 +3322,11 @@ export default function App() {
             </div>
 
             <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
-              <button style={{ ...S.catBtn, borderColor: habitDraft.levelsEnabled ? "#a78bfa" : "#222", color: habitDraft.levelsEnabled ? "#a78bfa" : "#444", background: habitDraft.levelsEnabled ? "rgba(167,139,250,0.12)" : "transparent", padding: "6px 14px" }}
+              <button style={{ ...S.catBtn, borderColor: habitDraft.levelsEnabled ? "#5B4A6A" : "var(--r-bord)", color: habitDraft.levelsEnabled ? "#5B4A6A" : "var(--r-fg2)", background: habitDraft.levelsEnabled ? "rgba(167,139,250,0.12)" : "transparent", padding: "6px 14px" }}
                 onClick={() => toggleLevelsEnabled(!habitDraft.levelsEnabled)}>
                 {habitDraft.levelsEnabled ? "✓ Levels on" : "Enable levels"}
               </button>
-              <span style={{ fontSize: 11, color: "#333" }}>build intensity progressively</span>
+              <span style={{ fontSize: 11, color: "var(--r-bord)" }}>build intensity progressively</span>
             </div>
 
             {habitDraft.levelsEnabled && (
@@ -3281,9 +3335,9 @@ export default function App() {
                 {habitDraft.levels.map((lvl, idx) => {
                   const isLast = idx === habitDraft.levels.length - 1;
                   return (
-                    <div key={lvl.level} style={{ background: "#060608", border: "0.5px solid #1a1a1e", borderRadius: 9, padding: "12px", marginBottom: 8 }}>
+                    <div key={lvl.level} style={{ background: "var(--r-bord)", border: "0.5px solid #1a1a1e", borderRadius: 9, padding: "12px", marginBottom: 8 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>Level {lvl.level}</span>
+                        <span style={{ fontSize: 11, color: "#5B4A6A", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>Level {lvl.level}</span>
                         {habitDraft.levels.length > 1 && <button style={S.deleteBtn} onClick={() => removeHabitLevel(lvl.level)}>×</button>}
                       </div>
                       <input style={{ ...S.input, marginBottom: 6 }} placeholder="Level name (optional, e.g. Starter)" value={lvl.name} onChange={e => updateHabitLevel(idx, "name", e.target.value)} />
@@ -3305,7 +3359,7 @@ export default function App() {
                     </div>
                   );
                 })}
-                <button style={{ ...S.primaryBtn, background: "#161618", color: "#a78bfa", border: "0.5px solid rgba(167,139,250,0.25)", marginTop: 2 }} onClick={addHabitLevel}>+ Add level</button>
+                <button style={{ ...S.primaryBtn, background: "var(--r-bord)", color: "#5B4A6A", border: "0.5px solid rgba(167,139,250,0.25)", marginTop: 2 }} onClick={addHabitLevel}>+ Add level</button>
               </div>
             )}
 
@@ -3335,7 +3389,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 6 }}>
                 {[["days", "Days — daily streaks"], ["hours", "Hours — for frequent urges"]].map(([val, label]) => (
                   <button key={val} onClick={() => setBadHabitDraft(d => ({ ...d, unit: val }))}
-                    style={{ flex: 1, padding: "8px 10px", borderRadius: 7, border: `1px solid ${badHabitDraft.unit === val ? accentColor : "#222"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: badHabitDraft.unit === val ? accentColor + "18" : "transparent", color: badHabitDraft.unit === val ? accentColor : "#555" }}>
+                    style={{ flex: 1, padding: "8px 10px", borderRadius: 7, border: `1px solid ${badHabitDraft.unit === val ? accentColor : "var(--r-bord)"}`, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: badHabitDraft.unit === val ? accentColor + "18" : "transparent", color: badHabitDraft.unit === val ? accentColor : "var(--r-fg2)" }}>
                     {label}
                   </button>
                 ))}
@@ -3384,7 +3438,7 @@ export default function App() {
               <textarea style={S.textarea} rows={3} placeholder="What happened? What triggered it?" value={slipNote} onChange={e => setSlipNote(e.target.value)} autoFocus />
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-              <button style={{ ...S.primaryBtn, flex: 1, background: "#f8717122", color: "#f87171", border: "1px solid #f8717144" }} onClick={() => {
+              <button style={{ ...S.primaryBtn, flex: 1, background: "#8C3F3018", color: "var(--r-danger)", border: "1px solid #8C3F3033" }} onClick={() => {
                 upd({ badHabits: badHabits.map(x => x.id !== slipModal ? x : { ...x, slips: [...(x.slips || []), { id: "s" + Date.now(), ts: Date.now(), note: slipNote.trim() }] }) });
                 setSlipModal(null); setSlipNote("");
               }}>Confirm slip</button>
@@ -3402,7 +3456,7 @@ export default function App() {
 
             <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
               {[["recurring", "Recurring"], ["oneTime", "One-time (this week)"]].map(([t, label]) => (
-                <button key={t} style={{ flex: 1, padding: "8px 10px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: schedActDraft.type === t ? "#60a5fa" : "var(--r-surf2)", color: schedActDraft.type === t ? "#0d0d0f" : "var(--r-fg2)" }}
+                <button key={t} style={{ flex: 1, padding: "8px 10px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--r-font)", background: schedActDraft.type === t ? "var(--r-info)" : "var(--r-surf2)", color: schedActDraft.type === t ? "#fff" : "var(--r-fg2)" }}
                   onClick={() => setSchedActDraft(d => ({ ...d, type: t }))}>
                   {label}
                 </button>
@@ -3419,7 +3473,7 @@ export default function App() {
                 <div style={{ ...S.formLabel, marginBottom: 6 }}>Days (leave blank = daily)</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {DAY_NAMES.map(day => (
-                    <button key={day} style={{ ...S.catBtn, borderColor: schedActDraft.days.includes(day) ? "#60a5fa" : "#222", color: schedActDraft.days.includes(day) ? "#60a5fa" : "#444", background: schedActDraft.days.includes(day) ? "rgba(96,165,250,0.12)" : "transparent" }}
+                    <button key={day} style={{ ...S.catBtn, borderColor: schedActDraft.days.includes(day) ? "var(--r-info)" : "var(--r-bord)", color: schedActDraft.days.includes(day) ? "var(--r-info)" : "var(--r-fg2)", background: schedActDraft.days.includes(day) ? "rgba(96,165,250,0.12)" : "transparent" }}
                       onClick={() => setSchedActDraft(d => ({ ...d, days: d.days.includes(day) ? d.days.filter(x => x !== day) : [...d.days, day] }))}>
                       {day}
                     </button>
@@ -3495,7 +3549,7 @@ export default function App() {
 
               {todayGroups.length === 0 && todayOneOnes.length === 0 ? (
                 <div style={{ ...S.card, textAlign: "center", padding: "48px 24px" }}>
-                  <div style={{ fontSize: 28, marginBottom: 10 }}>📅</div>
+                  <div style={{ fontSize: 30, marginBottom: 12, color: "var(--r-fg3)" }} aria-hidden="true"><i className="ph ph-calendar-blank" /></div>
                   <div style={{ fontSize: 14, fontWeight: 500, color: "var(--r-fg2)" }}>No classes scheduled for {todayName}</div>
                 </div>
               ) : (
@@ -3552,7 +3606,7 @@ export default function App() {
                 <button style={S.linkBtn} onClick={() => bizGoTo("biz-students")}>All students →</button>
               </div>
               {bizStudents.length === 0 ? (
-                <div style={S.card}><BizEmptyState icon="👤" title="No students yet" sub="Add your first student above." /></div>
+                <div style={S.card}><BizEmptyState icon="ph ph-user" title="No students yet" sub="Add your first student above." /></div>
               ) : (
                 <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -3585,7 +3639,7 @@ export default function App() {
                 <h2 style={S.pageTitle}>Students</h2>
                 <BizPrimBtn onClick={() => bizOpenModal("student", { name:"", school:"", enrolled_classes:"" })}>+ Add Student</BizPrimBtn>
               </div>
-              {bizStudents.length === 0 ? <div style={S.card}><BizEmptyState icon="👤" title="No students yet" sub="Add your first student to get started." /></div> : (
+              {bizStudents.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-user" title="No students yet" sub="Add your first student to get started." /></div> : (
                 <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 520 }}>
                     <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
@@ -3607,7 +3661,7 @@ export default function App() {
                           <td style={{ padding: "10px 14px", fontWeight: 700, color: total > 0 ? BIZ_RED : BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(total)}</td>
                           <td style={{ padding: "10px 14px", textAlign: "right" }}>
                             <button style={S.linkBtn} onClick={() => bizOpenModal("student", { name:s.name, school:s.school||"", enrolled_classes:s.enrolled_classes||"" }, s.id)}>Edit</button>
-                            <button style={{ ...S.linkBtn, color: "#f87171", marginLeft: 8 }} onClick={() => { setBizConfirm({ title: `Delete ${s.name}?`, msg: "Removes student profile. Class records remain.", onConfirm: () => bizDeleteStudent(s.id) }); setBizModal("confirm"); }}>Del</button>
+                            <button style={{ ...S.linkBtn, color: "var(--r-danger)", marginLeft: 8 }} onClick={() => { setBizConfirm({ title: `Delete ${s.name}?`, msg: "Removes student profile. Class records remain.", onConfirm: () => bizDeleteStudent(s.id) }); setBizModal("confirm"); }}>Del</button>
                           </td>
                         </tr>;
                       })}
@@ -3623,7 +3677,7 @@ export default function App() {
                 <h2 style={S.pageTitle}>Group Classes</h2>
                 <BizPrimBtn onClick={() => bizOpenModal("group", { name:"", schedules:[{day:"",time:""}], status:"active" })}>+ Create Group</BizPrimBtn>
               </div>
-              {bizGroups.length === 0 ? <div style={S.card}><BizEmptyState icon="👥" title="No group classes yet" sub="Create your first group class." /></div> : (
+              {bizGroups.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-users-three" title="No group classes yet" sub="Create your first group class." /></div> : (
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
                   {bizGroups.map(g => {
                     const gm = bizMembers.filter(m => m.group_id === g.id);
@@ -3641,7 +3695,7 @@ export default function App() {
                           </div>
                           <div style={{ display: "flex", gap: 4 }}>
                             <button style={S.linkBtn} onClick={e => { e.stopPropagation(); bizOpenModal("group", { name:g.name, schedules: bizGetSchedules(g), status:g.status }, g.id); }}>Edit</button>
-                            <button style={{ ...S.linkBtn, color: "#f87171" }} onClick={e => { e.stopPropagation(); setBizConfirm({ title: `Delete "${g.name}"?`, msg: "Deletes group and all member records.", onConfirm: () => bizDeleteGroup(g.id) }); setBizModal("confirm"); }}>Del</button>
+                            <button style={{ ...S.linkBtn, color: "var(--r-danger)" }} onClick={e => { e.stopPropagation(); setBizConfirm({ title: `Delete "${g.name}"?`, msg: "Deletes group and all member records.", onConfirm: () => bizDeleteGroup(g.id) }); setBizModal("confirm"); }}>Del</button>
                           </div>
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0, borderTop: "0.5px solid var(--r-bord)", paddingTop: 12 }}>
@@ -3684,7 +3738,7 @@ export default function App() {
                   <BizStatCard label="Collected" value={bizFmt$(totalPaidG)} color={BIZ_GREEN} />
                   <BizStatCard label="Overdue" value={bizFmt$(totalOverdueG)} color={totalOverdueG>0?BIZ_RED:BIZ_GREEN} />
                 </div>
-                {gm.length === 0 ? <div style={S.card}><BizEmptyState icon="👤" title="No members yet" sub='Click "+ Member" to add students to this group.' /></div> : (
+                {gm.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-user" title="No members yet" sub='Click "+ Member" to add students to this group.' /></div> : (
                   <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 560 }}>
                       <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
@@ -3706,7 +3760,7 @@ export default function App() {
                                 <BizPrimBtn style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => { setBizPayTarget({ targetId:m.id, targetType:"groupMember", groupId:g.id, studentName:m.student_name, rate:m.rate, isCustom:false }); bizOpenModal("payment", { date: today, note: "" }); }}>Pay</BizPrimBtn>
                                 <BizBtn style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => { setBizPayTarget({ targetId:m.id, targetType:"groupMember", groupId:g.id, studentName:m.student_name, rate:m.rate, isCustom:true }); bizOpenModal("payment", { date: today, note: "", custom_amount: "" }); }}>Custom</BizBtn>
                                 <button style={S.linkBtn} onClick={() => { setBizMemberGroupId(g.id); bizOpenModal("member", { student_name:m.student_name, rate:m.rate, classes_attended:m.classes_attended, total_paid:m.total_paid }, m.id); }}>Edit</button>
-                                <button style={{ ...S.linkBtn, color: "#f87171" }} onClick={() => { setBizConfirm({ title: `Remove ${m.student_name}?`, msg: "Removes member. Payment records remain.", onConfirm: () => bizDeleteMember(m.id) }); setBizModal("confirm"); }}>Del</button>
+                                <button style={{ ...S.linkBtn, color: "var(--r-danger)" }} onClick={() => { setBizConfirm({ title: `Remove ${m.student_name}?`, msg: "Removes member. Payment records remain.", onConfirm: () => bizDeleteMember(m.id) }); setBizModal("confirm"); }}>Del</button>
                               </div>
                             </td>
                           </tr>;
@@ -3744,7 +3798,7 @@ export default function App() {
                 <h2 style={S.pageTitle}>One-on-One</h2>
                 <BizPrimBtn onClick={() => bizOpenModal("oneone", { student_name:"", subject:"", rate:"", schedules:[{day:"",time:""}], status:"active", classes_attended:0, total_paid:0 })}>+ Create 1-on-1</BizPrimBtn>
               </div>
-              {bizOneOnes.length === 0 ? <div style={S.card}><BizEmptyState icon="👤" title="No one-on-one classes yet" sub="Create your first individual class." /></div> : (
+              {bizOneOnes.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-user" title="No one-on-one classes yet" sub="Create your first individual class." /></div> : (
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
                   {bizOneOnes.map((o, i) => {
                     const owed = o.classes_attended * o.rate;
@@ -3764,7 +3818,7 @@ export default function App() {
                           </div>
                           <div style={{ display: "flex", gap: 4 }}>
                             <button style={S.linkBtn} onClick={e => { e.stopPropagation(); bizOpenModal("oneone", { student_name:o.student_name, subject:o.subject, rate:o.rate, schedules: bizGetSchedules(o), status:o.status, classes_attended:o.classes_attended, total_paid:o.total_paid }, o.id); }}>Edit</button>
-                            <button style={{ ...S.linkBtn, color: "#f87171" }} onClick={e => { e.stopPropagation(); setBizConfirm({ title: `Delete 1-on-1 with ${o.student_name}?`, msg: "Deletes class and all payment records.", onConfirm: () => bizDeleteOneOne(o.id) }); setBizModal("confirm"); }}>Del</button>
+                            <button style={{ ...S.linkBtn, color: "var(--r-danger)" }} onClick={e => { e.stopPropagation(); setBizConfirm({ title: `Delete 1-on-1 with ${o.student_name}?`, msg: "Deletes class and all payment records.", onConfirm: () => bizDeleteOneOne(o.id) }); setBizModal("confirm"); }}>Del</button>
                           </div>
                         </div>
                         <div style={{ fontSize: 11, color: "var(--r-fg2)", marginBottom: 12 }}>{bizFmtSchedules(o)} · {bizFmt$(o.rate)}/class</div>
@@ -3809,7 +3863,7 @@ export default function App() {
                   <BizStatCard label="Overdue" value={bizFmt$(overdue)} color={overdue>0?BIZ_RED:BIZ_GREEN} />
                 </div>
                 {payments.length === 0 ? (
-                  <div style={S.card}><BizEmptyState icon="🧾" title="No payments recorded" sub="Use the buttons above to log a payment." /></div>
+                  <div style={S.card}><BizEmptyState icon="ph ph-receipt" title="No payments recorded" sub="Use the buttons above to log a payment." /></div>
                 ) : (
                   <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
                     <div style={{ padding: "10px 14px", borderBottom: "0.5px solid var(--r-bord)", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Payment History</div>
@@ -3877,7 +3931,7 @@ export default function App() {
                     {items.length === 0 ? <div style={{ padding: "12px 16px", fontSize: 12, color: "var(--r-fg2)" }}>No classes scheduled</div> : items.map((item, idx) => (
                       <div key={item.id + idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderTop: idx > 0 ? "0.5px solid var(--r-bord)" : "none", cursor: "pointer" }}
                         onClick={() => item._type==="group" ? bizGoTo("biz-group-detail",{groupId:item.id}) : bizGoTo("biz-oneone-detail",{oneOneId:item.id})}>
-                        <div style={{ width: 30, height: 30, borderRadius: 8, background: item._type==="group" ? BIZ_BLUE+"18" : BIZ_PURPLE+"18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{item._type==="group"?"👥":"👤"}</div>
+                        <div style={{ width: 30, height: 30, borderRadius: 8, background: item._type==="group" ? BIZ_BLUE+"18" : BIZ_PURPLE+"18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: item._type==="group" ? BIZ_BLUE : BIZ_PURPLE }} aria-hidden="true"><i className={item._type==="group"?"ph ph-users-three":"ph ph-user"} style={{ fontSize: 16 }} /></div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item._type==="group" ? item.name : item.student_name}</div>
                           <div style={{ fontSize: 11, color: "var(--r-fg2)" }}>{item._type==="group" ? `Group · ${bizMembers.filter(m=>m.group_id===item.id).length} students` : item.subject}</div>
@@ -3897,7 +3951,7 @@ export default function App() {
             {bizView === "biz-records" && (<>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                 <h2 style={S.pageTitle}>All Records</h2>
-                <BizBtn onClick={bizExportCSV}>⬇ Export CSV</BizBtn>
+                <BizBtn onClick={bizExportCSV}><i className="ph ph-download-simple" style={{ marginRight: 6 }} aria-hidden="true" />Export CSV</BizBtn>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
                 <BizStatCard label="Students" value={bizStudents.length} />
@@ -3941,7 +3995,7 @@ export default function App() {
 
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Group Classes</div>
               <div style={{ ...S.card, padding: 0, overflow: "auto", marginBottom: 20 }}>
-                {bizGroups.length === 0 ? <BizEmptyState icon="👥" title="No group classes" sub="" /> : (
+                {bizGroups.length === 0 ? <BizEmptyState icon="ph ph-users-three" title="No group classes" sub="" /> : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 500 }}>
                     <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
                       {["Name","Status","Schedule","Members","Collected","Overdue",""].map(h => <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:10, fontWeight:700, color:"var(--r-fg2)", textTransform:"uppercase", letterSpacing:"0.06em" }}>{h}</th>)}
@@ -3968,7 +4022,7 @@ export default function App() {
 
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>One-on-One Classes</div>
               <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
-                {bizOneOnes.length === 0 ? <BizEmptyState icon="👤" title="No one-on-one classes" sub="" /> : (
+                {bizOneOnes.length === 0 ? <BizEmptyState icon="ph ph-user" title="No one-on-one classes" sub="" /> : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 600 }}>
                     <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
                       {["Student","Status","Subject","Schedule","Rate","Classes","Paid","Overdue",""].map(h => <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:10, fontWeight:700, color:"var(--r-fg2)", textTransform:"uppercase", letterSpacing:"0.06em" }}>{h}</th>)}
@@ -4008,7 +4062,7 @@ export default function App() {
                       <input style={S.input} value={bizDraft?.[f]||""} placeholder={f==="name"?"e.g. Ahmad Ali":f==="school"?"e.g. King Fahad School":"e.g. Math, Physics"} onChange={e => setBizDraft(d => ({ ...d, [f]: e.target.value }))} autoFocus={f==="name"} />
                     </div>
                   ))}
-                  {bizError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{bizError}</div>}
+                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
                   <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                     <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
                     <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveStudent}>Save</button>
@@ -4042,12 +4096,12 @@ export default function App() {
                           {BIZ_WEEK.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                         <input type="time" style={{ ...S.input, flex: 1 }} value={slot.time||""} onChange={e => setBizDraft(d => ({ ...d, schedules: d.schedules.map((s,i) => i===si ? { ...s, time: e.target.value } : s) }))} />
-                        <button style={{ ...S.deleteBtn, color: "#f87171", fontSize: 18 }} onClick={() => setBizDraft(d => ({ ...d, schedules: d.schedules.filter((_,i) => i!==si) }))}>×</button>
+                        <button style={{ ...S.deleteBtn, color: "var(--r-danger)", fontSize: 18 }} onClick={() => setBizDraft(d => ({ ...d, schedules: d.schedules.filter((_,i) => i!==si) }))}>×</button>
                       </div>
                     ))}
                     <button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => setBizDraft(d => ({ ...d, schedules: [...(d.schedules||[]), { day:"", time:"" }] }))}>+ Add slot</button>
                   </div>
-                  {bizError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{bizError}</div>}
+                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
                     <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveGroup}>Save</button>
@@ -4086,7 +4140,7 @@ export default function App() {
                       <input type="number" style={S.input} value={bizDraft?.total_paid||0} min="0" step="0.01" onChange={e => setBizDraft(d => ({ ...d, total_paid: e.target.value }))} />
                     </div>
                   </div>
-                  {bizError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{bizError}</div>}
+                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
                     <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveMember}>Save</button>
@@ -4137,7 +4191,7 @@ export default function App() {
                           {BIZ_WEEK.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                         <input type="time" style={{ ...S.input, flex: 1 }} value={slot.time||""} onChange={e => setBizDraft(d => ({ ...d, schedules: d.schedules.map((s,i) => i===si ? { ...s, time: e.target.value } : s) }))} />
-                        <button style={{ ...S.deleteBtn, color: "#f87171", fontSize: 18 }} onClick={() => setBizDraft(d => ({ ...d, schedules: d.schedules.filter((_,i) => i!==si) }))}>×</button>
+                        <button style={{ ...S.deleteBtn, color: "var(--r-danger)", fontSize: 18 }} onClick={() => setBizDraft(d => ({ ...d, schedules: d.schedules.filter((_,i) => i!==si) }))}>×</button>
                       </div>
                     ))}
                     <button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => setBizDraft(d => ({ ...d, schedules: [...(d.schedules||[]), { day:"", time:"" }] }))}>+ Add slot</button>
@@ -4152,7 +4206,7 @@ export default function App() {
                       <input type="number" style={S.input} value={bizDraft?.total_paid||0} min="0" step="0.01" onChange={e => setBizDraft(d => ({ ...d, total_paid: e.target.value }))} />
                     </div>
                   </div>
-                  {bizError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{bizError}</div>}
+                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
                     <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveOneOne}>Save</button>
@@ -4186,10 +4240,10 @@ export default function App() {
                     <label style={S.formLabel}>Note (optional)</label>
                     <input style={S.input} placeholder="e.g. Cash payment" value={bizDraft?.note||""} onChange={e => setBizDraft(d => ({ ...d, note: e.target.value }))} />
                   </div>
-                  {bizError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{bizError}</div>}
+                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={() => { setBizModal(null); setBizDraft(null); setBizPayTarget(null); setBizError(""); }}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_GREEN, color: "#0d1f17" }} onClick={bizSavePayment}>Record Payment</button>
+                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_GREEN, color: "#fff" }} onClick={bizSavePayment}>Record Payment</button>
                   </div>
                 </div>
               </div>
@@ -4209,9 +4263,9 @@ export default function App() {
                     <label style={S.formLabel}>New Time (optional)</label>
                     <input type="time" style={S.input} value={bizDraft?.time||""} onChange={e => setBizDraft(d => ({ ...d, time: e.target.value }))} />
                   </div>
-                  {bizError && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{bizError}</div>}
+                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
-                    {bizDraft?.date && <button style={{ ...S.primaryBtn, flex: 1, background: "rgba(239,68,68,0.1)", color: "#f87171" }} onClick={bizClearReschedule}>Clear</button>}
+                    {bizDraft?.date && <button style={{ ...S.primaryBtn, flex: 1, background: "rgba(239,68,68,0.1)", color: "var(--r-danger)" }} onClick={bizClearReschedule}>Clear</button>}
                     <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={() => { setBizModal(null); setBizDraft(null); setBizReschedTarget(null); setBizError(""); }}>Cancel</button>
                     <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveReschedule}>Save</button>
                   </div>
@@ -4223,12 +4277,12 @@ export default function App() {
             {bizModal === "confirm" && bizConfirm && (
               <div style={S.overlay} onClick={() => { setBizModal(null); setBizConfirm(null); }}>
                 <div style={{ ...S.modalBox, maxWidth: 340, textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                  <div style={{ fontSize: 28, marginBottom: 12 }}>⚠️</div>
+                  <div style={{ fontSize: 30, marginBottom: 12, color: "var(--r-caution)" }} aria-hidden="true"><i className="ph ph-warning" /></div>
                   <div style={{ ...S.modalTitle, fontSize: 16, marginBottom: 6 }}>{bizConfirm.title}</div>
                   <div style={{ fontSize: 13, color: "var(--r-fg2)", lineHeight: 1.6, marginBottom: 20 }}>{bizConfirm.msg}</div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={() => { setBizModal(null); setBizConfirm(null); }}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "#f87171", color: "#fff" }} onClick={() => { bizConfirm.onConfirm(); setBizModal(null); setBizConfirm(null); }}>Confirm</button>
+                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-danger)", color: "#fff" }} onClick={() => { bizConfirm.onConfirm(); setBizModal(null); setBizConfirm(null); }}>Confirm</button>
                   </div>
                 </div>
               </div>
@@ -4251,7 +4305,7 @@ export default function App() {
                     <label style={S.formLabel}>Note (optional)</label>
                     <input style={S.input} placeholder="e.g. Covered algebra chapter 3…" value={bizDraft?.note || ""} onChange={e => setBizDraft(d => ({ ...d, note: e.target.value }))} />
                   </div>
-                  {bizError && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 10 }}>{bizError}</div>}
+                  {bizError && <div style={{ color: "var(--r-danger)", fontSize: 12, marginBottom: 10 }}>{bizError}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
                     <BizPrimBtn style={{ flex: 1, justifyContent: "center" }} onClick={bizSaveClass}>Save Class</BizPrimBtn>
                     <BizBtn style={{ flex: 1, justifyContent: "center" }} onClick={bizCloseModal}>Cancel</BizBtn>
@@ -4293,63 +4347,12 @@ function EmptyState({ title, body, cta, onCta, showGlyph = true }) {
   );
 }
 
-// Dashboard hero — day-count owns the top third (entrance + count-up + momentum rings)
-function DashboardHero({ daysSober, soberStart, scores, isMobile, onPanic, nextMilestone }) {
-  const prm = usePRM();
-  const [heroIn, setHeroIn] = useState(false);
-  const [shownDays, setShownDays] = useState(() => prm ? daysSober : Math.max(0, daysSober - 12));
-  useEffect(() => { const id = requestAnimationFrame(() => setHeroIn(true)); return () => cancelAnimationFrame(id); }, []);
-  useEffect(() => {
-    if (prm) { setShownDays(daysSober); return; }
-    const from = Math.max(0, daysSober - 12), to = daysSober, dur = 1000, t0 = performance.now();
-    let raf; const tick = now => { const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3); setShownDays(Math.round(from + (to - from) * e)); if (p < 1) raf = requestAnimationFrame(tick); };
-    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
-  }, [daysSober, prm]);
-  const rise = (delay, dur = 600) => ({ opacity: heroIn ? 1 : 0, transform: heroIn ? "translateY(0)" : "translateY(12px)", transition: prm ? "none" : `opacity ${dur}ms var(--r-ease-dawn) ${delay}ms, transform ${dur}ms var(--r-ease-dawn) ${delay}ms` });
-  const ringSize = isMobile ? 64 : 80;
-  const sinceStr = soberStart ? new Date(soberStart).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : null;
-  const mil = nextMilestone;
-  const milPct = mil ? Math.min(100, daysSober / mil.days * 100) : 0;
-  const rings = [{ label: "Routine", v: scores.routine }, { label: "Salah", v: scores.salah }, { label: "Sleep", v: scores.sleep }];
-  return (
-    <div style={S.heroBlock}>
-      <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(120% 90% at 50% 18%, var(--r-glow) 0%, transparent 60%)", opacity: 0.2, animation: prm ? "none" : "fajrBloom 8s ease-in-out infinite" }} />
-      <div style={{ position: "relative" }}>
-        <div className="r-tnum" style={{ ...S.heroNumeral, ...rise(120, 700), textShadow: "0 0 34px var(--r-glow)", minWidth: "1.5ch", display: "inline-block" }}>{shownDays}</div>
-        <div style={{ ...rise(220), fontSize: 15, color: "var(--r-fg2)", letterSpacing: "0.04em" }}>{daysSober === 1 ? "day" : "days"} steady</div>
-        {sinceStr && <div style={{ ...S.heroMeta, ...rise(400) }}>since {sinceStr}</div>}
-        {mil && (
-          <div style={{ ...rise(320), marginTop: 14 }}>
-            <div style={S.heroMilestone}>{Math.max(0, mil.days - daysSober)} {mil.days - daysSober === 1 ? "day" : "days"} to {mil.label || `${mil.days}`} · steady</div>
-            <div style={{ height: 4, background: "var(--r-surf2)", borderRadius: 999, maxWidth: 240, margin: "8px auto 0", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${milPct}%`, background: "var(--r-accent)", borderRadius: 999, transition: prm ? "none" : "width .8s var(--r-ease-dawn)" }} />
-            </div>
-          </div>
-        )}
-        <div style={{ ...S.momentumRow, ...rise(480), marginTop: 26 }}>
-          {rings.map((r, i) => (
-            <div key={r.label} style={{ textAlign: "center" }}>
-              <CircleRing value={r.v ?? 0} size={ringSize} strokeWidth={6} role="momentum" glow delay={i * 120} label={`${r.label} ${r.v ?? 0}`} />
-              <div style={{ fontSize: 13, color: "var(--r-fg2)", marginTop: 8 }}>{r.label}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ ...rise(560), marginTop: 22, display: "flex", justifyContent: "center" }}>
-          <button className="r-press" style={S.panicBtn} onClick={onPanic}>
-            <span style={{ fontSize: 15 }}>🕊️</span>
-            <span>I need a moment</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const S = {
   app: { display: "flex", minHeight: "100vh", background: "var(--r-bg,#0d0e13)", color: "var(--r-fg,#ece9e4)", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
   mobileHeader: { position: "fixed", top: 0, left: 0, right: 0, height: 52, background: "var(--r-surf,#14151c)", borderBottom: "1px solid var(--r-bord,#1f2029)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", zIndex: 100 },
   hamburger: { background: "none", border: "none", color: "var(--r-fg2)", fontSize: 22, cursor: "pointer", padding: "4px 6px", lineHeight: 1 },
-  sidebarBackdrop: { position: "fixed", inset: 0, background: "rgba(7,8,14,0.66)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", zIndex: 150 },
+  sidebarBackdrop: { position: "fixed", inset: 0, background: "rgba(34,30,24,0.32)", zIndex: 150 },
   sidebar: { width: 240, background: "var(--r-surf,#14151c)", borderRight: "1px solid var(--r-bord,#1f2029)", boxShadow: "6px 0 24px rgba(7,8,14,.35)", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
   logo: { fontSize: 17, fontWeight: 460, fontFamily: HERO_FONT, letterSpacing: "-0.02em" },
   accDot: { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 },
@@ -4357,8 +4360,8 @@ const S = {
   navIcon: { fontSize: 15, width: 20, textAlign: "center", flexShrink: 0, transition: "transform 200ms var(--r-ease-soft)" },
   main: { flex: 1, overflow: "auto", minWidth: 0 },
   content: { padding: "28px 32px", maxWidth: 1120, margin: "0 auto" },
-  pageTitle: { fontSize: 26, fontWeight: 600, marginBottom: 0, letterSpacing: "-0.02em" },
-  panicBtn: { display: "flex", alignItems: "center", gap: 8, background: "var(--r-surf2)", border: "1px solid rgba(156,107,107,0.48)", borderRadius: 10, padding: "11px 15px", color: "#e6b3b3", fontSize: 15, fontWeight: 600, cursor: "pointer", boxShadow: "var(--r-shadow-sm)" },
+  pageTitle: { fontFamily: HERO_FONT, fontSize: "clamp(1.6rem,1.3rem+1vw,2rem)", fontWeight: 480, marginBottom: 0, letterSpacing: "-0.01em" },
+  panicBtn: { display: "flex", alignItems: "center", gap: 8, background: "var(--r-surf)", border: "1px solid #C9A99E", borderRadius: 999, padding: "11px 16px", color: "#8C3F30", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "var(--r-shadow-sm)" },
   statGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 },
   statCard: { background: "var(--r-surf,#14151c)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 12, padding: "16px 20px", boxShadow: "var(--r-shadow-sm)" },
   card: { background: "var(--r-surf,#14151c)", border: "1px solid var(--r-bord,#1f2029)", borderRadius: 16, padding: "20px 24px", marginBottom: 16, boxShadow: "var(--r-shadow-sm)" },
@@ -4405,16 +4408,16 @@ const S = {
   secondaryBtn: { background: "var(--r-surf2)", color: "var(--r-fg)", border: "1px solid var(--r-bord)", padding: "12px 18px", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
   ghostBtn: { background: "transparent", color: "var(--r-fg2)", border: "none", padding: "10px 14px", borderRadius: 8, fontSize: 15, fontWeight: 500, cursor: "pointer", fontFamily: "var(--r-font,'DM Sans',system-ui,sans-serif)" },
   setupWrap: { minHeight: "100vh", background: "var(--r-bg,#0d0e13)", display: "flex", alignItems: "center", justifyContent: "center" },
-  setupCard: { background: "var(--r-surf3,#23242f)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px 34px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "var(--r-shadow-lg)" },
-  setupEmoji: { fontSize: 40, marginBottom: 14 },
+  setupCard: { background: "var(--r-surf3,#23242f)", border: "1px solid var(--r-bord)", borderRadius: 20, padding: "40px 34px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "var(--r-shadow-lg)" },
+  setupEmoji: { fontSize: 40, marginBottom: 14, color: "var(--r-accent)", lineHeight: 1 },
   setupTitle: { fontSize: 26, fontWeight: 420, fontFamily: HERO_FONT, marginBottom: 10, letterSpacing: "-0.02em" },
   setupSub: { fontSize: 15, color: "var(--r-fg2,#8b8a94)", lineHeight: 1.7, marginBottom: 20 },
-  overlay: { position: "fixed", inset: 0, background: "rgba(7,8,14,0.72)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modalBox: { background: "var(--r-surf3,#23242f)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "28px", maxWidth: 460, width: "92%", maxHeight: "88vh", overflowY: "auto", boxShadow: "var(--r-shadow-lg)" },
-  modalTitle: { fontSize: 21, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.02em" },
+  overlay: { position: "fixed", inset: 0, background: "rgba(34,30,24,0.32)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
+  modalBox: { background: "var(--r-surf3,#23242f)", border: "1px solid var(--r-bord)", borderRadius: 20, padding: "28px", maxWidth: 460, width: "92%", maxHeight: "88vh", overflowY: "auto", boxShadow: "var(--r-shadow-lg)" },
+  modalTitle: { fontFamily: HERO_FONT, fontSize: 22, fontWeight: 480, marginBottom: 8, letterSpacing: "-0.01em" },
   modalSub: { fontSize: 15, color: "var(--r-fg2,#8b8a94)", lineHeight: 1.6, marginBottom: 18 },
-  heroBlock: { position: "relative", overflow: "hidden", textAlign: "center", background: "radial-gradient(120% 90% at 50% 0%, var(--r-glow) 0%, transparent 55%), linear-gradient(180deg, var(--r-surf3) 0%, var(--r-surf) 100%)", border: "1px solid var(--r-bord)", borderRadius: 24, padding: "clamp(28px,6vw,56px) 24px 32px", marginBottom: 16, boxShadow: "var(--r-shadow-md)" },
-  heroNumeral: { fontFamily: HERO_FONT, fontSize: "clamp(4rem,10vw,7rem)", fontWeight: 360, lineHeight: 0.95, letterSpacing: "-0.02em", color: "var(--r-fg)", fontVariantNumeric: "tabular-nums" },
+  heroBlock: { position: "relative", overflow: "hidden", textAlign: "left", background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 20, padding: "clamp(22px,5vw,32px) clamp(20px,5vw,28px)", marginBottom: 16, boxShadow: "var(--r-shadow-md)" },
+  heroNumeral: { fontFamily: HERO_FONT, fontSize: "clamp(3.25rem,9vw,5rem)", fontWeight: 480, lineHeight: 0.95, letterSpacing: "-0.02em", color: "var(--r-accent-text)", fontVariantNumeric: "tabular-nums" },
   heroMeta: { fontSize: 15, color: "var(--r-fg2)", marginTop: 4 },
   heroMilestone: { fontSize: 13, color: "var(--r-accent-text)", marginTop: 12, fontWeight: 500 },
   momentumRow: { display: "flex", gap: "clamp(16px,4vw,40px)", justifyContent: "center", alignItems: "flex-start", padding: "8px 0 4px" },
@@ -4422,7 +4425,7 @@ const S = {
   emptyGlyph: { width: 88, height: 88, borderRadius: "50%", margin: "0 auto 18px", background: "radial-gradient(circle at 50% 40%, var(--r-glow), transparent 70%)" },
   emptyTitle: { fontFamily: HERO_FONT, fontSize: 22, fontWeight: 420, color: "var(--r-fg)", marginBottom: 8, letterSpacing: "-0.01em" },
   emptyBody: { fontSize: 15, color: "var(--r-fg2)", lineHeight: 1.6, marginBottom: 18 },
-  sosBlock: { background: "var(--r-surf3)", border: "1px solid rgba(156,107,107,0.36)", borderRadius: 16, padding: 28, boxShadow: "var(--r-shadow-lg)" },
+  sosBlock: { background: "var(--r-surf)", border: "1px solid #C9A99E", borderRadius: 20, padding: 28, boxShadow: "var(--r-shadow-lg)" },
   formRow: { display: "flex", flexDirection: "column", gap: 8 },
   formLabel: { fontSize: 13, color: "var(--r-fg2,#8b8a94)", fontWeight: 500 },
   accRow: { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--r-bord)", marginBottom: 8 },
