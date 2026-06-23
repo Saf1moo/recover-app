@@ -4,7 +4,11 @@
 React + Vite. Single-file: `src/App.jsx` contains all components, state, styles, and logic. No routing library. No CSS files. No external UI libs.
 
 ## Storage
-localStorage only. Key: `recover_root_v1`. Schema: `{ activeId, accounts: { [id]: Account } }`.
+Firebase (Auth + Firestore), with localStorage as local cache (`saveRoot`/`loadRoot`, key `recover_root_v1`). Client config: `src/firebase.js`.
+
+- Auth: Firebase Email/Password. Single internal account `user@recover-app.internal`; PIN is the password (padded to 6 chars for PINs < 6 digits). `session` shape kept as `{ user: { id: uid } }`.
+- User data: Firestore doc `profiles/{uid}` = `{ account, theme, updated_at }`. Debounced upsert via `syncToSupabase` (name kept; writes to Firestore with `setDoc(..., {merge:true})`).
+- Business data: 6 Firestore collections, each doc auto-id with `user_id` field — `business_students`, `business_groups`, `business_group_members`, `business_oneone`, `business_payments`, `business_sessions`. Reads filter `where("user_id","==",uid)` then sort client-side (no composite indexes needed). Rows carry `id: doc.id` injected on read. Cross-refs (`group_id`, `target_id`) are Firestore doc ids.
 
 Account shape:
 ```js

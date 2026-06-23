@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from "react";
-import { supabase } from "./supabase.js";
+import { auth, db } from "./firebase.js";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
 const ROOT_KEY = "recover_root_v1";
@@ -715,15 +717,18 @@ export default function App() {
     if (syncRef.current) clearTimeout(syncRef.current);
     setSyncStatus("syncing");
     syncRef.current = setTimeout(async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      if (!s) { setSyncStatus(null); return; }
-      const { error } = await supabase.from("profiles").upsert({
-        id: s.user.id,
-        account: rootData.account,
-        theme: rootData.theme,
-        updated_at: new Date().toISOString(),
-      });
-      setSyncStatus(error ? "error" : "synced");
+      const u = auth.currentUser;
+      if (!u) { setSyncStatus(null); return; }
+      try {
+        await setDoc(doc(db, "profiles", u.uid), {
+          account: rootData.account,
+          theme: rootData.theme,
+          updated_at: new Date().toISOString(),
+        }, { merge: true });
+        setSyncStatus("synced");
+      } catch {
+        setSyncStatus("error");
+      }
       setTimeout(() => setSyncStatus(null), 2000);
     }, 1500);
   }, []);
@@ -751,20 +756,24 @@ export default function App() {
     setBizLoading(true);
     try {
       const uid = session.user.id;
-      const [{ data: s }, { data: g }, { data: m }, { data: o }, { data: p }, { data: ss }] = await Promise.all([
-        supabase.from("business_students").select("*").eq("user_id", uid).order("name"),
-        supabase.from("business_groups").select("*").eq("user_id", uid).order("name"),
-        supabase.from("business_group_members").select("*").eq("user_id", uid),
-        supabase.from("business_oneone").select("*").eq("user_id", uid).order("student_name"),
-        supabase.from("business_payments").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
-        supabase.from("business_sessions").select("*").eq("user_id", uid).order("date", { ascending: false }),
+      const rows = async (name) => {
+        const snap = await getDocs(query(collection(db, name), where("user_id", "==", uid)));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      };
+      const [s, g, m, o, p, ss] = await Promise.all([
+        rows("business_students"),
+        rows("business_groups"),
+        rows("business_group_members"),
+        rows("business_oneone"),
+        rows("business_payments"),
+        rows("business_sessions"),
       ]);
-      setBizStudents(s || []);
-      setBizGroups(g || []);
-      setBizMembers(m || []);
-      setBizOneOnes(o || []);
-      setBizPayments(p || []);
-      setBizSessions(ss || []);
+      setBizStudents(s.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      setBizGroups(g.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      setBizMembers(m);
+      setBizOneOnes(o.sort((a, b) => (a.student_name || "").localeCompare(b.student_name || "")));
+      setBizPayments(p.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")));
+      setBizSessions(ss.sort((a, b) => (b.date || "").localeCompare(a.date || "")));
     } finally {
       setBizLoading(false);
     }
@@ -961,9 +970,10 @@ export default function App() {
 
   // ── Supabase auth ─────────────────────────────────────────────────────────
   const loadFromSupabase = useCallback(async (sess) => {
-    const { data } = await supabase.from("profiles").select("account,theme").eq("id", sess.user.id).single();
-    if (data?.account) {
-      const merged = { account: data.account, theme: data.theme ?? DEFAULT_THEME() };
+    const snap = await getDoc(doc(db, "profiles", sess.user.id));
+    if (snap.exists() && snap.data().account) {
+      const d = snap.data();
+      const merged = { account: d.account, theme: d.theme ?? DEFAULT_THEME() };
       setRoot(merged);
       saveRoot(merged);
     }
@@ -972,47 +982,54 @@ export default function App() {
 
   useEffect(() => {
     let initialDone = false;
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      initialDone = true;
-      setSession(s);
-      if (s) loadFromSupabase(s);
-      else setAuthLoading(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (s) {
-        // On initial load getSession already handles it; only act on subsequent sign-ins
-        if (initialDone) { setAuthLoading(true); loadFromSupabase(s); }
+    const unsub = onAuthStateChanged(auth, (u) => {
+      const sess = u ? { user: { id: u.uid } } : null;
+      setSession(sess);
+      if (u) {
+        // First fire is the restored session; later fires are explicit sign-ins
+        if (!initialDone) { initialDone = true; loadFromSupabase(sess); }
+        else { setAuthLoading(true); loadFromSupabase(sess); }
       } else {
+        initialDone = true;
         setAuthLoading(false);
       }
     });
-    return () => subscription.unsubscribe();
+    return () => unsub();
   }, [loadFromSupabase]);
 
   const handlePinLogin = async () => {
     const pin = pinInput.trim();
     if (pin.length < 4) { setAuthError("PIN must be at least 4 digits"); return; }
     setAuthError("");
-    const { error } = await supabase.auth.signInWithPassword({ email: INTERNAL_EMAIL, password: pin });
-    if (!error) return;
-    if (error.message.toLowerCase().includes("invalid login credentials")) {
-      if (!isNewUser) {
-        setIsNewUser(true);
-        setPinConfirm("");
-        return;
+    // Firebase requires >= 6 char passwords; pad short PINs deterministically.
+    const pwd = pin.length < 6 ? pin.padEnd(6, "0") : pin;
+    try {
+      await signInWithEmailAndPassword(auth, INTERNAL_EMAIL, pwd);
+    } catch (err) {
+      const code = err.code || "";
+      const badCreds = code === "auth/invalid-credential" || code === "auth/invalid-login-credentials"
+        || code === "auth/user-not-found" || code === "auth/wrong-password";
+      if (badCreds) {
+        if (!isNewUser) {
+          setIsNewUser(true);
+          setPinConfirm("");
+          return;
+        }
+        if (pinConfirm !== pin) { setAuthError("PINs don't match — try again"); setPinConfirm(""); return; }
+        try {
+          await createUserWithEmailAndPassword(auth, INTERNAL_EMAIL, pwd);
+        } catch (signUpErr) {
+          if (signUpErr.code === "auth/email-already-in-use") setAuthError("Incorrect PIN");
+          else setAuthError(signUpErr.message);
+        }
+      } else {
+        setAuthError("Incorrect PIN");
       }
-      if (pinConfirm !== pin) { setAuthError("PINs don't match — try again"); setPinConfirm(""); return; }
-      const { error: signUpErr } = await supabase.auth.signUp({ email: INTERNAL_EMAIL, password: pin });
-      if (signUpErr) { setAuthError(signUpErr.message); return; }
-      await supabase.auth.signInWithPassword({ email: INTERNAL_EMAIL, password: pin });
-    } else {
-      setAuthError("Incorrect PIN");
     }
   };
 
   const handleLock = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     setSession(null);
     setPinInput("");
     setPinConfirm("");
@@ -1197,25 +1214,26 @@ export default function App() {
     if (!bizDraft?.name?.trim()) { setBizError("Name is required"); return; }
     if (!bizDraft?.school?.trim()) { setBizError("School is required"); return; }
     const data = { name: bizDraft.name.trim(), school: bizDraft.school.trim(), enrolled_classes: bizDraft.enrolled_classes || "" };
-    if (bizEditId) await supabase.from("business_students").update(data).eq("id", bizEditId);
-    else await supabase.from("business_students").insert({ ...data, user_id: bizUid() });
+    if (bizEditId) await updateDoc(doc(db, "business_students", bizEditId), data);
+    else await addDoc(collection(db, "business_students"), { ...data, user_id: bizUid() });
     bizCloseModal(); loadBizData();
   }
   async function bizDeleteStudent(id) {
-    await supabase.from("business_students").delete().eq("id", id);
+    await deleteDoc(doc(db, "business_students", id));
     loadBizData();
   }
 
   async function bizSaveGroup() {
     if (!bizDraft?.name?.trim()) { setBizError("Group name is required"); return; }
     const data = { name: bizDraft.name.trim(), schedules: bizDraft.schedules || [], status: bizDraft.status || "active" };
-    if (bizEditId) await supabase.from("business_groups").update(data).eq("id", bizEditId);
-    else await supabase.from("business_groups").insert({ ...data, user_id: bizUid() });
+    if (bizEditId) await updateDoc(doc(db, "business_groups", bizEditId), data);
+    else await addDoc(collection(db, "business_groups"), { ...data, user_id: bizUid() });
     bizCloseModal(); loadBizData();
   }
   async function bizDeleteGroup(id) {
-    await supabase.from("business_group_members").delete().eq("group_id", id);
-    await supabase.from("business_groups").delete().eq("id", id);
+    const mems = await getDocs(query(collection(db, "business_group_members"), where("group_id", "==", id)));
+    await Promise.all(mems.docs.map(d => deleteDoc(d.ref)));
+    await deleteDoc(doc(db, "business_groups", id));
     if (bizView === "biz-group-detail") bizGoTo("biz-groups");
     loadBizData();
   }
@@ -1223,12 +1241,12 @@ export default function App() {
   async function bizSaveMember() {
     if (!bizDraft?.student_name?.trim()) { setBizError("Student name is required"); return; }
     const data = { group_id: bizMemberGroupId, student_name: bizDraft.student_name.trim(), rate: +bizDraft.rate || 0, classes_attended: +bizDraft.classes_attended || 0, total_paid: +bizDraft.total_paid || 0 };
-    if (bizEditId) await supabase.from("business_group_members").update(data).eq("id", bizEditId);
-    else await supabase.from("business_group_members").insert({ ...data, user_id: bizUid() });
+    if (bizEditId) await updateDoc(doc(db, "business_group_members", bizEditId), data);
+    else await addDoc(collection(db, "business_group_members"), { ...data, user_id: bizUid() });
     bizCloseModal(); loadBizData();
   }
   async function bizDeleteMember(id) {
-    await supabase.from("business_group_members").delete().eq("id", id);
+    await deleteDoc(doc(db, "business_group_members", id));
     loadBizData();
   }
 
@@ -1236,13 +1254,14 @@ export default function App() {
     if (!bizDraft?.student_name?.trim()) { setBizError("Student name is required"); return; }
     if (!bizDraft?.subject?.trim()) { setBizError("Subject is required"); return; }
     const data = { student_name: bizDraft.student_name.trim(), subject: bizDraft.subject.trim(), rate: +bizDraft.rate || 0, schedules: bizDraft.schedules || [], status: bizDraft.status || "active", classes_attended: +bizDraft.classes_attended || 0, total_paid: +bizDraft.total_paid || 0 };
-    if (bizEditId) await supabase.from("business_oneone").update(data).eq("id", bizEditId);
-    else await supabase.from("business_oneone").insert({ ...data, user_id: bizUid() });
+    if (bizEditId) await updateDoc(doc(db, "business_oneone", bizEditId), data);
+    else await addDoc(collection(db, "business_oneone"), { ...data, user_id: bizUid() });
     bizCloseModal(); loadBizData();
   }
   async function bizDeleteOneOne(id) {
-    await supabase.from("business_payments").delete().eq("target_id", id);
-    await supabase.from("business_oneone").delete().eq("id", id);
+    const pays = await getDocs(query(collection(db, "business_payments"), where("target_id", "==", id)));
+    await Promise.all(pays.docs.map(d => deleteDoc(d.ref)));
+    await deleteDoc(doc(db, "business_oneone", id));
     if (bizView === "biz-oneone-detail") bizGoTo("biz-oneone");
     loadBizData();
   }
@@ -1256,13 +1275,13 @@ export default function App() {
     const t = bizClassTarget;
     if (!t || !bizDraft?.date) { setBizError("Date is required"); return; }
     setBizError("");
-    await supabase.from("business_sessions").insert({ user_id: bizUid(), target_type: t.type, target_id: t.id, date: bizDraft.date, note: bizDraft.note || "" });
+    await addDoc(collection(db, "business_sessions"), { user_id: bizUid(), target_type: t.type, target_id: t.id, date: bizDraft.date, note: bizDraft.note || "", created_at: new Date().toISOString() });
     if (t.type === "group") {
       const groupMems = bizMembers.filter(m => m.group_id === t.id);
-      if (groupMems.length) await Promise.all(groupMems.map(m => supabase.from("business_group_members").update({ classes_attended: m.classes_attended + 1 }).eq("id", m.id)));
+      if (groupMems.length) await Promise.all(groupMems.map(m => updateDoc(doc(db, "business_group_members", m.id), { classes_attended: m.classes_attended + 1 })));
     } else {
       const oo = bizOneOnes.find(o => o.id === t.id);
-      if (oo) await supabase.from("business_oneone").update({ classes_attended: oo.classes_attended + 1 }).eq("id", t.id);
+      if (oo) await updateDoc(doc(db, "business_oneone", t.id), { classes_attended: oo.classes_attended + 1 });
     }
     setBizModal(null); setBizDraft(null); setBizClassTarget(null); setBizError("");
     loadBizData();
@@ -1275,13 +1294,13 @@ export default function App() {
     if (!amount || amount <= 0) { setBizError("Amount must be greater than 0"); return; }
     if (!bizDraft?.date) { setBizError("Date is required"); return; }
     setBizError("");
-    await supabase.from("business_payments").insert({ user_id: bizUid(), target_id: t.targetId, target_type: t.targetType, group_id: t.groupId || null, student_name: t.studentName, amount, date: bizDraft.date, is_custom: t.isCustom, note: bizDraft.note || "" });
+    await addDoc(collection(db, "business_payments"), { user_id: bizUid(), target_id: t.targetId, target_type: t.targetType, group_id: t.groupId || null, student_name: t.studentName, amount, date: bizDraft.date, is_custom: t.isCustom, note: bizDraft.note || "", created_at: new Date().toISOString() });
     if (t.targetType === "groupMember") {
       const m = bizMembers.find(x => x.id === t.targetId);
-      if (m) await supabase.from("business_group_members").update({ total_paid: m.total_paid + amount }).eq("id", t.targetId);
+      if (m) await updateDoc(doc(db, "business_group_members", t.targetId), { total_paid: m.total_paid + amount });
     } else {
       const oo = bizOneOnes.find(x => x.id === t.targetId);
-      if (oo) await supabase.from("business_oneone").update({ total_paid: oo.total_paid + amount }).eq("id", t.targetId);
+      if (oo) await updateDoc(doc(db, "business_oneone", t.targetId), { total_paid: oo.total_paid + amount });
     }
     setBizModal(null); setBizDraft(null); setBizPayTarget(null); setBizError("");
     loadBizData();
@@ -1292,7 +1311,7 @@ export default function App() {
     if (!t || !bizDraft?.date) { setBizError("Date is required"); return; }
     if (bizDraft.date < getTodayStr()) { setBizError("Date must be today or future"); return; }
     const table = t.targetType === "group" ? "business_groups" : "business_oneone";
-    await supabase.from(table).update({ rescheduled_to: { date: bizDraft.date, time: bizDraft.time || "" } }).eq("id", t.targetId);
+    await updateDoc(doc(db, table, t.targetId), { rescheduled_to: { date: bizDraft.date, time: bizDraft.time || "" } });
     setBizModal(null); setBizDraft(null); setBizReschedTarget(null); setBizError("");
     loadBizData();
   }
@@ -1300,7 +1319,7 @@ export default function App() {
     const t = bizReschedTarget;
     if (!t) return;
     const table = t.targetType === "group" ? "business_groups" : "business_oneone";
-    await supabase.from(table).update({ rescheduled_to: null }).eq("id", t.targetId);
+    await updateDoc(doc(db, table, t.targetId), { rescheduled_to: null });
     setBizModal(null); setBizDraft(null); setBizReschedTarget(null);
     loadBizData();
   }
