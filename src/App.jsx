@@ -696,6 +696,34 @@ function ProjLinkTile({ link, onEdit, onDelete }) {
   );
 }
 
+function ProjArc({ pct, size = 138 }) {
+  const sw = 11, r = (size - sw) / 2, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  const cx = size / 2;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ filter: `drop-shadow(0 0 12px ${PROJ_ACCENT}55)`, display: "block" }} aria-label={`${pct}% complete`}>
+      <defs>
+        <linearGradient id="projArcGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#b3a4ff" /><stop offset="100%" stopColor={PROJ_ACCENT} />
+        </linearGradient>
+      </defs>
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw} />
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke="url(#projArcGrad)" strokeWidth={sw} strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round" transform={`rotate(-90 ${cx} ${cx})`} style={{ transition: "stroke-dashoffset .7s cubic-bezier(.16,1,.3,1)" }} />
+      <text x="50%" y="45%" textAnchor="middle" dominantBaseline="central" fill="var(--r-fg)" fontFamily={HERO_FONT} fontSize={size * 0.3} fontWeight="500" style={{ fontVariantNumeric: "tabular-nums" }}>{pct}</text>
+      <text x="50%" y="63%" textAnchor="middle" dominantBaseline="central" fill="var(--r-fg2)" fontSize={size * 0.085} fontWeight="700" letterSpacing="0.18em">COMPLETE</text>
+    </svg>
+  );
+}
+
+// done | active | blocked | upcoming + colour, from a phase's effective task statuses
+function projPhaseState(tasks, eff) {
+  const sts = tasks.map(eff);
+  const done = sts.filter(s => s === "Done").length;
+  if (done === tasks.length) return { key: "done", color: "#34d399", done };
+  if (sts.some(s => s === "In progress") || done > 0) return { key: "active", color: PROJ_ACCENT, done };
+  if (sts.some(s => s === "Blocked")) return { key: "blocked", color: "#f87171", done };
+  return { key: "upcoming", color: "#9ca3af", done };
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function App() {
   const [root, setRoot] = useState(loadRoot);
@@ -777,6 +805,7 @@ export default function App() {
   const [projEditId, setProjEditId] = useState(null);
   const [projError, setProjError] = useState("");
   const [projLoading, setProjLoading] = useState(false);
+  const [projOpenPhase, setProjOpenPhase] = useState(null); // null = auto-open active phase
 
   const notifRef = useRef([]);
   const syncRef = useRef(null);
@@ -3544,77 +3573,139 @@ export default function App() {
             </>)}
 
             {/* ── PLAN ── */}
-            {projView === "plan" && (<>
-              <div style={{ marginBottom: 20 }}>
-                <h2 style={{ ...S.pageTitle, marginBottom: 2 }}>Revival Plan</h2>
-                <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>Online presence revival · 29 Jun – 31 Aug 2026</div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
-                <ProjStatCard label="Complete" value={pct + "%"} color={PROJ_ACCENT} sub={`${doneN}/${total} done`} />
-                <ProjStatCard label="In progress" value={progN} color="#f59e0b" sub="Active now" />
-                <ProjStatCard label="Not started" value={notN} color="#6b7280" sub="Queued" />
-                <ProjStatCard label="Blocked" value={blockN} color="#f87171" sub="Needs unblock" />
-              </div>
-              <div style={{ height: 6, background: "var(--r-surf2)", borderRadius: 999, overflow: "hidden", marginBottom: 8 }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: PROJ_ACCENT, borderRadius: 999, transition: "width .3s" }} />
-              </div>
-              <div style={{ fontSize: 11, color: "var(--r-fg3)", marginBottom: 22 }}>Tap a status pill to cycle: Not started → In progress → Done → Blocked.</div>
-
-              {PROJ_PLAN.map(ph => (
-                <div key={ph.name} style={{ marginBottom: 18 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>{ph.name}</div>
-                    <div style={{ flex: 1, height: 1, background: "var(--r-bord)" }} />
-                    <div className="r-tnum" style={{ fontSize: 11, color: "var(--r-fg3)" }}>{ph.tasks.filter(t => eff(t) === "Done").length}/{ph.tasks.length}</div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {ph.tasks.map(t => {
-                      const st = eff(t);
-                      const sc = projStatusColor(st);
-                      return (
-                        <div key={t.id} style={{ ...S.card, marginBottom: 0, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6, borderLeft: `3px solid ${sc}`, opacity: st === "Done" ? 0.72 : 1 }}>
-                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                            <div style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: "-0.01em", textDecoration: st === "Done" ? "line-through" : "none", flex: 1 }}>{t.t}</div>
-                            <button onClick={() => projCyclePlan(t.id, st)} aria-label={`Status: ${st}, tap to change`} style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, border: `1px solid ${sc}40`, background: sc + "1a", color: sc, cursor: "pointer", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", whiteSpace: "nowrap" }}>{st}</button>
-                          </div>
-                          {t.n && <div style={{ fontSize: 11.5, color: "var(--r-fg2)", lineHeight: 1.5 }}>{t.n}</div>}
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 11, color: "var(--r-fg3)", alignItems: "center" }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ph ph-calendar-blank" aria-hidden="true" />{t.s} – {t.e}</span>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ph ph-clock" aria-hidden="true" />{t.d}d</span>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: projPriColor(t.p) }}><i className="ph ph-flag" aria-hidden="true" />{t.p}</span>
-                            {t.dep !== "—" && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ph ph-arrow-bend-down-right" aria-hidden="true" />{t.dep}</span>}
-                          </div>
+            {projView === "plan" && (() => {
+              const activePhase = (PROJ_PLAN.find(ph => ph.tasks.some(t => eff(t) !== "Done")) || PROJ_PLAN[0]).name;
+              const openName = projOpenPhase === null ? activePhase : projOpenPhase;
+              return (<>
+              {/* ── Hero: radial progress + ambient glow ── */}
+              <div style={{ position: "relative", overflow: "hidden", borderRadius: 22, padding: isMobile ? "20px" : "26px 28px", marginBottom: 22, background: "radial-gradient(120% 140% at 100% 0%, rgba(124,108,246,0.20), rgba(124,108,246,0.02) 55%), var(--r-surf)", border: "1px solid var(--r-bord)", boxShadow: "var(--r-shadow-md)" }}>
+                {!isMobile && <div aria-hidden="true" style={{ position: "absolute", top: -70, right: -50, width: 220, height: 220, borderRadius: "50%", background: PROJ_ACCENT, filter: "blur(85px)", opacity: 0.2, pointerEvents: "none" }} />}
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", gap: isMobile ? 16 : 28, position: "relative" }}>
+                  <ProjArc pct={pct} size={isMobile ? 124 : 142} />
+                  <div style={{ flex: 1, minWidth: 0, textAlign: isMobile ? "center" : "left" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: PROJ_ACCENT, textTransform: "uppercase", marginBottom: 7 }}>Revival Journey</div>
+                    <h2 style={{ fontFamily: HERO_FONT, fontWeight: 500, fontSize: "clamp(1.5rem,1.2rem + 1.4vw,2rem)", lineHeight: 1.04, letterSpacing: "-0.015em", marginBottom: 7 }}>Ihsan Education<br />online revival</h2>
+                    <div style={{ fontSize: 12.5, color: "var(--r-fg2)", marginBottom: 14 }}>29 Jun – 31 Aug 2026 · {doneN}/{total} tasks done</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: isMobile ? "center" : "flex-start" }}>
+                      {[["In progress", progN, "#f59e0b"], ["Queued", notN, "#9ca3af"], ["Blocked", blockN, "#f87171"]].map(([l, v, c]) => (
+                        <div key={l} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 999, background: "rgba(255,255,255,0.04)", border: "1px solid var(--r-bord)" }}>
+                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />
+                          <span className="r-tnum" style={{ fontSize: 12.5, fontWeight: 700 }}>{v}</span>
+                          <span style={{ fontSize: 11, color: "var(--r-fg2)" }}>{l}</span>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
                 </div>
-              ))}
-
-              <div style={{ marginTop: 8, marginBottom: 18 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>Content Calendar</div>
-                  <div style={{ flex: 1, height: 1, background: "var(--r-bord)" }} />
-                  <div style={{ fontSize: 11, color: "var(--r-fg3)" }}>~5 posts/wk</div>
+                {/* 9-segment phase bar */}
+                <div style={{ display: "flex", gap: 4, marginTop: 18, position: "relative" }}>
+                  {PROJ_PLAN.map(ph => {
+                    const ps = projPhaseState(ph.tasks, eff);
+                    const fill = ph.tasks.length ? ps.done / ph.tasks.length : 0;
+                    return (
+                      <div key={ph.name} title={ph.name} style={{ flex: 1, height: 6, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${fill * 100}%`, background: ps.color, borderRadius: 999, transition: "width .5s var(--r-ease-dawn,ease)" }} />
+                      </div>
+                    );
+                  })}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
-                  {PROJ_CALENDAR.map(w => (
-                    <div key={w.wk} style={{ ...S.card, marginBottom: 0, padding: "14px 16px" }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: PROJ_ACCENT, marginBottom: 10 }}>{w.wk}</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {w.posts.map((p, i) => (
-                          <div key={i} style={{ fontSize: 11.5, color: "var(--r-fg2)", lineHeight: 1.45, display: "flex", gap: 7 }}>
-                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: PROJ_ACCENT, marginTop: 6, flexShrink: 0 }} />
-                            <span>{p}</span>
+              </div>
+
+              {/* ── Timeline spine of phase milestones ── */}
+              <div style={{ marginBottom: 26 }}>
+                {PROJ_PLAN.map((ph, pi) => {
+                  const ps = projPhaseState(ph.tasks, eff);
+                  const open = openName === ph.name;
+                  const isLast = pi === PROJ_PLAN.length - 1;
+                  const num = ph.name.includes(" · ") ? ph.name.split(" · ")[0] : String(pi + 1);
+                  const title = ph.name.split(" · ")[1] || ph.name;
+                  return (
+                    <div key={ph.name} style={{ position: "relative", display: "flex", gap: 14 }}>
+                      <div style={{ position: "relative", width: 40, flexShrink: 0, display: "flex", justifyContent: "center" }}>
+                        {!isLast && <div aria-hidden="true" style={{ position: "absolute", top: 42, bottom: -4, left: "50%", width: 2, transform: "translateX(-50%)", background: `linear-gradient(180deg, ${ps.color}99, var(--r-bord))` }} />}
+                        <button onClick={() => setProjOpenPhase(open ? "__none__" : ph.name)} aria-hidden="true" tabIndex={-1} style={{ position: "relative", zIndex: 1, width: 40, height: 40, borderRadius: 13, border: `1.5px solid ${ps.color}`, background: ps.key === "done" ? ps.color : ps.key === "upcoming" ? "var(--r-surf)" : ps.color + "22", color: ps.key === "done" ? "#0c0c0f" : "var(--r-fg)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: HERO_FONT, fontSize: 16, fontWeight: 600, boxShadow: ps.key !== "upcoming" ? `0 0 14px ${ps.color}45` : "none", transition: "all .2s" }}>
+                          {ps.key === "done" ? <i className="ph-bold ph-check" style={{ fontSize: 18 }} aria-hidden="true" /> : num}
+                        </button>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, paddingBottom: 14 }}>
+                        <button onClick={() => setProjOpenPhase(open ? "__none__" : ph.name)} aria-expanded={open} aria-controls={`phase-panel-${pi}`} style={{ width: "100%", textAlign: "left", background: open ? "var(--r-surf)" : "transparent", border: `1px solid ${open ? ps.color + "55" : "var(--r-bord)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "background .15s, border-color .15s" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: ps.color, textTransform: "uppercase" }}>Phase {num}</div>
+                            <div style={{ fontSize: 14.5, fontWeight: 600, letterSpacing: "-0.01em", marginTop: 2 }}>{title}</div>
                           </div>
-                        ))}
+                          <span className="r-tnum" style={{ fontSize: 12, fontWeight: 700, color: "var(--r-fg2)" }}>{ps.done}/{ph.tasks.length}</span>
+                          <i className={open ? "ph ph-caret-up" : "ph ph-caret-down"} style={{ fontSize: 14, color: "var(--r-fg2)" }} aria-hidden="true" />
+                        </button>
+                        {open && (
+                          <div id={`phase-panel-${pi}`} role="region" aria-label={`Phase ${num} tasks`} style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                            {ph.tasks.map(t => {
+                              const st = eff(t);
+                              const sc = projStatusColor(st);
+                              return (
+                                <div key={t.id} style={{ display: "flex", gap: 11, padding: "11px 13px", borderRadius: 12, background: "var(--r-surf2)", border: "1px solid var(--r-bord)", borderLeft: `3px solid ${sc}`, opacity: st === "Done" ? 0.82 : 1, transition: "opacity .2s" }}>
+                                  <button onClick={() => projCyclePlan(t.id, st)} aria-label={`Status ${st}, tap to change`} style={{ flexShrink: 0, marginTop: 1, width: 20, height: 20, borderRadius: 7, border: `2px solid ${sc}`, background: st === "Done" ? sc : st === "In progress" ? sc + "33" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
+                                    {st === "Done" && <i className="ph-bold ph-check" style={{ fontSize: 11, color: "#0c0c0f" }} aria-hidden="true" />}
+                                    {st === "In progress" && <span style={{ width: 7, height: 7, borderRadius: "50%", background: sc }} />}
+                                    {st === "Blocked" && <i className="ph-bold ph-x" style={{ fontSize: 10, color: sc }} aria-hidden="true" />}
+                                  </button>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                                      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: "-0.01em", textDecoration: st === "Done" ? "line-through" : "none", lineHeight: 1.35 }}>{t.t}</div>
+                                      <button onClick={() => projCyclePlan(t.id, st)} aria-label={`Cycle status, currently ${st}`} style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, border: `1px solid ${sc}40`, background: sc + "1a", color: sc, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" }}>{st}</button>
+                                    </div>
+                                    {t.n && <div style={{ fontSize: 11, color: "var(--r-fg2)", lineHeight: 1.5, marginTop: 3 }}>{t.n}</div>}
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, color: "var(--r-fg2)", alignItems: "center", marginTop: 5 }}>
+                                      <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-calendar-blank" aria-hidden="true" />{t.s}–{t.e}</span>
+                                      <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-hourglass-medium" aria-hidden="true" />{t.d}d</span>
+                                      <span style={{ display: "inline-flex", gap: 3, alignItems: "center", color: projPriColor(t.p) }}><i className="ph-fill ph-flag" aria-hidden="true" />{t.p}</span>
+                                      {t.dep !== "—" && <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-link" aria-hidden="true" />{t.dep}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── Content calendar filmstrip ── */}
+              <div style={{ marginTop: 4, marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <i className="ph ph-broadcast" style={{ color: PROJ_ACCENT, fontSize: 16 }} aria-hidden="true" />
+                  <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em" }}>Content Calendar</div>
+                  <div style={{ flex: 1 }} />
+                  <div style={{ fontSize: 11, color: "var(--r-fg3)" }}>~5 posts/wk · swipe →</div>
+                </div>
+                <div style={{ display: "flex", gap: 12, overflowX: "auto", margin: "0 -4px", padding: "0 4px 8px", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}>
+                  {PROJ_CALENDAR.map((w, wi) => (
+                    <div key={w.wk} style={{ flex: isMobile ? "0 0 80%" : "0 0 270px", maxWidth: 320, scrollSnapAlign: "start", background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 16, padding: "16px 18px", boxShadow: "var(--r-shadow-sm)" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: PROJ_ACCENT }}>{w.wk}</div>
+                        <div style={{ fontFamily: HERO_FONT, fontSize: 18, color: "var(--r-fg3)" }}>0{wi + 1}</div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                        {w.posts.map((p, i) => {
+                          const parts = p.split(" — ");
+                          const tag = parts[0];
+                          const body = parts.slice(1).join(" — ");
+                          return (
+                            <div key={p} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+                              <span style={{ flexShrink: 0, marginTop: 1, fontSize: 10, fontWeight: 700, color: PROJ_ACCENT, background: PROJ_ACCENT + "1a", borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" }}>{tag}</span>
+                              <span style={{ fontSize: 11.5, color: "var(--r-fg2)", lineHeight: 1.4 }}>{body}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </>)}
+              </>);
+            })()}
 
             {/* ── ADD / EDIT LINK MODAL ── */}
             {projModal === "link" && projDraft && (
