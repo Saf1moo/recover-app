@@ -560,51 +560,99 @@ function SunArc({ prayers, prayerTargets, onLog }) {
   );
 }
 
-// ─── Business helpers ─────────────────────────────────────────────────────────
-const BIZ_BLUE = "#3B82F6";
-const BIZ_GREEN = "#22C55E";
-const BIZ_ORANGE = "#F97316";
-const BIZ_RED = "#EF4444";
-const BIZ_PURPLE = "#A855F7";
-const BIZ_WEEK = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-const BIZ_ALL_DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-const bizFmt$ = n => "$" + (+n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-function bizGetSchedules(e) {
-  if (e.schedules && Array.isArray(e.schedules)) return e.schedules;
-  if (e.schedule_day) return [{ day: e.schedule_day, time: e.schedule_time || "" }];
-  return [];
-}
-function bizFmtSchedules(e) {
-  const s = bizGetSchedules(e);
-  if (!s.length) return "—";
-  return s.map(x => [x.day, x.time ? fmtTime(x.time) : ""].filter(Boolean).join(" @ ")).join(" · ");
-}
-function bizMatchesToday(e, todayName, todayStr) {
-  if (e.status === "inactive") return false;
-  const rt = e.rescheduled_to;
-  if (rt?.date) {
-    if (rt.date === todayStr) return true;
-    if (rt.date > todayStr) return false;
-  }
-  return bizGetSchedules(e).some(s => s.day?.toLowerCase() === todayName.toLowerCase());
-}
-function BizAvatar({ name, idx, sz = 32 }) {
-  const pal = [BIZ_BLUE, BIZ_PURPLE, BIZ_GREEN, BIZ_ORANGE, "#EC4899", "#EAB308", "#14B8A6", BIZ_RED];
-  const c = pal[idx % pal.length];
-  const lbl = (name||"?").trim().split(/\s+/).map(w => w[0]).join("").toUpperCase().slice(0, 2);
-  const fs = sz <= 26 ? 10 : sz <= 32 ? 11 : 13;
-  return <div style={{ width: sz, height: sz, borderRadius: Math.round(sz * 0.28), background: c + "20", color: c, display: "flex", alignItems: "center", justifyContent: "center", fontSize: fs, fontWeight: 700, flexShrink: 0, border: `1px solid ${c}30` }}>{lbl}</div>;
-}
-function BizEmptyState({ icon, title, sub }) {
-  return (
-    <div style={{ textAlign: "center", padding: "56px 24px" }}>
-      <div style={{ fontSize: 30, marginBottom: 12, color: "var(--r-fg3)" }} aria-hidden="true"><i className={icon} /></div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--r-fg)", marginBottom: 4 }}>{title}</div>
-      <div style={{ fontSize: 12, color: "var(--r-fg2)", lineHeight: 1.6 }}>{sub}</div>
-    </div>
-  );
-}
-function BizStatCard({ label, value, color, sub }) {
+// ─── Projects section ─────────────────────────────────────────────────────────
+const PROJ_ACCENT = "#7c6cf6";
+const PROJ_LINKS_KEY = "recover_proj_links_v1";
+const PROJ_PLAN_KEY = "recover_proj_plan_v1";
+const PROJ_GROUPS = ["Live Sites", "Infrastructure", "Other"];
+
+// User's known links — seeds. Custom links (localStorage) merge on top.
+const PROJ_DEFAULT_LINKS = [
+  { id: "l-edu", group: "Live Sites", name: "Ihsan Education", url: "https://ihsaneducation.com.au", desc: "Main website" },
+  { id: "l-studio", group: "Live Sites", name: "Ihsan Studio", url: "https://ihsan-studio.pages.dev", desc: "Student web app" },
+  { id: "l-studio-test", group: "Live Sites", name: "Studio · Test", url: "https://ihsan-studio-test.pages.dev", desc: "Staging / MVP" },
+  { id: "l-github", group: "Infrastructure", name: "GitHub", url: "https://github.com", desc: "Repositories" },
+  { id: "l-supabase", group: "Infrastructure", name: "Supabase", url: "https://supabase.com/dashboard", desc: "Database & auth" },
+  { id: "l-firebase", group: "Infrastructure", name: "Firebase", url: "https://console.firebase.google.com", desc: "Console" },
+  { id: "l-cloudflare", group: "Infrastructure", name: "Cloudflare", url: "https://dash.cloudflare.com", desc: "Pages & DNS" },
+  { id: "l-mobbin", group: "Other", name: "Mobbin", url: "https://mobbin.com", desc: "Design references" },
+];
+const PROJ_SEED_VER = 2; // bump when adding to PROJ_DEFAULT_LINKS to backfill existing users
+
+const projFavicon = url => { try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`; } catch { return ""; } };
+const projHost = url => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; } };
+function loadProjLinks() { try { const r = localStorage.getItem(PROJ_LINKS_KEY); if (r) return JSON.parse(r); } catch {} return []; }
+function saveProjLinks(l) { try { localStorage.setItem(PROJ_LINKS_KEY, JSON.stringify(l)); } catch {} }
+function loadProjPlan() { try { const r = localStorage.getItem(PROJ_PLAN_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } }
+function saveProjPlan(s) { try { localStorage.setItem(PROJ_PLAN_KEY, JSON.stringify(s)); } catch {} }
+
+// Ihsan Education — Revival Tracker (29 Jun – 31 Aug 2026)
+const PROJ_PLAN = [
+  { name: "1 · Foundations", tasks: [
+    { id: "t1", t: "Finalise logo & export full asset set", s: "29 Jun", e: "1 Jul", d: 3, st: "In progress", p: "High", dep: "—", n: "Lock colours/spacing, export profile crop + transparent PNG + favicon" },
+    { id: "t2", t: "Website v1 live on ihsaneducation.com.au", s: "29 Jun", e: "3 Jul", d: 5, st: "In progress", p: "High", dep: "—", n: "Pick prototype, fix links/images, mobile QA, deploy" },
+    { id: "t3", t: "Student web app MVP (login + resources + recordings)", s: "29 Jun", e: "11 Jul", d: 13, st: "In progress", p: "High", dep: "—", n: "ihsan-studio-test.pages.dev — get to genuinely usable" },
+    { id: "t4", t: "Web app polish + soft launch to current students", s: "13 Jul", e: "17 Jul", d: 5, st: "Not started", p: "High", dep: "App MVP", n: "Invite current students, collect feedback" },
+  ]},
+  { name: "2 · IG Rebrand", tasks: [
+    { id: "t5", t: "New profile pic + bio rewrite", s: "2 Jul", e: "2 Jul", d: 1, st: "Not started", p: "High", dep: "Logo", n: "5 mentors/scores + free-consult CTA + link" },
+    { id: "t6", t: "Design highlight covers (set of 6)", s: "2 Jul", e: "3 Jul", d: 2, st: "Not started", p: "Med", dep: "Logo", n: "Reviews / Roadmap / Mentors / Webinar / App / Workshops" },
+    { id: "t7", t: "Reorganise & refresh highlights", s: "6 Jul", e: "6 Jul", d: 1, st: "Not started", p: "Med", dep: "Covers", n: "Apply covers, tidy saved stories" },
+    { id: "t8", t: "Rebrand reveal post", s: "7 Jul", e: "7 Jul", d: 1, st: "Not started", p: "High", dep: "Profile+covers", n: "Before/after 'we levelled up' carousel" },
+  ]},
+  { name: "3 · Reviews", tasks: [
+    { id: "t9", t: "Collect student testimonials (8–12)", s: "29 Jun", e: "5 Jul", d: 7, st: "Not started", p: "High", dep: "—", n: "Async — DM current students, chase replies" },
+    { id: "t10", t: "Design reusable review graphic template", s: "6 Jul", e: "6 Jul", d: 1, st: "Not started", p: "Med", dep: "—", n: "On-brand, one template, swap text" },
+    { id: "t11", t: "Post reviews batch 1 (3–4 posts)", s: "8 Jul", e: "12 Jul", d: 5, st: "Not started", p: "High", dep: "Template+testimonials", n: "One every ~2 days to revive the page" },
+  ]},
+  { name: "4 · Content Engine", tasks: [
+    { id: "t12", t: "Set up content calendar / batching system", s: "6 Jul", e: "6 Jul", d: 1, st: "Not started", p: "High", dep: "—", n: "Never post blind" },
+    { id: "t13", t: "Batch-edit webinar clips from YouTube (4–6)", s: "8 Jul", e: "10 Jul", d: 3, st: "Not started", p: "High", dep: "—", n: "Reuse existing webinar footage" },
+    { id: "t14", t: "Draft 2 tips carousels", s: "9 Jul", e: "10 Jul", d: 2, st: "Not started", p: "Med", dep: "—", n: "e.g. SAC mistakes, 50-study schedule" },
+    { id: "t15", t: "Run consistent posting cadence (4–5/wk)", s: "13 Jul", e: "31 Aug", d: 50, st: "Not started", p: "High", dep: "Calendar", n: "RECURRING — see Content Calendar" },
+    { id: "t16", t: "Website + app preview posts", s: "13 Jul", e: "31 Aug", d: 50, st: "Not started", p: "Med", dep: "—", n: "RECURRING — sprinkle through the weeks" },
+  ]},
+  { name: "5 · Personal Brand", tasks: [
+    { id: "t17", t: "Film personal VCE-journey videos (2–3)", s: "13 Jul", e: "15 Jul", d: 3, st: "Not started", p: "Med", dep: "—", n: "Raw story content" },
+    { id: "t18", t: "Edit + post as collab (personal + Ihsan)", s: "16 Jul", e: "26 Jul", d: 11, st: "Not started", p: "Med", dep: "Filming", n: "Collab posts to build personal brand" },
+  ]},
+  { name: "6 · Collabs", tasks: [
+    { id: "t19", t: "Reach out + book high-achiever interview", s: "13 Jul", e: "14 Jul", d: 2, st: "Not started", p: "Med", dep: "—", n: "Past high achievers / alumni" },
+    { id: "t20", t: "Film interview", s: "22 Jul", e: "22 Jul", d: 1, st: "Not started", p: "Med", dep: "Booking", n: "Lock a date" },
+    { id: "t21", t: "Edit + publish interview", s: "23 Jul", e: "27 Jul", d: 5, st: "Not started", p: "Med", dep: "Filming", n: "Tease then full" },
+  ]},
+  { name: "7 · VCE App", tasks: [
+    { id: "t22", t: "First VCE app teaser (VCE AI + features)", s: "20 Jul", e: "21 Jul", d: 2, st: "Not started", p: "Med", dep: "—", n: "Separate from student app — build hype" },
+    { id: "t23", t: "Ongoing teasers as build progresses", s: "27 Jul", e: "31 Aug", d: 36, st: "Not started", p: "Low", dep: "—", n: "RECURRING — teasers until demo-able" },
+  ]},
+  { name: "8 · School Expansion", tasks: [
+    { id: "t24", t: "Build target school list", s: "20 Jul", e: "21 Jul", d: 2, st: "Not started", p: "High", dep: "—", n: "Start with network / community schools" },
+    { id: "t25", t: "Write outreach pitch + workshop deck", s: "22 Jul", e: "24 Jul", d: 3, st: "Not started", p: "High", dep: "—", n: "Free webinar/workshop offer; email + slides" },
+    { id: "t26", t: "Send outreach batch 1 + follow up", s: "27 Jul", e: "1 Aug", d: 6, st: "Not started", p: "High", dep: "Pitch+list", n: "Personalise, follow up after 3–4 days" },
+    { id: "t27", t: "'Free school workshops' IG announcement", s: "28 Jul", e: "28 Jul", d: 1, st: "Not started", p: "Med", dep: "Pitch", n: "Doubles as outreach + content" },
+    { id: "t28", t: "Outreach batch 2 + follow up", s: "3 Aug", e: "14 Aug", d: 12, st: "Not started", p: "Med", dep: "Batch 1", n: "Widen the net" },
+    { id: "t29", t: "Schedule & confirm first workshops", s: "3 Aug", e: "16 Aug", d: 14, st: "Not started", p: "High", dep: "Replies", n: "Dependent on school replies" },
+    { id: "t30", t: "Deliver first in-person webinars / workshops", s: "10 Aug", e: "31 Aug", d: 22, st: "Not started", p: "High", dep: "Scheduling", n: "Some slip into Sept — normal" },
+    { id: "t31", t: "Post-workshop upsell: tutoring + VCE app", s: "17 Aug", e: "31 Aug", d: 15, st: "Not started", p: "High", dep: "Workshops", n: "Pitch same schools after each session" },
+  ]},
+  { name: "9 · Ongoing Habits", tasks: [
+    { id: "t32", t: "Engage / reply to DMs & comments (daily)", s: "29 Jun", e: "31 Aug", d: 64, st: "Not started", p: "High", dep: "—", n: "DAILY — algorithm + trust" },
+    { id: "t33", t: "Weekly metrics review + plan next week", s: "29 Jun", e: "31 Aug", d: 64, st: "Not started", p: "Med", dep: "—", n: "WEEKLY — what worked, what's next" },
+  ]},
+];
+
+const PROJ_CALENDAR = [
+  { wk: "Wk of 13 Jul", posts: ["Review — Student review #4 graphic", "Webinar clip — 'biggest VCE mistake'", "Tips — start a 50-study schedule", "Site/App — new website tour", "Personal — my Year 12 timetable"] },
+  { wk: "Wk of 20 Jul", posts: ["VCE App teaser — Meet the VCE AI", "Webinar clip — SAC strategy", "Review — Student review #5", "Tips — active recall in 3 steps", "Personal — how I handled burnout"] },
+  { wk: "Wk of 27 Jul", posts: ["Announcement — Free school workshops booking", "Webinar clip — essay structure", "Site/App — students can access recordings", "Tips — my exam-week routine", "Collab — high-achiever interview teaser"] },
+  { wk: "Wk of 3 Aug", posts: ["Review — Student review #6", "Collab — high-achiever interview full", "Webinar clip — time management", "VCE App teaser — feature spotlight", "Personal — results day, my story"] },
+];
+
+const PROJ_PLAN_STATUSES = ["Not started", "In progress", "Done", "Blocked"];
+const projStatusColor = st => st === "Done" ? "#22c55e" : st === "In progress" ? "#f59e0b" : st === "Blocked" ? "#f87171" : "#6b7280";
+const projPriColor = p => p === "High" ? "#f87171" : p === "Med" ? "#f59e0b" : "#6b7280";
+
+function ProjStatCard({ label, value, color, sub }) {
   return (
     <div style={{ background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 12, padding: "16px 20px", boxShadow: ELEV.sm }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -613,6 +661,37 @@ function BizStatCard({ label, value, color, sub }) {
       </div>
       <div className="r-tnum" style={{ fontFamily: HERO_FONT, fontSize: 28, fontWeight: 400, color: color || "var(--r-fg)", letterSpacing: "-0.02em", lineHeight: 1 }}>{value}</div>
       {sub && <div style={{ fontSize: 13, color: "var(--r-fg2)", marginTop: 6 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function ProjLinkTile({ link, onEdit, onDelete }) {
+  const [err, setErr] = useState(false);
+  const fav = projFavicon(link.url);
+  return (
+    <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10, background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 14, padding: "16px 16px 14px", boxShadow: ELEV.sm, transition: "border-color .15s, transform .15s" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = PROJ_ACCENT + "80"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--r-bord)"; e.currentTarget.style.transform = "none"; }}>
+      <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: "var(--r-surf2)", border: "1px solid var(--r-bord)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+          {fav && !err
+            ? <img src={fav} alt="" width={22} height={22} onError={() => setErr(true)} style={{ display: "block" }} />
+            : <span style={{ fontFamily: HERO_FONT, fontSize: 18, fontWeight: 600, color: PROJ_ACCENT }}>{(link.name || "?").charAt(0).toUpperCase()}</span>}
+        </div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em", display: "flex", alignItems: "center", gap: 5 }}>
+            {link.name}<i className="ph ph-arrow-up-right" style={{ fontSize: 12, color: "var(--r-fg3)" }} aria-hidden="true" />
+          </div>
+          {link.desc && <div style={{ fontSize: 11.5, color: "var(--r-fg2)", marginTop: 2 }}>{link.desc}</div>}
+          <div style={{ fontSize: 11, color: "var(--r-fg3)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{projHost(link.url)}</div>
+        </div>
+      </a>
+      {(onEdit || onDelete) && (
+        <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 4 }}>
+          {onEdit && <button onClick={onEdit} aria-label="Edit link" style={{ background: "var(--r-surf2)", border: "1px solid var(--r-bord)", color: "var(--r-fg2)", borderRadius: 6, width: 24, height: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}><i className="ph ph-pencil-simple" /></button>}
+          {onDelete && <button onClick={onDelete} aria-label="Delete link" style={{ background: "var(--r-surf2)", border: "1px solid var(--r-bord)", color: "var(--r-fg2)", borderRadius: 6, width: 24, height: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}><i className="ph ph-trash" /></button>}
+        </div>
+      )}
     </div>
   );
 }
@@ -688,30 +767,20 @@ export default function App() {
   const [isNewUser, setIsNewUser] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null); // "syncing" | "synced" | "error"
 
-  // ── Business section state ────────────────────────────────────────────────
-  const [section, setSection] = useState("personal"); // "personal" | "business"
-  const [bizView, setBizView] = useState("biz-dashboard");
-  const [bizGroupId, setBizGroupId] = useState(null);
-  const [bizOneOneId, setBizOneOneId] = useState(null);
-  const [bizStudents, setBizStudents] = useState([]);
-  const [bizGroups, setBizGroups] = useState([]);
-  const [bizMembers, setBizMembers] = useState([]);
-  const [bizOneOnes, setBizOneOnes] = useState([]);
-  const [bizPayments, setBizPayments] = useState([]);
-  const [bizLoading, setBizLoading] = useState(false);
-  const [bizModal, setBizModal] = useState(null);
-  const [bizDraft, setBizDraft] = useState(null);
-  const [bizEditId, setBizEditId] = useState(null);
-  const [bizMemberGroupId, setBizMemberGroupId] = useState(null);
-  const [bizPayTarget, setBizPayTarget] = useState(null);
-  const [bizReschedTarget, setBizReschedTarget] = useState(null);
-  const [bizConfirm, setBizConfirm] = useState(null);
-  const [bizError, setBizError] = useState("");
-  const [bizSessions, setBizSessions] = useState([]);
-  const [bizClassTarget, setBizClassTarget] = useState(null);
+  // ── Projects section state ────────────────────────────────────────────────
+  const [section, setSection] = useState("personal"); // "personal" | "projects"
+  const [projView, setProjView] = useState("links");  // "links" | "plan"
+  const [projLinks, setProjLinks] = useState(loadProjLinks);
+  const [projPlan, setProjPlan] = useState(loadProjPlan); // { [taskId]: status }
+  const [projModal, setProjModal] = useState(null);       // null | "link"
+  const [projDraft, setProjDraft] = useState(null);
+  const [projEditId, setProjEditId] = useState(null);
+  const [projError, setProjError] = useState("");
+  const [projLoading, setProjLoading] = useState(false);
 
   const notifRef = useRef([]);
   const syncRef = useRef(null);
+  const projBusyRef = useRef(false);
 
   const syncToSupabase = useCallback((rootData) => {
     if (syncRef.current) clearTimeout(syncRef.current);
@@ -751,38 +820,88 @@ export default function App() {
     });
   }, [syncToSupabase]);
 
-  const loadBizData = useCallback(async () => {
-    if (!session) return;
-    setBizLoading(true);
+  const projUid = () => session?.user?.id;
+
+  const loadProjData = useCallback(async () => {
+    const uid = session?.user?.id;
+    if (!uid || projBusyRef.current) return;
+    projBusyRef.current = true;
+    setProjLoading(true);
     try {
-      const uid = session.user.id;
-      const rows = async (name) => {
-        const snap = await getDocs(query(collection(db, name), where("user_id", "==", uid)));
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      };
-      const [s, g, m, o, p, ss] = await Promise.all([
-        rows("business_students"),
-        rows("business_groups"),
-        rows("business_group_members"),
-        rows("business_oneone"),
-        rows("business_payments"),
-        rows("business_sessions"),
-      ]);
-      setBizStudents(s.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
-      setBizGroups(g.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
-      setBizMembers(m);
-      setBizOneOnes(o.sort((a, b) => (a.student_name || "").localeCompare(b.student_name || "")));
-      setBizPayments(p.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")));
-      setBizSessions(ss.sort((a, b) => (b.date || "").localeCompare(a.date || "")));
+      const snap = await getDocs(query(collection(db, "project_links"), where("user_id", "==", uid)));
+      let links = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Self-heal: drop duplicate URLs (keep first), delete surplus docs
+      const seen = new Map(), dupes = [];
+      for (const l of links) {
+        const key = (l.url || "").replace(/\/+$/, "").toLowerCase();
+        if (seen.has(key)) dupes.push(l); else seen.set(key, l);
+      }
+      if (dupes.length) {
+        await Promise.all(dupes.map(d => deleteDoc(doc(db, "project_links", d.id))));
+        links = [...seen.values()];
+      }
+      // Empty collection → seed default links
+      if (links.length === 0) {
+        const created = await Promise.all(PROJ_DEFAULT_LINKS.map(l =>
+          addDoc(collection(db, "project_links"), { user_id: uid, group: l.group, name: l.name, url: l.url, desc: l.desc })
+        ));
+        links = PROJ_DEFAULT_LINKS.map((l, i) => ({ id: created[i].id, group: l.group, name: l.name, url: l.url, desc: l.desc }));
+      }
+      const planRef = doc(db, "project_plan", uid);
+      const planSnap = await getDoc(planRef);
+      if (planSnap.exists()) {
+        const statuses = planSnap.data().statuses || {};
+        setProjPlan(statuses); saveProjPlan(statuses);
+        // Version backfill: add new default links the user never had
+        const ver = planSnap.data().seedVer || 1;
+        if (ver < PROJ_SEED_VER) {
+          const have = new Set(links.map(l => (l.url || "").replace(/\/+$/, "").toLowerCase()));
+          const missing = PROJ_DEFAULT_LINKS.filter(l => !have.has(l.url.replace(/\/+$/, "").toLowerCase()));
+          if (missing.length) {
+            const created = await Promise.all(missing.map(l => addDoc(collection(db, "project_links"), { user_id: uid, group: l.group, name: l.name, url: l.url, desc: l.desc })));
+            links = [...links, ...missing.map((l, i) => ({ id: created[i].id, group: l.group, name: l.name, url: l.url, desc: l.desc }))];
+          }
+          await setDoc(planRef, { seedVer: PROJ_SEED_VER }, { merge: true });
+        }
+      } else {
+        await setDoc(planRef, { user_id: uid, statuses: {}, seeded: true, seedVer: PROJ_SEED_VER });
+        setProjPlan({}); saveProjPlan({});
+      }
+      links.sort((a, b) => PROJ_GROUPS.indexOf(a.group) - PROJ_GROUPS.indexOf(b.group) || (a.name || "").localeCompare(b.name || ""));
+      setProjLinks(links); saveProjLinks(links);
     } finally {
-      setBizLoading(false);
+      setProjLoading(false);
+      projBusyRef.current = false;
     }
   }, [session]);
 
-  function bizGoTo(v, opts = {}) {
-    if (opts.groupId) setBizGroupId(opts.groupId);
-    if (opts.oneOneId) setBizOneOneId(opts.oneOneId);
-    setBizView(v);
+  function projOpenLink(draft = { name: "", url: "", desc: "", group: "Other" }, editId = null) {
+    setProjError(""); setProjDraft(draft); setProjEditId(editId); setProjModal("link");
+  }
+  function projCloseModal() { setProjModal(null); setProjDraft(null); setProjEditId(null); setProjError(""); }
+
+  async function projSaveLink() {
+    if (!projDraft?.name?.trim()) { setProjError("Name is required"); return; }
+    let url = (projDraft.url || "").trim();
+    if (!url) { setProjError("URL is required"); return; }
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    const data = { group: projDraft.group || "Other", name: projDraft.name.trim(), url, desc: (projDraft.desc || "").trim() };
+    if (projEditId) await updateDoc(doc(db, "project_links", projEditId), data);
+    else await addDoc(collection(db, "project_links"), { ...data, user_id: projUid() });
+    projCloseModal();
+    loadProjData();
+  }
+  async function projDeleteLink(id) {
+    await deleteDoc(doc(db, "project_links", id));
+    setProjLinks(prev => { const next = prev.filter(l => l.id !== id); saveProjLinks(next); return next; });
+  }
+  async function projCyclePlan(taskId, current) {
+    const idx = PROJ_PLAN_STATUSES.indexOf(current);
+    const next = PROJ_PLAN_STATUSES[(idx + 1) % PROJ_PLAN_STATUSES.length];
+    const m = { ...projPlan, [taskId]: next };
+    setProjPlan(m); saveProjPlan(m);
+    const uid = projUid();
+    if (uid) await setDoc(doc(db, "project_plan", uid), { user_id: uid, statuses: m, seeded: true }, { merge: true });
   }
 
   const account = root.account;
@@ -914,14 +1033,14 @@ export default function App() {
   }, [habits, routineTargets]);
 
   useEffect(() => {
-    if (section === "business" && session) loadBizData();
-  }, [section, session, loadBizData]);
-
-  useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (section === "projects" && session) loadProjData();
+  }, [section, session, loadProjData]);
 
   // Escape closes the topmost open modal/sheet (WCAG 2.1.2 — no keyboard trap)
   useEffect(() => {
@@ -932,12 +1051,12 @@ export default function App() {
       else if (badHabitModal) setBadHabitModal(null);
       else if (slipModal) setSlipModal(null);
       else if (schedActModal) setSchedActModal(false);
-      else if (bizModal) bizCloseModal();
+      else if (projModal) projCloseModal();
       else if (isMobile && sidebarOpen) setSidebarOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [modal, habitModal, badHabitModal, slipModal, schedActModal, bizModal, isMobile, sidebarOpen]);
+  }, [modal, habitModal, badHabitModal, slipModal, schedActModal, projModal, isMobile, sidebarOpen]);
 
   useEffect(() => {
     document.body.style.overflow = (isMobile && sidebarOpen) ? "hidden" : "";
@@ -1199,145 +1318,6 @@ export default function App() {
     setEditPrayerTargets(false);
   }
 
-  // ── Business CRUD ─────────────────────────────────────────────────────────
-  const bizUid = () => session?.user?.id;
-
-  function bizOpenModal(type, draft = {}, editId = null) {
-    setBizError("");
-    setBizDraft(draft);
-    setBizEditId(editId);
-    setBizModal(type);
-  }
-  function bizCloseModal() { setBizModal(null); setBizDraft(null); setBizEditId(null); setBizError(""); }
-
-  async function bizSaveStudent() {
-    if (!bizDraft?.name?.trim()) { setBizError("Name is required"); return; }
-    if (!bizDraft?.school?.trim()) { setBizError("School is required"); return; }
-    const data = { name: bizDraft.name.trim(), school: bizDraft.school.trim(), enrolled_classes: bizDraft.enrolled_classes || "" };
-    if (bizEditId) await updateDoc(doc(db, "business_students", bizEditId), data);
-    else await addDoc(collection(db, "business_students"), { ...data, user_id: bizUid() });
-    bizCloseModal(); loadBizData();
-  }
-  async function bizDeleteStudent(id) {
-    await deleteDoc(doc(db, "business_students", id));
-    loadBizData();
-  }
-
-  async function bizSaveGroup() {
-    if (!bizDraft?.name?.trim()) { setBizError("Group name is required"); return; }
-    const data = { name: bizDraft.name.trim(), schedules: bizDraft.schedules || [], status: bizDraft.status || "active" };
-    if (bizEditId) await updateDoc(doc(db, "business_groups", bizEditId), data);
-    else await addDoc(collection(db, "business_groups"), { ...data, user_id: bizUid() });
-    bizCloseModal(); loadBizData();
-  }
-  async function bizDeleteGroup(id) {
-    const mems = await getDocs(query(collection(db, "business_group_members"), where("group_id", "==", id)));
-    await Promise.all(mems.docs.map(d => deleteDoc(d.ref)));
-    await deleteDoc(doc(db, "business_groups", id));
-    if (bizView === "biz-group-detail") bizGoTo("biz-groups");
-    loadBizData();
-  }
-
-  async function bizSaveMember() {
-    if (!bizDraft?.student_name?.trim()) { setBizError("Student name is required"); return; }
-    const data = { group_id: bizMemberGroupId, student_name: bizDraft.student_name.trim(), rate: +bizDraft.rate || 0, classes_attended: +bizDraft.classes_attended || 0, total_paid: +bizDraft.total_paid || 0 };
-    if (bizEditId) await updateDoc(doc(db, "business_group_members", bizEditId), data);
-    else await addDoc(collection(db, "business_group_members"), { ...data, user_id: bizUid() });
-    bizCloseModal(); loadBizData();
-  }
-  async function bizDeleteMember(id) {
-    await deleteDoc(doc(db, "business_group_members", id));
-    loadBizData();
-  }
-
-  async function bizSaveOneOne() {
-    if (!bizDraft?.student_name?.trim()) { setBizError("Student name is required"); return; }
-    if (!bizDraft?.subject?.trim()) { setBizError("Subject is required"); return; }
-    const data = { student_name: bizDraft.student_name.trim(), subject: bizDraft.subject.trim(), rate: +bizDraft.rate || 0, schedules: bizDraft.schedules || [], status: bizDraft.status || "active", classes_attended: +bizDraft.classes_attended || 0, total_paid: +bizDraft.total_paid || 0 };
-    if (bizEditId) await updateDoc(doc(db, "business_oneone", bizEditId), data);
-    else await addDoc(collection(db, "business_oneone"), { ...data, user_id: bizUid() });
-    bizCloseModal(); loadBizData();
-  }
-  async function bizDeleteOneOne(id) {
-    const pays = await getDocs(query(collection(db, "business_payments"), where("target_id", "==", id)));
-    await Promise.all(pays.docs.map(d => deleteDoc(d.ref)));
-    await deleteDoc(doc(db, "business_oneone", id));
-    if (bizView === "biz-oneone-detail") bizGoTo("biz-oneone");
-    loadBizData();
-  }
-
-  function bizAddClass(type, id, name) {
-    setBizClassTarget({ type, id, name });
-    bizOpenModal("addclass", { date: getTodayStr(), note: "" });
-  }
-
-  async function bizSaveClass() {
-    const t = bizClassTarget;
-    if (!t || !bizDraft?.date) { setBizError("Date is required"); return; }
-    setBizError("");
-    await addDoc(collection(db, "business_sessions"), { user_id: bizUid(), target_type: t.type, target_id: t.id, date: bizDraft.date, note: bizDraft.note || "", created_at: new Date().toISOString() });
-    if (t.type === "group") {
-      const groupMems = bizMembers.filter(m => m.group_id === t.id);
-      if (groupMems.length) await Promise.all(groupMems.map(m => updateDoc(doc(db, "business_group_members", m.id), { classes_attended: m.classes_attended + 1 })));
-    } else {
-      const oo = bizOneOnes.find(o => o.id === t.id);
-      if (oo) await updateDoc(doc(db, "business_oneone", t.id), { classes_attended: oo.classes_attended + 1 });
-    }
-    setBizModal(null); setBizDraft(null); setBizClassTarget(null); setBizError("");
-    loadBizData();
-  }
-
-  async function bizSavePayment() {
-    const t = bizPayTarget;
-    if (!t) return;
-    const amount = t.isCustom ? (+bizDraft?.custom_amount || 0) : t.rate;
-    if (!amount || amount <= 0) { setBizError("Amount must be greater than 0"); return; }
-    if (!bizDraft?.date) { setBizError("Date is required"); return; }
-    setBizError("");
-    await addDoc(collection(db, "business_payments"), { user_id: bizUid(), target_id: t.targetId, target_type: t.targetType, group_id: t.groupId || null, student_name: t.studentName, amount, date: bizDraft.date, is_custom: t.isCustom, note: bizDraft.note || "", created_at: new Date().toISOString() });
-    if (t.targetType === "groupMember") {
-      const m = bizMembers.find(x => x.id === t.targetId);
-      if (m) await updateDoc(doc(db, "business_group_members", t.targetId), { total_paid: m.total_paid + amount });
-    } else {
-      const oo = bizOneOnes.find(x => x.id === t.targetId);
-      if (oo) await updateDoc(doc(db, "business_oneone", t.targetId), { total_paid: oo.total_paid + amount });
-    }
-    setBizModal(null); setBizDraft(null); setBizPayTarget(null); setBizError("");
-    loadBizData();
-  }
-
-  async function bizSaveReschedule() {
-    const t = bizReschedTarget;
-    if (!t || !bizDraft?.date) { setBizError("Date is required"); return; }
-    if (bizDraft.date < getTodayStr()) { setBizError("Date must be today or future"); return; }
-    const table = t.targetType === "group" ? "business_groups" : "business_oneone";
-    await updateDoc(doc(db, table, t.targetId), { rescheduled_to: { date: bizDraft.date, time: bizDraft.time || "" } });
-    setBizModal(null); setBizDraft(null); setBizReschedTarget(null); setBizError("");
-    loadBizData();
-  }
-  async function bizClearReschedule() {
-    const t = bizReschedTarget;
-    if (!t) return;
-    const table = t.targetType === "group" ? "business_groups" : "business_oneone";
-    await updateDoc(doc(db, table, t.targetId), { rescheduled_to: null });
-    setBizModal(null); setBizDraft(null); setBizReschedTarget(null);
-    loadBizData();
-  }
-
-  function bizExportCSV() {
-    const rows = [["Date","Type","Class/Group","Student","Amount","Note"]];
-    [...bizPayments].sort((a, b) => (a.date||"").localeCompare(b.date||"")).forEach(p => {
-      const className = p.target_type === "groupMember" && p.group_id
-        ? (bizGroups.find(g => g.id === p.group_id)?.name || "")
-        : (bizOneOnes.find(o => o.id === p.target_id)?.subject || "");
-      rows.push([p.date||"", p.target_type==="groupMember"?"Group":"1-on-1", className, p.student_name||"", (+p.amount).toFixed(2), p.note||""]);
-    });
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = `ihsaned-payments-${getTodayStr()}.csv`;
-    a.click();
-  }
 
   // ── Auth loading ──────────────────────────────────────────────────────────
   if (authLoading) {
@@ -1471,7 +1451,7 @@ export default function App() {
     <div style={S.app}>
       {/* Screen-reader announcer for view changes (no-router SPA — WCAG 4.1.3) */}
       <div role="status" aria-live="polite" style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
-        {section === "business" ? `Business · ${bizView}` : view} view
+        {section === "projects" ? `Projects · ${projView}` : view} view
       </div>
       {/* ── Mobile top bar ── */}
       {isMobile && (
@@ -1489,17 +1469,17 @@ export default function App() {
       <aside style={{ ...S.sidebar, ...(isMobile ? { position: "fixed", top: 0, bottom: 0, left: 0, height: "auto", transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.25s ease", zIndex: 200, boxShadow: "4px 0 32px rgba(0,0,0,0.8)", width: 240 } : {}) }}>
         {/* Logo */}
         <div style={{ padding: "16px 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ ...S.logo, display: "flex", alignItems: "center", gap: 8 }}><i className={section === "business" ? "ph ph-briefcase" : "ph ph-leaf"} style={{ fontSize: 19, color: accentColor }} aria-hidden="true" />{section === "business" ? "IhsanEd" : "Recover"}</div>
+          <div style={{ ...S.logo, display: "flex", alignItems: "center", gap: 8 }}><i className={section === "projects" ? "ph ph-stack" : "ph ph-leaf"} style={{ fontSize: 19, color: section === "projects" ? PROJ_ACCENT : accentColor }} aria-hidden="true" />{section === "projects" ? "Projects" : "Recover"}</div>
           {isMobile && <button style={{ background: "none", border: "none", color: "var(--r-fg2)", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 0 }} onClick={() => setSidebarOpen(false)}>×</button>}
         </div>
 
-        {/* Personal / Business tabs */}
+        {/* Personal / Projects tabs */}
         <div style={{ padding: "0 12px 12px", borderBottom: "1px solid var(--r-bord)" }}>
           <div style={{ display: "flex", background: "var(--r-surf2)", borderRadius: 8, padding: 3, gap: 3 }}>
-            {["personal","business"].map(s => (
-              <button key={s} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", background: section === s ? (s === "business" ? BIZ_BLUE : accentColor) : "transparent", color: section === s ? (s === "business" ? "#fff" : "#fff") : "var(--r-fg2)", transition: "all 0.15s", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", letterSpacing: "-0.01em" }}
+            {["personal","projects"].map(s => (
+              <button key={s} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", background: section === s ? (s === "projects" ? PROJ_ACCENT : accentColor) : "transparent", color: section === s ? "#fff" : "var(--r-fg2)", transition: "all 0.15s", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", letterSpacing: "-0.01em" }}
                 onClick={() => { setSection(s); if (isMobile) setSidebarOpen(false); }}>
-                {s === "personal" ? "Personal" : "Business"}
+                {s === "personal" ? "Personal" : "Projects"}
               </button>
             ))}
           </div>
@@ -1561,25 +1541,21 @@ export default function App() {
           </div>
         </>)}
 
-        {section === "business" && (() => {
-          const bizNavItems = [
-            { id: "biz-dashboard", icon: "ph ph-squares-four", label: "Dashboard" },
-            { id: "biz-groups", icon: "ph ph-users-three", label: "Group Classes" },
-            { id: "biz-oneone", icon: "ph ph-user", label: "One-on-One" },
-            { id: "biz-schedule", icon: "ph ph-calendar-blank", label: "Schedule" },
-            { id: "biz-students", icon: "ph ph-student", label: "Students" },
-            { id: "biz-records", icon: "ph ph-receipt", label: "Records" },
+        {section === "projects" && (() => {
+          const projNavItems = [
+            { id: "links", icon: "ph ph-link-simple", label: "Links" },
+            { id: "plan", icon: "ph ph-list-checks", label: "Revival Plan" },
           ];
           return (<>
             <nav style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0", overscrollBehavior: "contain" }}>
-              {bizNavItems.map(n => {
-                const active = bizView === n.id || (n.id === "biz-groups" && bizView === "biz-group-detail") || (n.id === "biz-oneone" && bizView === "biz-oneone-detail");
+              {projNavItems.map(n => {
+                const active = projView === n.id;
                 return (
-                  <button key={n.id} style={{ ...S.navBtn, ...(active ? { background: BIZ_BLUE + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }}
-                    onClick={() => { bizGoTo(n.id); if (isMobile) setSidebarOpen(false); }}>
-                    <span style={{ ...S.navIcon, color: active ? BIZ_BLUE : "var(--r-fg2)" }} aria-hidden="true"><i className={n.icon} style={{ fontSize: 18 }} /></span>
+                  <button key={n.id} style={{ ...S.navBtn, ...(active ? { background: PROJ_ACCENT + "18", color: "var(--r-fg)", fontWeight: 600 } : {}) }}
+                    onClick={() => { setProjView(n.id); if (isMobile) setSidebarOpen(false); }}>
+                    <span style={{ ...S.navIcon, color: active ? PROJ_ACCENT : "var(--r-fg2)" }} aria-hidden="true"><i className={n.icon} style={{ fontSize: 18 }} /></span>
                     <span style={{ color: active ? "var(--r-fg)" : "var(--r-fg2)" }}>{n.label}</span>
-                    <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: active ? 20 : 0, transform: "translateY(-50%)", background: BIZ_BLUE, borderRadius: 2, transition: "height 260ms var(--r-ease-dawn)" }} />
+                    <div style={{ position: "absolute", left: 0, top: "50%", width: 3, height: active ? 20 : 0, transform: "translateY(-50%)", background: PROJ_ACCENT, borderRadius: 2, transition: "height 260ms var(--r-ease-dawn)" }} />
                   </button>
                 );
               })}
@@ -3523,811 +3499,152 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {/* ════════════════════════ BUSINESS SECTION ════════════════════════ */}
-      {section === "business" && (() => {
-        const today = getTodayStr();
-        const todayName = BIZ_ALL_DAYS[new Date().getDay()];
-        const todayLow = todayName.toLowerCase();
-        const todayGroups = bizGroups.filter(g => bizMatchesToday(g, todayName, today));
-        const todayOneOnes = bizOneOnes.filter(o => bizMatchesToday(o, todayName, today));
-        const totalOwed = bizMembers.reduce((t,m) => t + Math.max(0, m.classes_attended*m.rate - m.total_paid), 0)
-          + bizOneOnes.reduce((t,o) => t + Math.max(0, o.classes_attended*o.rate - o.total_paid), 0);
-        const totalEarned = bizMembers.reduce((t,m) => t + m.total_paid, 0) + bizOneOnes.reduce((t,o) => t + o.total_paid, 0);
-
-        const BizBtn = ({ children, style, ...p }) => (
-          <button style={{ border: "0.5px solid var(--r-bord)", background: "var(--r-surf2)", color: "var(--r-fg)", borderRadius: 7, padding: "7px 12px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", transition: "background 0.15s", ...style }} {...p}>{children}</button>
-        );
-        const BizPrimBtn = ({ children, style, ...p }) => (
-          <button style={{ background: BIZ_BLUE, color: "#fff", border: "none", borderRadius: 7, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", ...style }} {...p}>{children}</button>
-        );
+      {/* ════════════════════════ PROJECTS SECTION ════════════════════════ */}
+      {section === "projects" && (() => {
+        const allTasks = PROJ_PLAN.flatMap(ph => ph.tasks);
+        const eff = t => projPlan[t.id] || t.st;
+        const cnt = st => allTasks.filter(t => eff(t) === st).length;
+        const total = allTasks.length;
+        const doneN = cnt("Done"), progN = cnt("In progress"), notN = cnt("Not started"), blockN = cnt("Blocked");
+        const pct = total ? Math.round(doneN / total * 100) : 0;
+        const grouped = PROJ_GROUPS.map(g => ({ g, items: projLinks.filter(l => l.group === g) })).filter(x => x.items.length);
 
         return (
           <div style={S.content}>
-            {bizLoading && <div style={{ color: "var(--r-fg2)", fontSize: 13, marginBottom: 16 }}>Loading…</div>}
-
-            {/* ── DASHBOARD ── */}
-            {bizView === "biz-dashboard" && (<>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
+            {projLoading && <div style={{ color: "var(--r-fg2)", fontSize: 13, marginBottom: 16 }}>Loading…</div>}
+            {/* ── LINKS ── */}
+            {projView === "links" && (<>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 20 }}>
                 <div>
-                  <h2 style={{ ...S.pageTitle, marginBottom: 2 }}>Dashboard</h2>
-                  <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>Today is {todayName}</div>
+                  <h2 style={{ ...S.pageTitle, marginBottom: 2 }}>Links</h2>
+                  <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>{projLinks.length} shortcut{projLinks.length !== 1 ? "s" : ""} · quick access to everything</div>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <BizBtn onClick={() => bizOpenModal("student", { name:"", school:"", enrolled_classes:"" })}>+ Student</BizBtn>
-                  <BizBtn onClick={() => bizOpenModal("group", { name:"", schedules:[{day:"",time:""}], status:"active" })}>+ Group</BizBtn>
-                  <BizPrimBtn onClick={() => bizOpenModal("oneone", { student_name:"", subject:"", rate:"", schedules:[{day:"",time:""}], status:"active", classes_attended:0, total_paid:0 })}>+ 1-on-1</BizPrimBtn>
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 18 }}>
-                <BizStatCard label="Today's Classes" value={todayGroups.length + todayOneOnes.length} sub={todayName} />
-                <BizStatCard label="Outstanding" value={bizFmt$(totalOwed)} color={totalOwed > 0 ? BIZ_ORANGE : BIZ_GREEN} sub="Unpaid balance" />
-                <BizStatCard label="Collected" value={bizFmt$(totalEarned)} color={BIZ_GREEN} sub="All time" />
-                <BizStatCard label="Students" value={bizStudents.length} color={BIZ_BLUE} sub="Total roster" />
+                <button onClick={() => projOpenLink()} style={{ background: PROJ_ACCENT, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", flexShrink: 0 }}>
+                  <i className="ph ph-plus" aria-hidden="true" /> Add link
+                </button>
               </div>
 
-              {todayGroups.length === 0 && todayOneOnes.length === 0 ? (
+              {grouped.length === 0 ? (
                 <div style={{ ...S.card, textAlign: "center", padding: "48px 24px" }}>
-                  <div style={{ fontSize: 30, marginBottom: 12, color: "var(--r-fg3)" }} aria-hidden="true"><i className="ph ph-calendar-blank" /></div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--r-fg2)" }}>No classes scheduled for {todayName}</div>
+                  <div style={{ fontSize: 30, marginBottom: 12, color: "var(--r-fg3)" }} aria-hidden="true"><i className="ph ph-link-simple" /></div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--r-fg2)" }}>No links yet. Add your first one.</div>
                 </div>
-              ) : (
-                <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Today — {todayName} · {todayGroups.length + todayOneOnes.length} class{todayGroups.length+todayOneOnes.length !== 1 ? "es" : ""}</div>
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(280px,1fr))", gap: 12, marginBottom: 20 }}>
-                    {todayGroups.map(g => {
-                      const gm = bizMembers.filter(m => m.group_id === g.id);
-                      const overdue = gm.reduce((t,m) => t + Math.max(0, m.classes_attended*m.rate - m.total_paid), 0);
-                      return (
-                        <div key={g.id} style={{ ...S.card, cursor: "pointer", borderLeft: `3px solid ${BIZ_BLUE}` }} onClick={() => bizGoTo("biz-group-detail", { groupId: g.id })}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                            <div>
-                              <div style={{ fontSize: 14, fontWeight: 600 }}>{g.name}</div>
-                              <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 2 }}>{g.rescheduled_to?.date===today ? `Rescheduled · ${fmtTime(g.rescheduled_to.time)}` : bizFmtSchedules(g)}</div>
-                            </div>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: overdue > 0 ? BIZ_ORANGE : BIZ_GREEN, background: (overdue > 0 ? BIZ_ORANGE : BIZ_GREEN) + "18", padding: "2px 8px", borderRadius: 5, flexShrink: 0 }}>{overdue > 0 ? `${bizFmt$(overdue)} due` : "Paid"}</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginBottom: 10 }}>{gm.length} student{gm.length!==1?"s":""}</div>
-                          <div style={{ display: "flex", gap: 6, borderTop: "0.5px solid var(--r-bord)", paddingTop: 10 }}>
-                            <BizBtn style={{ flex: 1, justifyContent: "center" }} onClick={e => { e.stopPropagation(); bizAddClass("group", g.id, g.name); }}>+ Class</BizBtn>
-                            <BizBtn style={{ flex: 1, justifyContent: "center" }} onClick={e => { e.stopPropagation(); setBizReschedTarget({ targetType: "group", targetId: g.id, name: g.name }); bizOpenModal("reschedule", { date: g.rescheduled_to?.date||"", time: g.rescheduled_to?.time||"" }); }}>Reschedule</BizBtn>
-                            <BizPrimBtn style={{ flex: 1, justifyContent: "center" }} onClick={e => { e.stopPropagation(); bizGoTo("biz-group-detail", { groupId: g.id }); }}>View →</BizPrimBtn>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {todayOneOnes.map(o => {
-                      const overdue = Math.max(0, o.classes_attended * o.rate - o.total_paid);
-                      return (
-                        <div key={o.id} style={{ ...S.card, cursor: "pointer", borderLeft: `3px solid ${BIZ_PURPLE}` }} onClick={() => bizGoTo("biz-oneone-detail", { oneOneId: o.id })}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                            <div>
-                              <div style={{ fontSize: 14, fontWeight: 600 }}>{o.student_name}</div>
-                              <div style={{ fontSize: 11, color: "var(--r-fg2)", marginTop: 2 }}>{o.subject} · {o.rescheduled_to?.date===today ? `Rescheduled · ${fmtTime(o.rescheduled_to.time)}` : bizFmtSchedules(o)}</div>
-                            </div>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: overdue > 0 ? BIZ_ORANGE : BIZ_GREEN, background: (overdue > 0 ? BIZ_ORANGE : BIZ_GREEN) + "18", padding: "2px 8px", borderRadius: 5, flexShrink: 0 }}>{overdue > 0 ? `${bizFmt$(overdue)} due` : "Paid"}</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: "var(--r-fg2)", marginBottom: 10 }}>{bizFmt$(o.rate)}/class</div>
-                          <div style={{ display: "flex", gap: 6, borderTop: "0.5px solid var(--r-bord)", paddingTop: 10 }}>
-                            <BizBtn style={{ flex: 1, justifyContent: "center" }} onClick={e => { e.stopPropagation(); bizAddClass("oneone", o.id, o.student_name); }}>+ Class</BizBtn>
-                            <BizBtn style={{ flex: 1, justifyContent: "center" }} onClick={e => { e.stopPropagation(); setBizReschedTarget({ targetType: "oneone", targetId: o.id, name: o.student_name }); bizOpenModal("reschedule", { date: o.rescheduled_to?.date||"", time: o.rescheduled_to?.time||"" }); }}>Reschedule</BizBtn>
-                            <BizPrimBtn style={{ flex: 1, justifyContent: "center" }} onClick={e => { e.stopPropagation(); bizGoTo("biz-oneone-detail", { oneOneId: o.id }); }}>View →</BizPrimBtn>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Students</div>
-                <button style={S.linkBtn} onClick={() => bizGoTo("biz-students")}>All students →</button>
-              </div>
-              {bizStudents.length === 0 ? (
-                <div style={S.card}><BizEmptyState icon="ph ph-user" title="No students yet" sub="Add your first student above." /></div>
-              ) : (
-                <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                    <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                      {["Name","School","Classes","Total Due",""].map(h => <th key={h} style={{ textAlign: "left", padding: "9px 14px", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</th>)}
-                    </tr></thead>
-                    <tbody>
-                      {bizStudents.slice(0,5).map((s, i) => {
-                        const sMembers = bizMembers.filter(m => m.student_name === s.name);
-                        const sOO = bizOneOnes.filter(o => o.student_name === s.name);
-                        const due = sMembers.reduce((t,m) => t + Math.max(0, m.classes_attended*m.rate - m.total_paid), 0)
-                          + sOO.reduce((t,o) => t + Math.max(0, o.classes_attended*o.rate - o.total_paid), 0);
-                        return <tr key={s.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                          <td style={{ padding: "10px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><BizAvatar name={s.name} idx={i} sz={26} /><span style={{ fontWeight: 500 }}>{s.name}</span></div></td>
-                          <td style={{ padding: "10px 14px", color: "var(--r-fg2)", fontSize: 12 }}>{s.school||"—"}</td>
-                          <td style={{ padding: "10px 14px", color: "var(--r-fg2)", fontSize: 12 }}>{s.enrolled_classes||"—"}</td>
-                          <td style={{ padding: "10px 14px", fontWeight: 600, color: due > 0 ? BIZ_RED : BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(due)}</td>
-                          <td style={{ padding: "10px 14px", textAlign: "right" }}><button style={S.linkBtn} onClick={() => bizOpenModal("student", { name:s.name, school:s.school||"", enrolled_classes:s.enrolled_classes||"" }, s.id)}>Edit</button></td>
-                        </tr>;
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>)}
-
-            {/* ── STUDENTS ── */}
-            {bizView === "biz-students" && (<>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                <h2 style={S.pageTitle}>Students</h2>
-                <BizPrimBtn onClick={() => bizOpenModal("student", { name:"", school:"", enrolled_classes:"" })}>+ Add Student</BizPrimBtn>
-              </div>
-              {bizStudents.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-user" title="No students yet" sub="Add your first student to get started." /></div> : (
-                <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 520 }}>
-                    <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
-                      {["Name","School","Enrolled In","Group Due","1-on-1 Due","Total Due",""].map(h => <th key={h} style={{ textAlign: "left", padding: "9px 14px", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>)}
-                    </tr></thead>
-                    <tbody>
-                      {bizStudents.map((s, i) => {
-                        const sm = bizMembers.filter(m => m.student_name === s.name);
-                        const so = bizOneOnes.filter(o => o.student_name === s.name);
-                        const gDue = sm.reduce((t,m) => t + Math.max(0, m.classes_attended*m.rate - m.total_paid), 0);
-                        const oDue = so.reduce((t,o) => t + Math.max(0, o.classes_attended*o.rate - o.total_paid), 0);
-                        const total = gDue + oDue;
-                        return <tr key={s.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                          <td style={{ padding: "10px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><BizAvatar name={s.name} idx={i} sz={28} /><span style={{ fontWeight: 500 }}>{s.name}</span></div></td>
-                          <td style={{ padding: "10px 14px", color: "var(--r-fg2)" }}>{s.school||"—"}</td>
-                          <td style={{ padding: "10px 14px", color: "var(--r-fg2)" }}>{s.enrolled_classes||"—"}</td>
-                          <td style={{ padding: "10px 14px", fontWeight: 600, color: gDue > 0 ? BIZ_RED : "var(--r-fg2)", fontVariantNumeric: "tabular-nums" }}>{gDue > 0 ? bizFmt$(gDue) : "—"}</td>
-                          <td style={{ padding: "10px 14px", fontWeight: 600, color: oDue > 0 ? BIZ_RED : "var(--r-fg2)", fontVariantNumeric: "tabular-nums" }}>{oDue > 0 ? bizFmt$(oDue) : "—"}</td>
-                          <td style={{ padding: "10px 14px", fontWeight: 700, color: total > 0 ? BIZ_RED : BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(total)}</td>
-                          <td style={{ padding: "10px 14px", textAlign: "right" }}>
-                            <button style={S.linkBtn} onClick={() => bizOpenModal("student", { name:s.name, school:s.school||"", enrolled_classes:s.enrolled_classes||"" }, s.id)}>Edit</button>
-                            <button style={{ ...S.linkBtn, color: "var(--r-danger)", marginLeft: 8 }} onClick={() => { setBizConfirm({ title: `Delete ${s.name}?`, msg: "Removes student profile. Class records remain.", onConfirm: () => bizDeleteStudent(s.id) }); setBizModal("confirm"); }}>Del</button>
-                          </td>
-                        </tr>;
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>)}
-
-            {/* ── GROUPS ── */}
-            {bizView === "biz-groups" && (<>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                <h2 style={S.pageTitle}>Group Classes</h2>
-                <BizPrimBtn onClick={() => bizOpenModal("group", { name:"", schedules:[{day:"",time:""}], status:"active" })}>+ Create Group</BizPrimBtn>
-              </div>
-              {bizGroups.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-users-three" title="No group classes yet" sub="Create your first group class." /></div> : (
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
-                  {bizGroups.map(g => {
-                    const gm = bizMembers.filter(m => m.group_id === g.id);
-                    const overdue = gm.reduce((t,m) => t + Math.max(0, m.classes_attended*m.rate - m.total_paid), 0);
-                    const collected = gm.reduce((t,m) => t + m.total_paid, 0);
-                    return (
-                      <div key={g.id} style={{ ...S.card, cursor: "pointer", opacity: g.status==="inactive" ? 0.65 : 1 }} onClick={() => bizGoTo("biz-group-detail", { groupId: g.id })}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
-                              <span style={{ fontSize: 14, fontWeight: 600 }}>{g.name}</span>
-                              <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: g.status==="inactive" ? "rgba(255,255,255,0.06)" : BIZ_GREEN+"18", color: g.status==="inactive" ? "var(--r-fg2)" : BIZ_GREEN }}>{g.status==="inactive"?"Inactive":"Active"}</span>
-                            </div>
-                            <div style={{ fontSize: 11, color: "var(--r-fg2)" }}>{bizFmtSchedules(g)}</div>
-                          </div>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button style={S.linkBtn} onClick={e => { e.stopPropagation(); bizOpenModal("group", { name:g.name, schedules: bizGetSchedules(g), status:g.status }, g.id); }}>Edit</button>
-                            <button style={{ ...S.linkBtn, color: "var(--r-danger)" }} onClick={e => { e.stopPropagation(); setBizConfirm({ title: `Delete "${g.name}"?`, msg: "Deletes group and all member records.", onConfirm: () => bizDeleteGroup(g.id) }); setBizModal("confirm"); }}>Del</button>
-                          </div>
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0, borderTop: "0.5px solid var(--r-bord)", paddingTop: 12 }}>
-                          <div><div style={{ fontSize: 16, fontWeight: 700 }}>{gm.length}</div><div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Students</div></div>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: overdue>0?BIZ_ORANGE:BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(overdue)}</div><div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Overdue</div></div>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(collected)}</div><div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Paid</div></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>)}
-
-            {/* ── GROUP DETAIL ── */}
-            {bizView === "biz-group-detail" && (() => {
-              const g = bizGroups.find(x => x.id === bizGroupId);
-              if (!g) return <div style={{ color: "var(--r-fg2)", fontSize: 13 }}>Group not found.</div>;
-              const gm = bizMembers.filter(m => m.group_id === g.id);
-              const totalOwedG = gm.reduce((t,m) => t + m.classes_attended*m.rate, 0);
-              const totalPaidG = gm.reduce((t,m) => t + m.total_paid, 0);
-              const totalOverdueG = gm.reduce((t,m) => t + Math.max(0, m.classes_attended*m.rate - m.total_paid), 0);
-              return (<>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                  <div>
-                    <button style={S.linkBtn} onClick={() => bizGoTo("biz-groups")}>← Groups</button>
-                    <h2 style={{ ...S.pageTitle, marginTop: 4 }}>{g.name}</h2>
-                    <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>{bizFmtSchedules(g)}{g.status==="inactive"?" · Inactive":""}</div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <BizBtn onClick={() => bizOpenModal("group", { name:g.name, schedules: bizGetSchedules(g), status:g.status }, g.id)}>Edit</BizBtn>
-                    <BizBtn onClick={() => { setBizReschedTarget({ targetType: "group", targetId: g.id, name: g.name }); bizOpenModal("reschedule", { date: g.rescheduled_to?.date||"", time: g.rescheduled_to?.time||"" }); }}>Reschedule</BizBtn>
-                    <BizBtn onClick={() => { setBizMemberGroupId(g.id); bizOpenModal("member", { student_name:"", rate:"", classes_attended:0, total_paid:0 }); }}>+ Member</BizBtn>
-                    <BizPrimBtn onClick={() => bizAddClass("group", g.id, g.name)}>+ Class</BizPrimBtn>
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
-                  <BizStatCard label="Members" value={gm.length} />
-                  <BizStatCard label="Total Owed" value={bizFmt$(totalOwedG)} />
-                  <BizStatCard label="Collected" value={bizFmt$(totalPaidG)} color={BIZ_GREEN} />
-                  <BizStatCard label="Overdue" value={bizFmt$(totalOverdueG)} color={totalOverdueG>0?BIZ_RED:BIZ_GREEN} />
-                </div>
-                {gm.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-user" title="No members yet" sub='Click "+ Member" to add students to this group.' /></div> : (
-                  <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 560 }}>
-                      <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
-                        {["Student","Rate","Classes","Owed","Paid","Overdue",""].map(h => <th key={h} style={{ textAlign: "left", padding: "9px 14px", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>)}
-                      </tr></thead>
-                      <tbody>
-                        {gm.map((m, i) => {
-                          const owed = m.classes_attended * m.rate;
-                          const overdue = Math.max(0, owed - m.total_paid);
-                          return <tr key={m.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                            <td style={{ padding: "10px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><BizAvatar name={m.student_name} idx={i} sz={26} /><span style={{ fontWeight: 500 }}>{m.student_name}</span></div></td>
-                            <td style={{ padding: "10px 14px", fontVariantNumeric: "tabular-nums" }}>{bizFmt$(m.rate)}</td>
-                            <td style={{ padding: "10px 14px", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{m.classes_attended}</td>
-                            <td style={{ padding: "10px 14px", fontVariantNumeric: "tabular-nums" }}>{bizFmt$(owed)}</td>
-                            <td style={{ padding: "10px 14px", color: BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(m.total_paid)}</td>
-                            <td style={{ padding: "10px 14px", fontWeight: 700, color: overdue>0?BIZ_RED:BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(overdue)}</td>
-                            <td style={{ padding: "10px 14px", textAlign: "right" }}>
-                              <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                                <BizPrimBtn style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => { setBizPayTarget({ targetId:m.id, targetType:"groupMember", groupId:g.id, studentName:m.student_name, rate:m.rate, isCustom:false }); bizOpenModal("payment", { date: today, note: "" }); }}>Pay</BizPrimBtn>
-                                <BizBtn style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => { setBizPayTarget({ targetId:m.id, targetType:"groupMember", groupId:g.id, studentName:m.student_name, rate:m.rate, isCustom:true }); bizOpenModal("payment", { date: today, note: "", custom_amount: "" }); }}>Custom</BizBtn>
-                                <button style={S.linkBtn} onClick={() => { setBizMemberGroupId(g.id); bizOpenModal("member", { student_name:m.student_name, rate:m.rate, classes_attended:m.classes_attended, total_paid:m.total_paid }, m.id); }}>Edit</button>
-                                <button style={{ ...S.linkBtn, color: "var(--r-danger)" }} onClick={() => { setBizConfirm({ title: `Remove ${m.student_name}?`, msg: "Removes member. Payment records remain.", onConfirm: () => bizDeleteMember(m.id) }); setBizModal("confirm"); }}>Del</button>
-                              </div>
-                            </td>
-                          </tr>;
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {(() => {
-                  const groupSessions = bizSessions.filter(s => s.target_type === "group" && s.target_id === g.id);
-                  if (!groupSessions.length) return null;
-                  return (
-                    <div style={{ ...S.card, padding: 0, overflow: "auto", marginTop: 16 }}>
-                      <div style={{ padding: "10px 14px", borderBottom: "0.5px solid var(--r-bord)", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Session History ({groupSessions.length})</div>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                        <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                          {["Date","Note"].map(h => <th key={h} style={{ textAlign:"left", padding:"8px 14px", fontSize:10, fontWeight:700, color:"var(--r-fg2)", textTransform:"uppercase" }}>{h}</th>)}
-                        </tr></thead>
-                        <tbody>
-                          {groupSessions.map(s => <tr key={s.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                            <td style={{ padding:"9px 14px", color:"var(--r-fg2)", whiteSpace:"nowrap" }}>{s.date}</td>
-                            <td style={{ padding:"9px 14px" }}>{s.note||"—"}</td>
-                          </tr>)}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()}
-              </>);
-            })()}
-
-            {/* ── ONE-ON-ONE LIST ── */}
-            {bizView === "biz-oneone" && (<>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                <h2 style={S.pageTitle}>One-on-One</h2>
-                <BizPrimBtn onClick={() => bizOpenModal("oneone", { student_name:"", subject:"", rate:"", schedules:[{day:"",time:""}], status:"active", classes_attended:0, total_paid:0 })}>+ Create 1-on-1</BizPrimBtn>
-              </div>
-              {bizOneOnes.length === 0 ? <div style={S.card}><BizEmptyState icon="ph ph-user" title="No one-on-one classes yet" sub="Create your first individual class." /></div> : (
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
-                  {bizOneOnes.map((o, i) => {
-                    const owed = o.classes_attended * o.rate;
-                    const overdue = Math.max(0, owed - o.total_paid);
-                    return (
-                      <div key={o.id} style={{ ...S.card, cursor: "pointer", opacity: o.status==="inactive" ? 0.65 : 1 }} onClick={() => bizGoTo("biz-oneone-detail", { oneOneId: o.id })}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <BizAvatar name={o.student_name} idx={i} sz={34} />
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                                <span style={{ fontSize: 14, fontWeight: 600 }}>{o.student_name}</span>
-                                <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: o.status==="inactive" ? "rgba(255,255,255,0.06)" : BIZ_BLUE+"18", color: o.status==="inactive" ? "var(--r-fg2)" : BIZ_BLUE }}>{o.status==="inactive"?"Inactive":"Active"}</span>
-                              </div>
-                              <div style={{ fontSize: 11, color: "var(--r-fg2)" }}>{o.subject}</div>
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button style={S.linkBtn} onClick={e => { e.stopPropagation(); bizOpenModal("oneone", { student_name:o.student_name, subject:o.subject, rate:o.rate, schedules: bizGetSchedules(o), status:o.status, classes_attended:o.classes_attended, total_paid:o.total_paid }, o.id); }}>Edit</button>
-                            <button style={{ ...S.linkBtn, color: "var(--r-danger)" }} onClick={e => { e.stopPropagation(); setBizConfirm({ title: `Delete 1-on-1 with ${o.student_name}?`, msg: "Deletes class and all payment records.", onConfirm: () => bizDeleteOneOne(o.id) }); setBizModal("confirm"); }}>Del</button>
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--r-fg2)", marginBottom: 12 }}>{bizFmtSchedules(o)} · {bizFmt$(o.rate)}/class</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0, borderTop: "0.5px solid var(--r-bord)", paddingTop: 12 }}>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{o.classes_attended}</div><div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Classes</div></div>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(o.total_paid)}</div><div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Paid</div></div>
-                          <div><div style={{ fontSize: 16, fontWeight: 700, color: overdue>0?BIZ_ORANGE:BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(overdue)}</div><div style={{ fontSize: 10, color: "var(--r-fg2)", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Overdue</div></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>)}
-
-            {/* ── ONE-ON-ONE DETAIL ── */}
-            {bizView === "biz-oneone-detail" && (() => {
-              const o = bizOneOnes.find(x => x.id === bizOneOneId);
-              if (!o) return <div style={{ color: "var(--r-fg2)", fontSize: 13 }}>Class not found.</div>;
-              const owed = o.classes_attended * o.rate;
-              const overdue = Math.max(0, owed - o.total_paid);
-              const payments = bizPayments.filter(p => p.target_id === o.id).sort((a, b) => (b.date||"").localeCompare(a.date||""));
-              return (<>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                  <div>
-                    <button style={S.linkBtn} onClick={() => bizGoTo("biz-oneone")}>← One-on-One</button>
-                    <h2 style={{ ...S.pageTitle, marginTop: 4 }}>{o.student_name}</h2>
-                    <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>{o.subject} · {bizFmtSchedules(o)}{o.status==="inactive"?" · Inactive":""}</div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <BizBtn onClick={() => bizOpenModal("oneone", { student_name:o.student_name, subject:o.subject, rate:o.rate, schedules: bizGetSchedules(o), status:o.status, classes_attended:o.classes_attended, total_paid:o.total_paid }, o.id)}>Edit</BizBtn>
-                    <BizBtn onClick={() => { setBizReschedTarget({ targetType: "oneone", targetId: o.id, name: o.student_name }); bizOpenModal("reschedule", { date: o.rescheduled_to?.date||"", time: o.rescheduled_to?.time||"" }); }}>Reschedule</BizBtn>
-                    <BizBtn onClick={() => { setBizPayTarget({ targetId:o.id, targetType:"oneOnOne", groupId:null, studentName:o.student_name, rate:o.rate, isCustom:false }); bizOpenModal("payment", { date: today, note: "" }); }}>Add Payment</BizBtn>
-                    <BizBtn onClick={() => { setBizPayTarget({ targetId:o.id, targetType:"oneOnOne", groupId:null, studentName:o.student_name, rate:o.rate, isCustom:true }); bizOpenModal("payment", { date: today, note: "", custom_amount: "" }); }}>Custom</BizBtn>
-                    <BizPrimBtn onClick={() => bizAddClass("oneone", o.id, o.student_name)}>+ Class</BizPrimBtn>
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
-                  <BizStatCard label="Rate" value={bizFmt$(o.rate) + "/class"} />
-                  <BizStatCard label="Classes Attended" value={o.classes_attended} />
-                  <BizStatCard label="Paid" value={`${bizFmt$(o.total_paid)} / ${bizFmt$(owed)}`} color={BIZ_GREEN} />
-                  <BizStatCard label="Overdue" value={bizFmt$(overdue)} color={overdue>0?BIZ_RED:BIZ_GREEN} />
-                </div>
-                {payments.length === 0 ? (
-                  <div style={S.card}><BizEmptyState icon="ph ph-receipt" title="No payments recorded" sub="Use the buttons above to log a payment." /></div>
-                ) : (
-                  <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
-                    <div style={{ padding: "10px 14px", borderBottom: "0.5px solid var(--r-bord)", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Payment History</div>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                      <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                        {["Date","Amount","Type","Note"].map(h => <th key={h} style={{ textAlign: "left", padding: "8px 14px", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase" }}>{h}</th>)}
-                      </tr></thead>
-                      <tbody>
-                        {payments.map(p => <tr key={p.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                          <td style={{ padding: "9px 14px", color: "var(--r-fg2)" }}>{p.date||"—"}</td>
-                          <td style={{ padding: "9px 14px", fontWeight: 600, color: BIZ_GREEN, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(p.amount)}</td>
-                          <td style={{ padding: "9px 14px" }}><span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: p.is_custom ? BIZ_BLUE+"18" : BIZ_GREEN+"18", color: p.is_custom ? BIZ_BLUE : BIZ_GREEN }}>{p.is_custom?"Custom":"Standard"}</span></td>
-                          <td style={{ padding: "9px 14px", color: "var(--r-fg2)" }}>{p.note||"—"}</td>
-                        </tr>)}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {(() => {
-                  const ooSessions = bizSessions.filter(s => s.target_type === "oneone" && s.target_id === o.id);
-                  if (!ooSessions.length) return null;
-                  return (
-                    <div style={{ ...S.card, padding: 0, overflow: "auto", marginTop: 16 }}>
-                      <div style={{ padding: "10px 14px", borderBottom: "0.5px solid var(--r-bord)", fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Session History ({ooSessions.length})</div>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                        <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                          {["Date","Note"].map(h => <th key={h} style={{ textAlign:"left", padding:"8px 14px", fontSize:10, fontWeight:700, color:"var(--r-fg2)", textTransform:"uppercase" }}>{h}</th>)}
-                        </tr></thead>
-                        <tbody>
-                          {ooSessions.map(s => <tr key={s.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                            <td style={{ padding:"9px 14px", color:"var(--r-fg2)", whiteSpace:"nowrap" }}>{s.date}</td>
-                            <td style={{ padding:"9px 14px" }}>{s.note||"—"}</td>
-                          </tr>)}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()}
-              </>);
-            })()}
-
-            {/* ── SCHEDULE ── */}
-            {bizView === "biz-schedule" && (<>
-              <h2 style={{ ...S.pageTitle, marginBottom: 20 }}>Schedule</h2>
-              {BIZ_WEEK.map(day => {
-                const dayLow = day.toLowerCase();
-                const isToday = day.toLowerCase() === todayLow;
-                const dayGroups = bizGroups.filter(g => bizGetSchedules(g).some(s => s.day?.toLowerCase() === dayLow) && !(g.rescheduled_to?.date >= today));
-                const dayOOs = bizOneOnes.filter(o => bizGetSchedules(o).some(s => s.day?.toLowerCase() === dayLow) && !(o.rescheduled_to?.date >= today));
-                const reschedGroups = bizGroups.filter(g => g.rescheduled_to?.date >= today && new Date(g.rescheduled_to.date+"T12:00").toLocaleDateString("en-US",{weekday:"long"}) === day);
-                const reschedOOs = bizOneOnes.filter(o => o.rescheduled_to?.date >= today && new Date(o.rescheduled_to.date+"T12:00").toLocaleDateString("en-US",{weekday:"long"}) === day);
-                const items = [
-                  ...dayGroups.map(g => ({ ...g, _type:"group", _time: (bizGetSchedules(g).find(s=>s.day?.toLowerCase()===dayLow)||{}).time||"" })),
-                  ...dayOOs.map(o => ({ ...o, _type:"oneone", _time: (bizGetSchedules(o).find(s=>s.day?.toLowerCase()===dayLow)||{}).time||"" })),
-                  ...reschedGroups.map(g => ({ ...g, _type:"group", _time: g.rescheduled_to.time||"", _rescheduled: true })),
-                  ...reschedOOs.map(o => ({ ...o, _type:"oneone", _time: o.rescheduled_to.time||"", _rescheduled: true })),
-                ].sort((a,b) => (a._time||"99:99").localeCompare(b._time||"99:99"));
-                return (
-                  <div key={day} style={{ ...S.card, padding: 0, marginBottom: 12, border: isToday ? `1px solid ${BIZ_BLUE}` : "0.5px solid var(--r-bord)" }}>
-                    <div style={{ padding: "10px 14px", borderBottom: "0.5px solid var(--r-bord)", display: "flex", alignItems: "center", gap: 8, background: isToday ? BIZ_BLUE + "10" : "transparent" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: isToday ? "#93C5FD" : "var(--r-fg)" }}>{day}</span>
-                      {isToday && <span style={{ fontSize: 10, fontWeight: 700, color: BIZ_BLUE, background: BIZ_BLUE+"18", padding: "1px 7px", borderRadius: 4 }}>Today</span>}
-                      <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--r-fg2)" }}>{items.length} class{items.length!==1?"es":""}</span>
-                    </div>
-                    {items.length === 0 ? <div style={{ padding: "12px 16px", fontSize: 12, color: "var(--r-fg2)" }}>No classes scheduled</div> : items.map((item, idx) => (
-                      <div key={item.id + idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderTop: idx > 0 ? "0.5px solid var(--r-bord)" : "none", cursor: "pointer" }}
-                        onClick={() => item._type==="group" ? bizGoTo("biz-group-detail",{groupId:item.id}) : bizGoTo("biz-oneone-detail",{oneOneId:item.id})}>
-                        <div style={{ width: 30, height: 30, borderRadius: 8, background: item._type==="group" ? BIZ_BLUE+"18" : BIZ_PURPLE+"18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: item._type==="group" ? BIZ_BLUE : BIZ_PURPLE }} aria-hidden="true"><i className={item._type==="group"?"ph ph-users-three":"ph ph-user"} style={{ fontSize: 16 }} /></div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item._type==="group" ? item.name : item.student_name}</div>
-                          <div style={{ fontSize: 11, color: "var(--r-fg2)" }}>{item._type==="group" ? `Group · ${bizMembers.filter(m=>m.group_id===item.id).length} students` : item.subject}</div>
-                        </div>
-                        <div style={{ flexShrink: 0, textAlign: "right" }}>
-                          {item._time && <div style={{ fontSize: 12, fontWeight: 600, color: item._rescheduled ? BIZ_ORANGE : "var(--r-fg2)" }}>{fmtTime(item._time)}</div>}
-                          {item._rescheduled && <div style={{ fontSize: 10, color: BIZ_ORANGE }}>Rescheduled</div>}
-                        </div>
-                      </div>
+              ) : grouped.map(({ g, items }) => (
+                <div key={g} style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>{g} · {items.length}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill,minmax(184px,1fr))", gap: 12 }}>
+                    {items.map(l => (
+                      <ProjLinkTile key={l.id} link={l}
+                        onEdit={() => projOpenLink({ name: l.name, url: l.url, desc: l.desc || "", group: l.group }, l.id)}
+                        onDelete={() => projDeleteLink(l.id)} />
                     ))}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </>)}
 
-            {/* ── RECORDS ── */}
-            {bizView === "biz-records" && (<>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                <h2 style={S.pageTitle}>All Records</h2>
-                <BizBtn onClick={bizExportCSV}><i className="ph ph-download-simple" style={{ marginRight: 6 }} aria-hidden="true" />Export CSV</BizBtn>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
-                <BizStatCard label="Students" value={bizStudents.length} />
-                <BizStatCard label="Group Classes" value={bizGroups.length} />
-                <BizStatCard label="Total Collected" value={bizFmt$(totalEarned)} color={BIZ_GREEN} />
-                <BizStatCard label="Total Overdue" value={bizFmt$(totalOwed)} color={totalOwed>0?BIZ_RED:BIZ_GREEN} />
+            {/* ── PLAN ── */}
+            {projView === "plan" && (<>
+              <div style={{ marginBottom: 20 }}>
+                <h2 style={{ ...S.pageTitle, marginBottom: 2 }}>Revival Plan</h2>
+                <div style={{ fontSize: 12, color: "var(--r-fg2)" }}>Online presence revival · 29 Jun – 31 Aug 2026</div>
               </div>
 
-              {(() => {
-                const now = new Date();
-                const months = Array.from({ length: 6 }, (_, i) => {
-                  const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-                  const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-                  return { key, label: d.toLocaleDateString("en-US", { month: "short" }), isThis: i === 5,
-                    total: bizPayments.filter(p => (p.date||"").startsWith(key)).reduce((s,p) => s + p.amount, 0) };
-                });
-                const maxVal = Math.max(...months.map(m => m.total), 1);
-                const chartH = 90, barW = 38, gap = 14;
-                return (
-                  <div style={{ ...S.card, marginBottom: 20 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>Monthly Earnings</div>
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
-                      {months.map(m => {
-                        const pct = Math.max(2, (m.total / maxVal) * 100);
-                        return (
-                          <div key={m.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", gap: 4 }}>
-                            {m.total > 0 && <div style={{ fontSize: 10, color: "var(--r-fg2)", whiteSpace: "nowrap" }}>{bizFmt$(m.total)}</div>}
-                            <div style={{ width: "100%", height: `${pct}%`, background: m.isThis ? BIZ_BLUE : BIZ_BLUE + "55", borderRadius: "4px 4px 0 0", minHeight: 3 }} />
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+                <ProjStatCard label="Complete" value={pct + "%"} color={PROJ_ACCENT} sub={`${doneN}/${total} done`} />
+                <ProjStatCard label="In progress" value={progN} color="#f59e0b" sub="Active now" />
+                <ProjStatCard label="Not started" value={notN} color="#6b7280" sub="Queued" />
+                <ProjStatCard label="Blocked" value={blockN} color="#f87171" sub="Needs unblock" />
+              </div>
+              <div style={{ height: 6, background: "var(--r-surf2)", borderRadius: 999, overflow: "hidden", marginBottom: 8 }}>
+                <div style={{ height: "100%", width: `${pct}%`, background: PROJ_ACCENT, borderRadius: 999, transition: "width .3s" }} />
+              </div>
+              <div style={{ fontSize: 11, color: "var(--r-fg3)", marginBottom: 22 }}>Tap a status pill to cycle: Not started → In progress → Done → Blocked.</div>
+
+              {PROJ_PLAN.map(ph => (
+                <div key={ph.name} style={{ marginBottom: 18 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>{ph.name}</div>
+                    <div style={{ flex: 1, height: 1, background: "var(--r-bord)" }} />
+                    <div className="r-tnum" style={{ fontSize: 11, color: "var(--r-fg3)" }}>{ph.tasks.filter(t => eff(t) === "Done").length}/{ph.tasks.length}</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {ph.tasks.map(t => {
+                      const st = eff(t);
+                      const sc = projStatusColor(st);
+                      return (
+                        <div key={t.id} style={{ ...S.card, marginBottom: 0, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6, borderLeft: `3px solid ${sc}`, opacity: st === "Done" ? 0.72 : 1 }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: "-0.01em", textDecoration: st === "Done" ? "line-through" : "none", flex: 1 }}>{t.t}</div>
+                            <button onClick={() => projCyclePlan(t.id, st)} aria-label={`Status: ${st}, tap to change`} style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, border: `1px solid ${sc}40`, background: sc + "1a", color: sc, cursor: "pointer", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)", whiteSpace: "nowrap" }}>{st}</button>
                           </div>
-                        );
-                      })}
+                          {t.n && <div style={{ fontSize: 11.5, color: "var(--r-fg2)", lineHeight: 1.5 }}>{t.n}</div>}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 11, color: "var(--r-fg3)", alignItems: "center" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ph ph-calendar-blank" aria-hidden="true" />{t.s} – {t.e}</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ph ph-clock" aria-hidden="true" />{t.d}d</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: projPriColor(t.p) }}><i className="ph ph-flag" aria-hidden="true" />{t.p}</span>
+                            {t.dep !== "—" && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ph ph-arrow-bend-down-right" aria-hidden="true" />{t.dep}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ marginTop: 8, marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Content Calendar</div>
+                  <div style={{ flex: 1, height: 1, background: "var(--r-bord)" }} />
+                  <div style={{ fontSize: 11, color: "var(--r-fg3)" }}>~5 posts/wk</div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
+                  {PROJ_CALENDAR.map(w => (
+                    <div key={w.wk} style={{ ...S.card, marginBottom: 0, padding: "14px 16px" }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: PROJ_ACCENT, marginBottom: 10 }}>{w.wk}</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {w.posts.map((p, i) => (
+                          <div key={i} style={{ fontSize: 11.5, color: "var(--r-fg2)", lineHeight: 1.45, display: "flex", gap: 7 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: PROJ_ACCENT, marginTop: 6, flexShrink: 0 }} />
+                            <span>{p}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                      {months.map(m => (
-                        <div key={m.key} style={{ flex: 1, textAlign: "center", fontSize: 11, color: m.isThis ? "var(--r-fg)" : "var(--r-fg2)", fontWeight: m.isThis ? 600 : 400 }}>{m.label}</div>
+                  ))}
+                </div>
+              </div>
+            </>)}
+
+            {/* ── ADD / EDIT LINK MODAL ── */}
+            {projModal === "link" && projDraft && (
+              <div style={S.overlay} onClick={projCloseModal}>
+                <div style={{ ...S.modalBox, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+                  <div style={S.modalTitle}>{projEditId ? "Edit link" : "Add link"}</div>
+                  {projError && <div style={{ fontSize: 12, color: "var(--r-danger)", margin: "8px 0" }}>{projError}</div>}
+                  <div style={S.formRow}>
+                    <label style={S.formLabel}>Name</label>
+                    <input style={S.input} value={projDraft.name} autoFocus placeholder="Google Drive" onChange={e => setProjDraft(d => ({ ...d, name: e.target.value }))} />
+                  </div>
+                  <div style={{ ...S.formRow, marginTop: 12 }}>
+                    <label style={S.formLabel}>URL</label>
+                    <input style={S.input} value={projDraft.url} placeholder="drive.google.com" onChange={e => setProjDraft(d => ({ ...d, url: e.target.value }))} />
+                  </div>
+                  <div style={{ ...S.formRow, marginTop: 12 }}>
+                    <label style={S.formLabel}>Description (optional)</label>
+                    <input style={S.input} value={projDraft.desc} placeholder="Shared files" onChange={e => setProjDraft(d => ({ ...d, desc: e.target.value }))} />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ ...S.formLabel, marginBottom: 6 }}>Group</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {PROJ_GROUPS.map(g => (
+                        <button key={g} onClick={() => setProjDraft(d => ({ ...d, group: g }))} style={{ flex: 1, padding: "7px 4px", borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: "pointer", border: `1px solid ${projDraft.group === g ? PROJ_ACCENT : "var(--r-bord)"}`, background: projDraft.group === g ? PROJ_ACCENT + "1a" : "transparent", color: projDraft.group === g ? PROJ_ACCENT : "var(--r-fg2)", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" }}>{g}</button>
                       ))}
                     </div>
                   </div>
-                );
-              })()}
-
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Group Classes</div>
-              <div style={{ ...S.card, padding: 0, overflow: "auto", marginBottom: 20 }}>
-                {bizGroups.length === 0 ? <BizEmptyState icon="ph ph-users-three" title="No group classes" sub="" /> : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 500 }}>
-                    <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
-                      {["Name","Status","Schedule","Members","Collected","Overdue",""].map(h => <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:10, fontWeight:700, color:"var(--r-fg2)", textTransform:"uppercase", letterSpacing:"0.06em" }}>{h}</th>)}
-                    </tr></thead>
-                    <tbody>
-                      {bizGroups.map(g => {
-                        const gm = bizMembers.filter(m => m.group_id === g.id);
-                        const collected = gm.reduce((t,m) => t + m.total_paid, 0);
-                        const overdue = gm.reduce((t,m) => t + Math.max(0, m.classes_attended*m.rate - m.total_paid), 0);
-                        return <tr key={g.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                          <td style={{ padding:"10px 14px", fontWeight:500 }}>{g.name}</td>
-                          <td style={{ padding:"10px 14px" }}><span style={{ fontSize:10, fontWeight:600, padding:"1px 6px", borderRadius:4, background:g.status==="inactive"?"rgba(255,255,255,0.06)":BIZ_GREEN+"18", color:g.status==="inactive"?"var(--r-fg2)":BIZ_GREEN }}>{g.status==="inactive"?"Inactive":"Active"}</span></td>
-                          <td style={{ padding:"10px 14px", color:"var(--r-fg2)", fontSize:12 }}>{bizFmtSchedules(g)}</td>
-                          <td style={{ padding:"10px 14px", fontVariantNumeric:"tabular-nums" }}>{gm.length}</td>
-                          <td style={{ padding:"10px 14px", color:BIZ_GREEN, fontVariantNumeric:"tabular-nums" }}>{bizFmt$(collected)}</td>
-                          <td style={{ padding:"10px 14px", fontWeight:600, color:overdue>0?BIZ_RED:BIZ_GREEN, fontVariantNumeric:"tabular-nums" }}>{bizFmt$(overdue)}</td>
-                          <td style={{ padding:"10px 14px", textAlign:"right" }}><button style={S.linkBtn} onClick={() => bizGoTo("biz-group-detail",{groupId:g.id})}>View →</button></td>
-                        </tr>;
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>One-on-One Classes</div>
-              <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
-                {bizOneOnes.length === 0 ? <BizEmptyState icon="ph ph-user" title="No one-on-one classes" sub="" /> : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 600 }}>
-                    <thead><tr style={{ borderBottom: "0.5px solid var(--r-bord)", background: "var(--r-surf2)" }}>
-                      {["Student","Status","Subject","Schedule","Rate","Classes","Paid","Overdue",""].map(h => <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:10, fontWeight:700, color:"var(--r-fg2)", textTransform:"uppercase", letterSpacing:"0.06em" }}>{h}</th>)}
-                    </tr></thead>
-                    <tbody>
-                      {bizOneOnes.map(o => {
-                        const owed = o.classes_attended * o.rate;
-                        const overdue = Math.max(0, owed - o.total_paid);
-                        return <tr key={o.id} style={{ borderBottom: "0.5px solid var(--r-bord)" }}>
-                          <td style={{ padding:"10px 14px", fontWeight:500 }}>{o.student_name}</td>
-                          <td style={{ padding:"10px 14px" }}><span style={{ fontSize:10, fontWeight:600, padding:"1px 6px", borderRadius:4, background:o.status==="inactive"?"rgba(255,255,255,0.06)":BIZ_BLUE+"18", color:o.status==="inactive"?"var(--r-fg2)":BIZ_BLUE }}>{o.status==="inactive"?"Inactive":"Active"}</span></td>
-                          <td style={{ padding:"10px 14px", color:"var(--r-fg2)" }}>{o.subject}</td>
-                          <td style={{ padding:"10px 14px", color:"var(--r-fg2)", fontSize:12 }}>{bizFmtSchedules(o)}</td>
-                          <td style={{ padding:"10px 14px", fontVariantNumeric:"tabular-nums" }}>{bizFmt$(o.rate)}</td>
-                          <td style={{ padding:"10px 14px", fontVariantNumeric:"tabular-nums" }}>{o.classes_attended}</td>
-                          <td style={{ padding:"10px 14px", color:BIZ_GREEN, fontVariantNumeric:"tabular-nums" }}>{bizFmt$(o.total_paid)}</td>
-                          <td style={{ padding:"10px 14px", fontWeight:600, color:overdue>0?BIZ_RED:BIZ_GREEN, fontVariantNumeric:"tabular-nums" }}>{bizFmt$(overdue)}</td>
-                          <td style={{ padding:"10px 14px", textAlign:"right" }}><button style={S.linkBtn} onClick={() => bizGoTo("biz-oneone-detail",{oneOneId:o.id})}>View →</button></td>
-                        </tr>;
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </>)}
-
-            {/* ══ BUSINESS MODALS ══ */}
-
-            {/* Student modal */}
-            {bizModal === "student" && (
-              <div style={S.overlay} onClick={() => bizCloseModal()}>
-                <div style={{ ...S.modalBox, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-                  <div style={S.modalTitle}>{bizEditId ? "Edit Student" : "Add Student"}</div>
-                  {["name","school","enrolled_classes"].map(f => (
-                    <div key={f} style={{ ...S.formRow, marginBottom: 12 }}>
-                      <label style={S.formLabel}>{f==="name"?"Full Name *":f==="school"?"School *":"Classes Enrolled In"}</label>
-                      <input style={S.input} value={bizDraft?.[f]||""} placeholder={f==="name"?"e.g. Ahmad Ali":f==="school"?"e.g. King Fahad School":"e.g. Math, Physics"} onChange={e => setBizDraft(d => ({ ...d, [f]: e.target.value }))} autoFocus={f==="name"} />
-                    </div>
-                  ))}
-                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
-                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveStudent}>Save</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Group modal */}
-            {bizModal === "group" && (
-              <div style={S.overlay} onClick={() => bizCloseModal()}>
-                <div style={{ ...S.modalBox, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-                  <div style={S.modalTitle}>{bizEditId ? "Edit Group" : "Create Group Class"}</div>
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Group Name *</label>
-                    <input style={S.input} value={bizDraft?.name||""} placeholder="e.g. Group Class 1" onChange={e => setBizDraft(d => ({ ...d, name: e.target.value }))} autoFocus />
-                  </div>
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Status</label>
-                    <select style={S.input} value={bizDraft?.status||"active"} onChange={e => setBizDraft(d => ({ ...d, status: e.target.value }))}>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={S.formLabel}>Schedule Slots</label>
-                    {(bizDraft?.schedules||[]).map((slot, si) => (
-                      <div key={si} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                        <select style={{ ...S.input, flex: 1 }} value={slot.day||""} onChange={e => setBizDraft(d => ({ ...d, schedules: d.schedules.map((s,i) => i===si ? { ...s, day: e.target.value } : s) }))}>
-                          <option value="">— Day —</option>
-                          {BIZ_WEEK.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
-                        <input type="time" style={{ ...S.input, flex: 1 }} value={slot.time||""} onChange={e => setBizDraft(d => ({ ...d, schedules: d.schedules.map((s,i) => i===si ? { ...s, time: e.target.value } : s) }))} />
-                        <button style={{ ...S.deleteBtn, color: "var(--r-danger)", fontSize: 18 }} onClick={() => setBizDraft(d => ({ ...d, schedules: d.schedules.filter((_,i) => i!==si) }))}>×</button>
-                      </div>
-                    ))}
-                    <button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => setBizDraft(d => ({ ...d, schedules: [...(d.schedules||[]), { day:"", time:"" }] }))}>+ Add slot</button>
-                  </div>
-                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveGroup}>Save</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Member modal */}
-            {bizModal === "member" && (
-              <div style={S.overlay} onClick={() => bizCloseModal()}>
-                <div style={{ ...S.modalBox, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-                  <div style={S.modalTitle}>{bizEditId ? "Edit Member" : "Add Member"}</div>
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Student Name *</label>
-                    <select style={S.input} value={bizDraft?.student_name ? (bizStudents.find(s=>s.name===bizDraft.student_name) ? bizDraft.student_name : "__custom__") : ""} onChange={e => { const v = e.target.value; setBizDraft(d => ({ ...d, student_name: v === "__custom__" ? "" : v, _customName: v === "__custom__" })); }}>
-                      <option value="">— Select student —</option>
-                      {bizStudents.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                      <option value="__custom__">Enter manually…</option>
-                    </select>
-                    {(bizDraft?._customName || (!bizStudents.find(s=>s.name===bizDraft?.student_name) && bizDraft?.student_name)) && (
-                      <input style={{ ...S.input, marginTop: 6 }} value={bizDraft?.student_name||""} placeholder="Student name" onChange={e => setBizDraft(d => ({ ...d, student_name: e.target.value }))} />
-                    )}
-                  </div>
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Rate per Class ($) *</label>
-                    <input type="number" style={S.input} value={bizDraft?.rate||""} placeholder="50" min="0" step="0.01" onChange={e => setBizDraft(d => ({ ...d, rate: e.target.value }))} />
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                    <div style={S.formRow}>
-                      <label style={S.formLabel}>Classes Attended</label>
-                      <input type="number" style={S.input} value={bizDraft?.classes_attended||0} min="0" onChange={e => setBizDraft(d => ({ ...d, classes_attended: e.target.value }))} />
-                    </div>
-                    <div style={S.formRow}>
-                      <label style={S.formLabel}>Total Paid ($)</label>
-                      <input type="number" style={S.input} value={bizDraft?.total_paid||0} min="0" step="0.01" onChange={e => setBizDraft(d => ({ ...d, total_paid: e.target.value }))} />
-                    </div>
-                  </div>
-                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveMember}>Save</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* One-on-One modal */}
-            {bizModal === "oneone" && (
-              <div style={S.overlay} onClick={() => bizCloseModal()}>
-                <div style={{ ...S.modalBox, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-                  <div style={S.modalTitle}>{bizEditId ? "Edit 1-on-1" : "Create 1-on-1 Class"}</div>
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Student *</label>
-                    <select style={S.input} value={bizDraft?.student_name ? (bizStudents.find(s=>s.name===bizDraft.student_name) ? bizDraft.student_name : "__custom__") : ""} onChange={e => { const v = e.target.value; setBizDraft(d => ({ ...d, student_name: v === "__custom__" ? "" : v, _customName: v === "__custom__" })); }}>
-                      <option value="">— Select student —</option>
-                      {bizStudents.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                      <option value="__custom__">Enter manually…</option>
-                    </select>
-                    {(bizDraft?._customName || (!bizStudents.find(s=>s.name===bizDraft?.student_name) && bizDraft?.student_name)) && (
-                      <input style={{ ...S.input, marginTop: 6 }} value={bizDraft?.student_name||""} placeholder="Student name" onChange={e => setBizDraft(d => ({ ...d, student_name: e.target.value }))} />
-                    )}
-                  </div>
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Subject *</label>
-                    <input style={S.input} value={bizDraft?.subject||""} placeholder="e.g. Mathematics" onChange={e => setBizDraft(d => ({ ...d, subject: e.target.value }))} />
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                    <div style={S.formRow}>
-                      <label style={S.formLabel}>Rate/Class ($)</label>
-                      <input type="number" style={S.input} value={bizDraft?.rate||""} placeholder="60" min="0" step="0.01" onChange={e => setBizDraft(d => ({ ...d, rate: e.target.value }))} />
-                    </div>
-                    <div style={S.formRow}>
-                      <label style={S.formLabel}>Status</label>
-                      <select style={S.input} value={bizDraft?.status||"active"} onChange={e => setBizDraft(d => ({ ...d, status: e.target.value }))}>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={S.formLabel}>Schedule Slots</label>
-                    {(bizDraft?.schedules||[]).map((slot, si) => (
-                      <div key={si} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                        <select style={{ ...S.input, flex: 1 }} value={slot.day||""} onChange={e => setBizDraft(d => ({ ...d, schedules: d.schedules.map((s,i) => i===si ? { ...s, day: e.target.value } : s) }))}>
-                          <option value="">— Day —</option>
-                          {BIZ_WEEK.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
-                        <input type="time" style={{ ...S.input, flex: 1 }} value={slot.time||""} onChange={e => setBizDraft(d => ({ ...d, schedules: d.schedules.map((s,i) => i===si ? { ...s, time: e.target.value } : s) }))} />
-                        <button style={{ ...S.deleteBtn, color: "var(--r-danger)", fontSize: 18 }} onClick={() => setBizDraft(d => ({ ...d, schedules: d.schedules.filter((_,i) => i!==si) }))}>×</button>
-                      </div>
-                    ))}
-                    <button style={{ ...S.linkBtn, marginTop: 8 }} onClick={() => setBizDraft(d => ({ ...d, schedules: [...(d.schedules||[]), { day:"", time:"" }] }))}>+ Add slot</button>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                    <div style={S.formRow}>
-                      <label style={S.formLabel}>Classes Attended</label>
-                      <input type="number" style={S.input} value={bizDraft?.classes_attended||0} min="0" onChange={e => setBizDraft(d => ({ ...d, classes_attended: e.target.value }))} />
-                    </div>
-                    <div style={S.formRow}>
-                      <label style={S.formLabel}>Total Paid ($)</label>
-                      <input type="number" style={S.input} value={bizDraft?.total_paid||0} min="0" step="0.01" onChange={e => setBizDraft(d => ({ ...d, total_paid: e.target.value }))} />
-                    </div>
-                  </div>
-                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={bizCloseModal}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveOneOne}>Save</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Payment modal */}
-            {bizModal === "payment" && bizPayTarget && (
-              <div style={S.overlay} onClick={() => { setBizModal(null); setBizDraft(null); setBizPayTarget(null); setBizError(""); }}>
-                <div style={{ ...S.modalBox, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
-                  <div style={S.modalTitle}>{bizPayTarget.isCustom ? `Custom Payment — ${bizPayTarget.studentName}` : `Add Payment — ${bizPayTarget.studentName}`}</div>
-                  {!bizPayTarget.isCustom && (
-                    <div style={{ background: BIZ_BLUE + "10", border: `1px solid ${BIZ_BLUE}30`, borderRadius: 8, padding: "14px 16px", marginBottom: 14 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--r-fg2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Amount</div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: BIZ_BLUE, fontVariantNumeric: "tabular-nums" }}>{bizFmt$(bizPayTarget.rate)}</div>
-                    </div>
-                  )}
-                  {bizPayTarget.isCustom && (
-                    <div style={{ ...S.formRow, marginBottom: 12 }}>
-                      <label style={S.formLabel}>Custom Amount ($) *</label>
-                      <input type="number" style={S.input} min="0" step="0.01" placeholder="0.00" value={bizDraft?.custom_amount||""} onChange={e => setBizDraft(d => ({ ...d, custom_amount: e.target.value }))} autoFocus />
-                    </div>
-                  )}
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Date</label>
-                    <input type="date" style={S.input} value={bizDraft?.date||today} onChange={e => setBizDraft(d => ({ ...d, date: e.target.value }))} />
-                  </div>
-                  <div style={{ ...S.formRow, marginBottom: 14 }}>
-                    <label style={S.formLabel}>Note (optional)</label>
-                    <input style={S.input} placeholder="e.g. Cash payment" value={bizDraft?.note||""} onChange={e => setBizDraft(d => ({ ...d, note: e.target.value }))} />
-                  </div>
-                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={() => { setBizModal(null); setBizDraft(null); setBizPayTarget(null); setBizError(""); }}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_GREEN, color: "#fff" }} onClick={bizSavePayment}>Record Payment</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Reschedule modal */}
-            {bizModal === "reschedule" && bizReschedTarget && (
-              <div style={S.overlay} onClick={() => { setBizModal(null); setBizDraft(null); setBizReschedTarget(null); setBizError(""); }}>
-                <div style={{ ...S.modalBox, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
-                  <div style={S.modalTitle}>Reschedule — {bizReschedTarget.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--r-fg2)", lineHeight: 1.6, marginBottom: 14, padding: "10px 12px", background: BIZ_BLUE+"08", borderRadius: 7 }}>One-off only — after this date the class returns to its regular schedule.</div>
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>New Date *</label>
-                    <input type="date" style={S.input} value={bizDraft?.date||""} min={today} onChange={e => setBizDraft(d => ({ ...d, date: e.target.value }))} autoFocus />
-                  </div>
-                  <div style={{ ...S.formRow, marginBottom: 14 }}>
-                    <label style={S.formLabel}>New Time (optional)</label>
-                    <input type="time" style={S.input} value={bizDraft?.time||""} onChange={e => setBizDraft(d => ({ ...d, time: e.target.value }))} />
-                  </div>
-                  {bizError && <div style={{ fontSize: 12, color: "var(--r-danger)", marginBottom: 10 }}>{bizError}</div>}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {bizDraft?.date && <button style={{ ...S.primaryBtn, flex: 1, background: "rgba(239,68,68,0.1)", color: "var(--r-danger)" }} onClick={bizClearReschedule}>Clear</button>}
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={() => { setBizModal(null); setBizDraft(null); setBizReschedTarget(null); setBizError(""); }}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: BIZ_BLUE }} onClick={bizSaveReschedule}>Save</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Confirm modal */}
-            {bizModal === "confirm" && bizConfirm && (
-              <div style={S.overlay} onClick={() => { setBizModal(null); setBizConfirm(null); }}>
-                <div style={{ ...S.modalBox, maxWidth: 340, textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                  <div style={{ fontSize: 30, marginBottom: 12, color: "var(--r-caution)" }} aria-hidden="true"><i className="ph ph-warning" /></div>
-                  <div style={{ ...S.modalTitle, fontSize: 16, marginBottom: 6 }}>{bizConfirm.title}</div>
-                  <div style={{ fontSize: 13, color: "var(--r-fg2)", lineHeight: 1.6, marginBottom: 20 }}>{bizConfirm.msg}</div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)" }} onClick={() => { setBizModal(null); setBizConfirm(null); }}>Cancel</button>
-                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-danger)", color: "#fff" }} onClick={() => { bizConfirm.onConfirm(); setBizModal(null); setBizConfirm(null); }}>Confirm</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {bizModal === "addclass" && bizClassTarget && (
-              <div style={S.overlay} onClick={bizCloseModal}>
-                <div style={{ ...S.modalBox, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
-                  <div style={S.modalTitle}>Add Class — {bizClassTarget.name}</div>
-                  {bizClassTarget.type === "group" && (
-                    <div style={{ fontSize: 12, color: "var(--r-fg2)", marginBottom: 14 }}>
-                      Increments attendance for all {bizMembers.filter(m => m.group_id === bizClassTarget.id).length} members.
-                    </div>
-                  )}
-                  <div style={{ ...S.formRow, marginBottom: 12 }}>
-                    <label style={S.formLabel}>Date *</label>
-                    <input type="date" style={S.input} value={bizDraft?.date || ""} onChange={e => setBizDraft(d => ({ ...d, date: e.target.value }))} />
-                  </div>
-                  <div style={{ ...S.formRow, marginBottom: 16 }}>
-                    <label style={S.formLabel}>Note (optional)</label>
-                    <input style={S.input} placeholder="e.g. Covered algebra chapter 3…" value={bizDraft?.note || ""} onChange={e => setBizDraft(d => ({ ...d, note: e.target.value }))} />
-                  </div>
-                  {bizError && <div style={{ color: "var(--r-danger)", fontSize: 12, marginBottom: 10 }}>{bizError}</div>}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <BizPrimBtn style={{ flex: 1, justifyContent: "center" }} onClick={bizSaveClass}>Save Class</BizPrimBtn>
-                    <BizBtn style={{ flex: 1, justifyContent: "center" }} onClick={bizCloseModal}>Cancel</BizBtn>
+                  <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+                    <button style={{ ...S.primaryBtn, flex: 1, background: "var(--r-surf2)", color: "var(--r-fg2)", boxShadow: "none" }} onClick={projCloseModal}>Cancel</button>
+                    <button style={{ ...S.primaryBtn, flex: 1, background: PROJ_ACCENT, color: "#fff" }} onClick={projSaveLink}>Save</button>
                   </div>
                 </div>
               </div>

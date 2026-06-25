@@ -3,7 +3,7 @@ echo.
 echo 🌿 Recover App — Deploying to Cloudflare...
 echo.
 
-cd /d "%USERPROFILE%\Downloads\recover-app\recover-app"
+cd /d "D:\Claude\projects\recover-app\recover-app"
 
 git add .
 
