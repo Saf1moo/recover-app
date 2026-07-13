@@ -586,66 +586,52 @@ function saveProjLinks(l) { try { localStorage.setItem(PROJ_LINKS_KEY, JSON.stri
 function loadProjPlan() { try { const r = localStorage.getItem(PROJ_PLAN_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } }
 function saveProjPlan(s) { try { localStorage.setItem(PROJ_PLAN_KEY, JSON.stringify(s)); } catch {} }
 
-// Ihsan Education — Revival Tracker (29 Jun – 31 Aug 2026)
+// Ihsan Education — Revival Tracker (13 Jul – 15 Aug 2026) · content-first sprint to mid-August
 const PROJ_PLAN = [
-  { name: "1 · Foundations", tasks: [
-    { id: "t1", t: "Finalise logo & export full asset set", s: "29 Jun", e: "1 Jul", d: 3, st: "In progress", p: "High", dep: "—", n: "Lock colours/spacing, export profile crop + transparent PNG + favicon" },
-    { id: "t2", t: "Website v1 live on ihsaneducation.com.au", s: "29 Jun", e: "3 Jul", d: 5, st: "In progress", p: "High", dep: "—", n: "Pick prototype, fix links/images, mobile QA, deploy" },
-    { id: "t3", t: "Student web app MVP (login + resources + recordings)", s: "29 Jun", e: "11 Jul", d: 13, st: "In progress", p: "High", dep: "—", n: "ihsan-studio-test.pages.dev — get to genuinely usable" },
-    { id: "t4", t: "Web app polish + soft launch to current students", s: "13 Jul", e: "17 Jul", d: 5, st: "Not started", p: "High", dep: "App MVP", n: "Invite current students, collect feedback" },
+  { name: "0 · Completed", tasks: [
+    { id: "r1", t: "New logo designed & applied to Instagram", s: "8 Jul", e: "11 Jul", d: 4, st: "Done", p: "High", dep: "—", n: "Done" },
+    { id: "r2", t: "Highlight covers designed & applied", s: "10 Jul", e: "12 Jul", d: 3, st: "Done", p: "Med", dep: "—", n: "Done" },
+    { id: "r3", t: "Rebrand reveal post published", s: "12 Jul", e: "12 Jul", d: 1, st: "Done", p: "High", dep: "—", n: "Done" },
+    { id: "r4", t: "Student testimonials collected (8–12)", s: "6 Jul", e: "12 Jul", d: 7, st: "Done", p: "High", dep: "—", n: "Ready to turn into posts" },
   ]},
-  { name: "2 · IG Rebrand", tasks: [
-    { id: "t5", t: "New profile pic + bio rewrite", s: "2 Jul", e: "2 Jul", d: 1, st: "Not started", p: "High", dep: "Logo", n: "5 mentors/scores + free-consult CTA + link" },
-    { id: "t6", t: "Design highlight covers (set of 6)", s: "2 Jul", e: "3 Jul", d: 2, st: "Not started", p: "Med", dep: "Logo", n: "Reviews / Roadmap / Mentors / Webinar / App / Workshops" },
-    { id: "t7", t: "Reorganise & refresh highlights", s: "6 Jul", e: "6 Jul", d: 1, st: "Not started", p: "Med", dep: "Covers", n: "Apply covers, tidy saved stories" },
-    { id: "t8", t: "Rebrand reveal post", s: "7 Jul", e: "7 Jul", d: 1, st: "Not started", p: "High", dep: "Profile+covers", n: "Before/after 'we levelled up' carousel" },
+  { name: "1 · Launch This Week", tasks: [
+    { id: "r5", t: "Final QA + PUBLISH website", s: "13 Jul", e: "15 Jul", d: 3, st: "In progress", p: "High", dep: "—", n: "★ Go live by Wed 15 Jul" },
+    { id: "r6", t: "Student app: final polish + DEMO to students", s: "13 Jul", e: "16 Jul", d: 4, st: "In progress", p: "High", dep: "—", n: "★ Demo by mid-week" },
   ]},
-  { name: "3 · Reviews", tasks: [
-    { id: "t9", t: "Collect student testimonials (8–12)", s: "29 Jun", e: "5 Jul", d: 7, st: "Not started", p: "High", dep: "—", n: "Async — DM current students, chase replies" },
-    { id: "t10", t: "Design reusable review graphic template", s: "6 Jul", e: "6 Jul", d: 1, st: "Not started", p: "Med", dep: "—", n: "On-brand, one template, swap text" },
-    { id: "t11", t: "Post reviews batch 1 (3–4 posts)", s: "8 Jul", e: "12 Jul", d: 5, st: "Not started", p: "High", dep: "Template+testimonials", n: "One every ~2 days to revive the page" },
+  { name: "2 · Content Engine", tasks: [
+    { id: "r7", t: "Build reusable review post template", s: "13 Jul", e: "14 Jul", d: 2, st: "Not started", p: "High", dep: "—", n: "Do first — unblocks review posting" },
+    { id: "r8", t: "Post student reviews (rotate through batch)", s: "15 Jul", e: "15 Aug", d: 32, st: "Not started", p: "High", dep: "Template", n: "RECURRING — start immediately" },
+    { id: "r9", t: "SAC tips carousels (essay ranking, study tips)", s: "14 Jul", e: "15 Aug", d: 33, st: "Not started", p: "High", dep: "—", n: "RECURRING — main content pillar right now" },
+    { id: "r10", t: "Batch-edit webinar clips from YouTube (4–6)", s: "14 Jul", e: "17 Jul", d: 4, st: "Not started", p: "High", dep: "—", n: "Reuse existing footage" },
+    { id: "r11", t: "Post webinar clips", s: "17 Jul", e: "15 Aug", d: 30, st: "Not started", p: "Med", dep: "Clips edited", n: "RECURRING" },
+    { id: "r12", t: "Hold 5 posts/wk + reply to DMs daily", s: "13 Jul", e: "15 Aug", d: 34, st: "Not started", p: "High", dep: "—", n: "RECURRING — the engine; see Content Calendar" },
   ]},
-  { name: "4 · Content Engine", tasks: [
-    { id: "t12", t: "Set up content calendar / batching system", s: "6 Jul", e: "6 Jul", d: 1, st: "Not started", p: "High", dep: "—", n: "Never post blind" },
-    { id: "t13", t: "Batch-edit webinar clips from YouTube (4–6)", s: "8 Jul", e: "10 Jul", d: 3, st: "Not started", p: "High", dep: "—", n: "Reuse existing webinar footage" },
-    { id: "t14", t: "Draft 2 tips carousels", s: "9 Jul", e: "10 Jul", d: 2, st: "Not started", p: "Med", dep: "—", n: "e.g. SAC mistakes, 50-study schedule" },
-    { id: "t15", t: "Run consistent posting cadence (4–5/wk)", s: "13 Jul", e: "31 Aug", d: 50, st: "Not started", p: "High", dep: "Calendar", n: "RECURRING — see Content Calendar" },
-    { id: "t16", t: "Website + app preview posts", s: "13 Jul", e: "31 Aug", d: 50, st: "Not started", p: "Med", dep: "—", n: "RECURRING — sprinkle through the weeks" },
+  { name: "3 · Personal Brand & Interviews", tasks: [
+    { id: "r13", t: "Film personal VCE-journey videos (2–3)", s: "14 Jul", e: "18 Jul", d: 5, st: "Not started", p: "Med", dep: "—", n: "Raw story content" },
+    { id: "r14", t: "Post journey videos as collab (personal + Ihsan)", s: "18 Jul", e: "15 Aug", d: 29, st: "Not started", p: "Med", dep: "Filming", n: "RECURRING — build personal brand" },
+    { id: "r15", t: "Reach out + book high-achiever interview", s: "14 Jul", e: "16 Jul", d: 3, st: "Not started", p: "High", dep: "—", n: "Past high achievers / alumni" },
+    { id: "r16", t: "Film interview", s: "20 Jul", e: "22 Jul", d: 3, st: "Not started", p: "Med", dep: "Booking", n: "Lock a date" },
+    { id: "r17", t: "Edit + publish interview", s: "22 Jul", e: "26 Jul", d: 5, st: "Not started", p: "Med", dep: "Filming", n: "Tease then full" },
   ]},
-  { name: "5 · Personal Brand", tasks: [
-    { id: "t17", t: "Film personal VCE-journey videos (2–3)", s: "13 Jul", e: "15 Jul", d: 3, st: "Not started", p: "Med", dep: "—", n: "Raw story content" },
-    { id: "t18", t: "Edit + post as collab (personal + Ihsan)", s: "16 Jul", e: "26 Jul", d: 11, st: "Not started", p: "Med", dep: "Filming", n: "Collab posts to build personal brand" },
+  { name: "4 · VCE App Teasers", tasks: [
+    { id: "r18", t: "VCE app teaser posts (VCE AI + features)", s: "21 Jul", e: "15 Aug", d: 26, st: "Not started", p: "Med", dep: "—", n: "RECURRING — teasers only until demo-able" },
   ]},
-  { name: "6 · Collabs", tasks: [
-    { id: "t19", t: "Reach out + book high-achiever interview", s: "13 Jul", e: "14 Jul", d: 2, st: "Not started", p: "Med", dep: "—", n: "Past high achievers / alumni" },
-    { id: "t20", t: "Film interview", s: "22 Jul", e: "22 Jul", d: 1, st: "Not started", p: "Med", dep: "Booking", n: "Lock a date" },
-    { id: "t21", t: "Edit + publish interview", s: "23 Jul", e: "27 Jul", d: 5, st: "Not started", p: "Med", dep: "Filming", n: "Tease then full" },
-  ]},
-  { name: "7 · VCE App", tasks: [
-    { id: "t22", t: "First VCE app teaser (VCE AI + features)", s: "20 Jul", e: "21 Jul", d: 2, st: "Not started", p: "Med", dep: "—", n: "Separate from student app — build hype" },
-    { id: "t23", t: "Ongoing teasers as build progresses", s: "27 Jul", e: "31 Aug", d: 36, st: "Not started", p: "Low", dep: "—", n: "RECURRING — teasers until demo-able" },
-  ]},
-  { name: "8 · School Expansion", tasks: [
-    { id: "t24", t: "Build target school list", s: "20 Jul", e: "21 Jul", d: 2, st: "Not started", p: "High", dep: "—", n: "Start with network / community schools" },
-    { id: "t25", t: "Write outreach pitch + workshop deck", s: "22 Jul", e: "24 Jul", d: 3, st: "Not started", p: "High", dep: "—", n: "Free webinar/workshop offer; email + slides" },
-    { id: "t26", t: "Send outreach batch 1 + follow up", s: "27 Jul", e: "1 Aug", d: 6, st: "Not started", p: "High", dep: "Pitch+list", n: "Personalise, follow up after 3–4 days" },
-    { id: "t27", t: "'Free school workshops' IG announcement", s: "28 Jul", e: "28 Jul", d: 1, st: "Not started", p: "Med", dep: "Pitch", n: "Doubles as outreach + content" },
-    { id: "t28", t: "Outreach batch 2 + follow up", s: "3 Aug", e: "14 Aug", d: 12, st: "Not started", p: "Med", dep: "Batch 1", n: "Widen the net" },
-    { id: "t29", t: "Schedule & confirm first workshops", s: "3 Aug", e: "16 Aug", d: 14, st: "Not started", p: "High", dep: "Replies", n: "Dependent on school replies" },
-    { id: "t30", t: "Deliver first in-person webinars / workshops", s: "10 Aug", e: "31 Aug", d: 22, st: "Not started", p: "High", dep: "Scheduling", n: "Some slip into Sept — normal" },
-    { id: "t31", t: "Post-workshop upsell: tutoring + VCE app", s: "17 Aug", e: "31 Aug", d: 15, st: "Not started", p: "High", dep: "Workshops", n: "Pitch same schools after each session" },
-  ]},
-  { name: "9 · Ongoing Habits", tasks: [
-    { id: "t32", t: "Engage / reply to DMs & comments (daily)", s: "29 Jun", e: "31 Aug", d: 64, st: "Not started", p: "High", dep: "—", n: "DAILY — algorithm + trust" },
-    { id: "t33", t: "Weekly metrics review + plan next week", s: "29 Jun", e: "31 Aug", d: 64, st: "Not started", p: "Med", dep: "—", n: "WEEKLY — what worked, what's next" },
+  { name: "5 · School Expansion", tasks: [
+    { id: "r19", t: "Build target school list", s: "16 Jul", e: "18 Jul", d: 3, st: "Not started", p: "High", dep: "—", n: "Start with network / community schools" },
+    { id: "r20", t: "Write outreach pitch + workshop one-pager", s: "18 Jul", e: "22 Jul", d: 5, st: "Not started", p: "High", dep: "—", n: "Free webinar/workshop offer" },
+    { id: "r21", t: "SEND outreach emails to schools", s: "23 Jul", e: "24 Jul", d: 2, st: "Not started", p: "High", dep: "Pitch+list", n: "★ Deadline: Fri 24 Jul" },
+    { id: "r22", t: "'Free school workshops' IG announcement", s: "24 Jul", e: "24 Jul", d: 1, st: "Not started", p: "Med", dep: "Pitch", n: "Doubles as content" },
+    { id: "r23", t: "Follow up + schedule workshops", s: "27 Jul", e: "8 Aug", d: 13, st: "Not started", p: "High", dep: "Emails sent", n: "Chase replies" },
+    { id: "r24", t: "Deliver first workshops / lock bookings", s: "4 Aug", e: "15 Aug", d: 12, st: "Not started", p: "High", dep: "Scheduling", n: "Some delivery may fall just after mid-Aug — school calendars" },
+    { id: "r25", t: "Post-workshop upsell: tutoring + VCE app", s: "11 Aug", e: "15 Aug", d: 5, st: "Not started", p: "High", dep: "Workshops", n: "Pitch same schools after each session" },
   ]},
 ];
 
 const PROJ_CALENDAR = [
-  { wk: "Wk of 13 Jul", posts: ["Review — Student review #4 graphic", "Webinar clip — 'biggest VCE mistake'", "Tips — start a 50-study schedule", "Site/App — new website tour", "Personal — my Year 12 timetable"] },
-  { wk: "Wk of 20 Jul", posts: ["VCE App teaser — Meet the VCE AI", "Webinar clip — SAC strategy", "Review — Student review #5", "Tips — active recall in 3 steps", "Personal — how I handled burnout"] },
-  { wk: "Wk of 27 Jul", posts: ["Announcement — Free school workshops booking", "Webinar clip — essay structure", "Site/App — students can access recordings", "Tips — my exam-week routine", "Collab — high-achiever interview teaser"] },
-  { wk: "Wk of 3 Aug", posts: ["Review — Student review #6", "Collab — high-achiever interview full", "Webinar clip — time management", "VCE App teaser — feature spotlight", "Personal — results day, my story"] },
+  { wk: "Wk of 13 Jul", posts: ["Review — First student review post", "SAC tips — Ranking the parts of an essay intro", "Site/App — Website LIVE + student app demo", "Webinar clip — Clip 1: biggest VCE mistake", "Personal — My Year 12 timetable (collab)"] },
+  { wk: "Wk of 20 Jul", posts: ["VCE App teaser — Meet the VCE AI", "SAC tips — Ranking essay body paragraphs", "Review — Student review #2", "Announcement — Free school workshops, now booking", "Personal — How I handled burnout (collab)"] },
+  { wk: "Wk of 27 Jul", posts: ["Interview — High-achiever interview teaser", "SAC tips — Top SAC mistakes, ranked", "Review — Student review #3", "Webinar clip — Clip 2: SAC strategy", "Personal — Results day, my story (collab)"] },
+  { wk: "Wk of 3 Aug", posts: ["Interview — High-achiever interview, full", "SAC tips — Building a 50 study schedule", "Review — Student review #4", "VCE App teaser — Feature spotlight", "Site/App — Student app walkthrough"] },
 ];
 
 const PROJ_PLAN_STATUSES = ["Not started", "In progress", "Done", "Blocked"];
@@ -3585,7 +3571,7 @@ export default function App() {
                   <div style={{ flex: 1, minWidth: 0, textAlign: isMobile ? "center" : "left" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: PROJ_ACCENT, textTransform: "uppercase", marginBottom: 7 }}>Revival Journey</div>
                     <h2 style={{ fontFamily: HERO_FONT, fontWeight: 500, fontSize: "clamp(1.5rem,1.2rem + 1.4vw,2rem)", lineHeight: 1.04, letterSpacing: "-0.015em", marginBottom: 7 }}>Ihsan Education<br />online revival</h2>
-                    <div style={{ fontSize: 12.5, color: "var(--r-fg2)", marginBottom: 14 }}>29 Jun – 31 Aug 2026 · {doneN}/{total} tasks done</div>
+                    <div style={{ fontSize: 12.5, color: "var(--r-fg2)", marginBottom: 14 }}>13 Jul – 15 Aug 2026 · {doneN}/{total} tasks done</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: isMobile ? "center" : "flex-start" }}>
                       {[["In progress", progN, "#f59e0b"], ["Queued", notN, "#9ca3af"], ["Blocked", blockN, "#f87171"]].map(([l, v, c]) => (
                         <div key={l} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 999, background: "rgba(255,255,255,0.04)", border: "1px solid var(--r-bord)" }}>
@@ -3597,7 +3583,7 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-                {/* 9-segment phase bar */}
+                {/* phase bar — one segment per phase */}
                 <div style={{ display: "flex", gap: 4, marginTop: 18, position: "relative" }}>
                   {PROJ_PLAN.map(ph => {
                     const ps = projPhaseState(ph.tasks, eff);
