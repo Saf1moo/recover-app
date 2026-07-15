@@ -561,7 +561,14 @@ function SunArc({ prayers, prayerTargets, onLog }) {
 }
 
 // ─── Projects section ─────────────────────────────────────────────────────────
-const PROJ_ACCENT = "#7c6cf6";
+const PROJ_ACCENT = "#7c6cf6"; // brand purple — UI (borders/dots/fills/glow) only
+// Readable text variants — raw #7c6cf6 is ~3.4:1 on the light "almanac" paper.
+// Darkened for light, lightened for dark; both clear 4.5:1 (WCAG 1.4.3).
+const projAccentText = () => CURRENT_LIGHT ? "#5b4bd6" : "#b3a4ff";
+// Status/priority as TEXT routes through the theme-verified score tokens
+// (crit/low/high already commented "≥4.5:1 on paper"); raw hex stays for dots/borders.
+const projStatusText = st => st === "Done" ? "var(--r-success)" : st === "In progress" ? "var(--r-caution)" : st === "Blocked" ? "var(--r-danger)" : "var(--r-fg2)";
+const projPriText = p => p === "High" ? "var(--r-danger)" : p === "Med" ? "var(--r-caution)" : "var(--r-fg2)";
 const PROJ_LINKS_KEY = "recover_proj_links_v1";
 const PROJ_PLAN_KEY = "recover_proj_plan_v1";
 const PROJ_GROUPS = ["Live Sites", "Infrastructure", "Other"];
@@ -638,6 +645,51 @@ const PROJ_PLAN_STATUSES = ["Not started", "In progress", "Done", "Blocked"];
 const projStatusColor = st => st === "Done" ? "#22c55e" : st === "In progress" ? "#f59e0b" : st === "Blocked" ? "#f87171" : "#6b7280";
 const projPriColor = p => p === "High" ? "#f87171" : p === "Med" ? "#f59e0b" : "#6b7280";
 
+// ─── Schedule helpers · turn "13 Jul" task windows into a day-by-day agenda ────
+const PROJ_YEAR = 2026;
+const PROJ_MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+// "13 Jul" → local-midnight Date in PROJ_YEAR. Null on bad data (degrades to "Later").
+function projTaskDate(str) {
+  if (!str) return null;
+  const [day, mon] = String(str).trim().split(/\s+/);
+  const m = PROJ_MONTHS[mon], d = Number(day);
+  if (m == null || !d) return null;
+  return new Date(PROJ_YEAR, m, d);
+}
+const projDayDiff = (a, b) => Math.round((a - b) / 86400000); // whole days, DST-proof
+function projToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+const projFmtDay = date => date.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+// Recurring = the content engine (daily habits), not one-off dated work.
+// Keyword-driven only — every recurring task tags its note. A long one-off
+// window must NOT be swallowed into Ongoing, so no duration heuristic here.
+const projIsRecurring = t => /RECURRING/i.test(t.n || "");
+
+// One-pass classification of every task into exactly one agenda bucket.
+function projBuckets(eff, today) {
+  const b = { overdue: [], today: [], tomorrow: [], week: [], later: [], ongoing: [], doneCount: 0 };
+  for (const ph of PROJ_PLAN) for (const t of ph.tasks) {
+    const st = eff(t);
+    if (st === "Done") { b.doneCount++; continue; }
+    const s = projTaskDate(t.s), e = projTaskDate(t.e);
+    const item = { t, st, s, e };
+    if (projIsRecurring(t) && s && s <= today) b.ongoing.push(item);
+    else if (e && e < today) b.overdue.push(item);
+    else if (s && e && s <= today && today <= e) b.today.push(item);
+    else if (s && projDayDiff(s, today) === 1) b.tomorrow.push(item);
+    else if (s && projDayDiff(s, today) >= 2 && projDayDiff(s, today) <= 7) b.week.push(item);
+    else b.later.push(item);
+  }
+  const pri = { High: 0, Med: 1 };
+  const ts = d => d ? d.getTime() : Infinity; // null dates sort last, never epoch-0
+  const sort = arr => arr.sort((x, y) => (pri[x.t.p] ?? 2) - (pri[y.t.p] ?? 2) || (ts(x.s) - ts(y.s)) || (Number(x.t.id.slice(1)) - Number(y.t.id.slice(1))));
+  [b.overdue, b.today, b.tomorrow, b.week, b.later, b.ongoing].forEach(sort);
+  // Pre-group the 7-day window by day so the render stays dumb.
+  const byDay = new Map();
+  for (const it of b.week) { const k = projDayDiff(it.s, today); (byDay.get(k) || byDay.set(k, []).get(k)).push(it); }
+  b.weekDays = [...byDay.keys()].sort((x, y) => x - y).map(k => ({ date: byDay.get(k)[0].s, items: byDay.get(k) }));
+  return b;
+}
+
 function ProjStatCard({ label, value, color, sub }) {
   return (
     <div style={{ background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 12, padding: "16px 20px", boxShadow: ELEV.sm }}>
@@ -647,6 +699,56 @@ function ProjStatCard({ label, value, color, sub }) {
       </div>
       <div className="r-tnum" style={{ fontFamily: HERO_FONT, fontSize: 28, fontWeight: 400, color: color || "var(--r-fg)", letterSpacing: "-0.02em", lineHeight: 1 }}>{value}</div>
       {sub && <div style={{ fontSize: 13, color: "var(--r-fg2)", marginTop: 6 }}>{sub}</div>}
+    </div>
+  );
+}
+
+// Shared task row — agenda buckets + phase timeline. compact hides the note.
+// One focusable control per row (the status pill, ≥24×24); the checkbox is a
+// decorative duplicate (aria-hidden, non-tabbable) matching the phase-node pattern.
+function ProjTaskRow({ t, st, onCycle, compact }) {
+  const sc = projStatusColor(st);
+  return (
+    <div style={{ display: "flex", gap: 11, padding: compact ? "9px 12px" : "11px 13px", borderRadius: 12, background: "var(--r-surf2)", border: "1px solid var(--r-bord)", borderLeft: `3px solid ${sc}`, opacity: st === "Done" ? 0.82 : 1, transition: "opacity .2s" }}>
+      <button onClick={onCycle} aria-hidden="true" tabIndex={-1} style={{ flexShrink: 0, marginTop: 1, width: 24, height: 24, borderRadius: 8, border: `2px solid ${sc}`, background: st === "Done" ? sc : st === "In progress" ? sc + "33" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
+        {st === "Done" && <i className="ph-bold ph-check" style={{ fontSize: 13, color: "var(--r-on-accent,#fff)" }} aria-hidden="true" />}
+        {st === "In progress" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: sc }} />}
+        {st === "Blocked" && <i className="ph-bold ph-x" style={{ fontSize: 12, color: sc }} aria-hidden="true" />}
+      </button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: "-0.01em", textDecoration: st === "Done" ? "line-through" : "none", lineHeight: 1.35 }}>{t.t}</div>
+          <button onClick={onCycle} aria-label={`${t.t} — status ${st}, tap to change`} style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, minHeight: 24, padding: "5px 10px", borderRadius: 999, border: `1px solid ${sc}40`, background: sc + "1a", color: projStatusText(st), cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" }}>{st}</button>
+        </div>
+        {!compact && t.n && <div style={{ fontSize: 11, color: "var(--r-fg2)", lineHeight: 1.5, marginTop: 3 }}>{t.n}</div>}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, color: "var(--r-fg2)", alignItems: "center", marginTop: 5 }}>
+          <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-calendar-blank" aria-hidden="true" />{t.s}–{t.e}</span>
+          {!compact && <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-hourglass-medium" aria-hidden="true" />{t.d}d</span>}
+          <span style={{ display: "inline-flex", gap: 3, alignItems: "center", color: projPriText(t.p) }}><i className="ph-fill ph-flag" aria-hidden="true" />{t.p}</span>
+          {!compact && t.dep !== "—" && <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-link" aria-hidden="true" />{t.dep}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Agenda bucket card — dated header + task rows or an empty line. Stateless;
+// module-scoped so status cycling inside it reconciles in place (keeps focus).
+function AgendaCard({ label, date, items, accent, tone, glow, icon, empty, isMobile, onCycle }) {
+  const textTone = tone || "var(--r-fg2)"; // readable label/icon colour
+  return (
+    <div style={{ position: "relative", overflow: "hidden", borderRadius: 18, padding: isMobile ? "16px 16px" : "18px 20px", marginBottom: 14, background: glow && accent ? `radial-gradient(120% 140% at 100% 0%, ${accent}1f, ${accent}03 55%), var(--r-surf)` : "var(--r-surf)", border: `1px solid ${accent ? accent + "55" : "var(--r-bord)"}`, boxShadow: glow ? "var(--r-shadow-md)" : "var(--r-shadow-sm)" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+        {icon && <i className={icon} style={{ fontSize: 14, color: textTone, alignSelf: "center" }} aria-hidden="true" />}
+        <h3 style={{ margin: 0, display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.14em", color: textTone, textTransform: "uppercase" }}>{label}</span>
+          {date && <span style={{ fontFamily: HERO_FONT, fontWeight: 500, fontSize: 16, letterSpacing: "-0.01em", color: "var(--r-fg)" }}>{date}</span>}
+        </h3>
+        <span style={{ flex: 1 }} />
+        <span className="r-tnum" style={{ fontSize: 12, fontWeight: 700, color: "var(--r-fg2)" }}>{items.length}</span>
+      </div>
+      {items.length ? <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{items.map(it => <ProjTaskRow key={it.t.id} t={it.t} st={it.st} onCycle={() => onCycle(it)} />)}</div>
+        : <div style={{ fontSize: 12.5, color: "var(--r-fg3)", padding: "2px 2px 4px" }}>{empty}</div>}
     </div>
   );
 }
@@ -792,6 +894,7 @@ export default function App() {
   const [projError, setProjError] = useState("");
   const [projLoading, setProjLoading] = useState(false);
   const [projOpenPhase, setProjOpenPhase] = useState(null); // null = auto-open active phase
+  const [projShowTimeline, setProjShowTimeline] = useState(false); // full phase timeline collapse
 
   const notifRef = useRef([]);
   const syncRef = useRef(null);
@@ -3562,6 +3665,9 @@ export default function App() {
             {projView === "plan" && (() => {
               const activePhase = (PROJ_PLAN.find(ph => ph.tasks.some(t => eff(t) !== "Done")) || PROJ_PLAN[0]).name;
               const openName = projOpenPhase === null ? activePhase : projOpenPhase;
+              const today = projToday();
+              const bk = projBuckets(eff, today);
+              const onCycle = it => projCyclePlan(it.t.id, it.st);
               return (<>
               {/* ── Hero: radial progress + ambient glow ── */}
               <div style={{ position: "relative", overflow: "hidden", borderRadius: 22, padding: isMobile ? "20px" : "26px 28px", marginBottom: 22, background: "radial-gradient(120% 140% at 100% 0%, rgba(124,108,246,0.20), rgba(124,108,246,0.02) 55%), var(--r-surf)", border: "1px solid var(--r-bord)", boxShadow: "var(--r-shadow-md)" }}>
@@ -3569,7 +3675,7 @@ export default function App() {
                 <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", gap: isMobile ? 16 : 28, position: "relative" }}>
                   <ProjArc pct={pct} size={isMobile ? 124 : 142} />
                   <div style={{ flex: 1, minWidth: 0, textAlign: isMobile ? "center" : "left" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: PROJ_ACCENT, textTransform: "uppercase", marginBottom: 7 }}>Revival Journey</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: projAccentText(), textTransform: "uppercase", marginBottom: 7 }}>Revival Journey</div>
                     <h2 style={{ fontFamily: HERO_FONT, fontWeight: 500, fontSize: "clamp(1.5rem,1.2rem + 1.4vw,2rem)", lineHeight: 1.04, letterSpacing: "-0.015em", marginBottom: 7 }}>Ihsan Education<br />online revival</h2>
                     <div style={{ fontSize: 12.5, color: "var(--r-fg2)", marginBottom: 14 }}>13 Jul – 15 Aug 2026 · {doneN}/{total} tasks done</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: isMobile ? "center" : "flex-start" }}>
@@ -3597,8 +3703,71 @@ export default function App() {
                 </div>
               </div>
 
+              {/* ── Agenda · what's on today, tomorrow, and coming up ── */}
+              {bk.overdue.length > 0 && (
+                <AgendaCard label="Overdue" items={bk.overdue} accent="#f87171" tone="var(--r-danger)" icon="ph ph-warning-circle"
+                  isMobile={isMobile} onCycle={onCycle} empty="" />
+              )}
+              <AgendaCard label="Today" date={projFmtDay(today)} items={bk.today} accent={PROJ_ACCENT} tone={projAccentText()} glow icon="ph ph-sun-horizon"
+                isMobile={isMobile} onCycle={onCycle} empty="Nothing dated today — keep the content engine running below ↓" />
+              <AgendaCard label="Tomorrow" date={projFmtDay(new Date(today.getTime() + 86400000))} items={bk.tomorrow}
+                icon="ph ph-arrow-bend-down-right" isMobile={isMobile} onCycle={onCycle} empty="Clear tomorrow." />
+
+              {/* Next 7 days — one header per day that has work */}
+              {bk.weekDays.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.14em", color: "var(--r-fg2)", textTransform: "uppercase", margin: "18px 2px 10px" }}>Next 7 days</h3>
+                  {bk.weekDays.map(g => (
+                    <div key={+g.date} style={{ marginBottom: 12 }}>
+                      <h4 style={{ fontSize: 12, fontWeight: 600, color: "var(--r-fg2)", margin: "0 2px 7px" }}>{projFmtDay(g.date)}</h4>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {g.items.map(it => <ProjTaskRow key={it.t.id} t={it.t} st={it.st} compact onCycle={() => projCyclePlan(it.t.id, it.st)} />)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Ongoing / daily — the recurring content engine, one-tap cycle */}
+              {bk.ongoing.length > 0 && (
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, margin: "18px 2px 11px" }}>
+                    <i className="ph ph-repeat" style={{ fontSize: 14, color: projAccentText() }} aria-hidden="true" />
+                    <h3 style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.14em", color: "var(--r-fg2)", textTransform: "uppercase" }}>Ongoing · daily</h3>
+                    <span className="r-tnum" style={{ fontSize: 12, fontWeight: 700, color: "var(--r-fg3)" }}>{bk.ongoing.length}</span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {bk.ongoing.map(it => {
+                      const sc = projStatusColor(it.st);
+                      return (
+                        <button key={it.t.id} onClick={() => projCyclePlan(it.t.id, it.st)} aria-label={`${it.t.t} — ${it.st}, tap to change`}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 7, maxWidth: "100%", padding: "7px 12px", borderRadius: 999, background: "var(--r-surf2)", border: `1px solid ${sc}55`, cursor: "pointer", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" }}>
+                          <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: "50%", background: it.st === "Not started" ? "transparent" : sc, border: `2px solid ${sc}`, boxSizing: "border-box" }} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--r-fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.t.t}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {bk.later.length > 0 && (
+                <div style={{ fontSize: 11.5, color: "var(--r-fg3)", margin: "0 2px 20px" }}>
+                  + {bk.later.length} more task{bk.later.length !== 1 ? "s" : ""} later in the plan — see the timeline below.
+                </div>
+              )}
+
+              {/* ── Full phase timeline (collapsible) ── */}
+              <button onClick={() => setProjShowTimeline(v => !v)} aria-expanded={projShowTimeline}
+                style={{ width: "100%", textAlign: "left", background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 14, padding: "13px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginBottom: projShowTimeline ? 16 : 26, fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" }}>
+                <i className="ph ph-list-checks" style={{ fontSize: 16, color: projAccentText() }} aria-hidden="true" />
+                <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: "var(--r-fg)" }}>Full plan timeline · by phase</span>
+                <span className="r-tnum" style={{ fontSize: 12, fontWeight: 700, color: "var(--r-fg2)" }}>{doneN}/{total}</span>
+                <i className={projShowTimeline ? "ph ph-caret-up" : "ph ph-caret-down"} style={{ fontSize: 14, color: "var(--r-fg2)" }} aria-hidden="true" />
+              </button>
+
               {/* ── Timeline spine of phase milestones ── */}
-              <div style={{ marginBottom: 26 }}>
+              {projShowTimeline && <div style={{ marginBottom: 26 }}>
                 {PROJ_PLAN.map((ph, pi) => {
                   const ps = projPhaseState(ph.tasks, eff);
                   const open = openName === ph.name;
@@ -3624,53 +3793,36 @@ export default function App() {
                         </button>
                         {open && (
                           <div id={`phase-panel-${pi}`} role="region" aria-label={`Phase ${num} tasks`} style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-                            {ph.tasks.map(t => {
-                              const st = eff(t);
-                              const sc = projStatusColor(st);
-                              return (
-                                <div key={t.id} style={{ display: "flex", gap: 11, padding: "11px 13px", borderRadius: 12, background: "var(--r-surf2)", border: "1px solid var(--r-bord)", borderLeft: `3px solid ${sc}`, opacity: st === "Done" ? 0.82 : 1, transition: "opacity .2s" }}>
-                                  <button onClick={() => projCyclePlan(t.id, st)} aria-label={`Status ${st}, tap to change`} style={{ flexShrink: 0, marginTop: 1, width: 20, height: 20, borderRadius: 7, border: `2px solid ${sc}`, background: st === "Done" ? sc : st === "In progress" ? sc + "33" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>
-                                    {st === "Done" && <i className="ph-bold ph-check" style={{ fontSize: 11, color: "#0c0c0f" }} aria-hidden="true" />}
-                                    {st === "In progress" && <span style={{ width: 7, height: 7, borderRadius: "50%", background: sc }} />}
-                                    {st === "Blocked" && <i className="ph-bold ph-x" style={{ fontSize: 10, color: sc }} aria-hidden="true" />}
-                                  </button>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                                      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: "-0.01em", textDecoration: st === "Done" ? "line-through" : "none", lineHeight: 1.35 }}>{t.t}</div>
-                                      <button onClick={() => projCyclePlan(t.id, st)} aria-label={`Cycle status, currently ${st}`} style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, border: `1px solid ${sc}40`, background: sc + "1a", color: sc, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap", fontFamily: "var(--r-font,'Inter',system-ui,sans-serif)" }}>{st}</button>
-                                    </div>
-                                    {t.n && <div style={{ fontSize: 11, color: "var(--r-fg2)", lineHeight: 1.5, marginTop: 3 }}>{t.n}</div>}
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, color: "var(--r-fg2)", alignItems: "center", marginTop: 5 }}>
-                                      <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-calendar-blank" aria-hidden="true" />{t.s}–{t.e}</span>
-                                      <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-hourglass-medium" aria-hidden="true" />{t.d}d</span>
-                                      <span style={{ display: "inline-flex", gap: 3, alignItems: "center", color: projPriColor(t.p) }}><i className="ph-fill ph-flag" aria-hidden="true" />{t.p}</span>
-                                      {t.dep !== "—" && <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}><i className="ph ph-link" aria-hidden="true" />{t.dep}</span>}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                            {ph.tasks.map(t => { const st = eff(t); return (
+                              <ProjTaskRow key={t.id} t={t} st={st} onCycle={() => projCyclePlan(t.id, st)} />
+                            ); })}
                           </div>
                         )}
                       </div>
                     </div>
                   );
                 })}
-              </div>
+              </div>}
 
               {/* ── Content calendar filmstrip ── */}
               <div style={{ marginTop: 4, marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <i className="ph ph-broadcast" style={{ color: PROJ_ACCENT, fontSize: 16 }} aria-hidden="true" />
-                  <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em" }}>Content Calendar</div>
+                  <i className="ph ph-broadcast" style={{ color: projAccentText(), fontSize: 16 }} aria-hidden="true" />
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em" }}>Content Calendar</h3>
                   <div style={{ flex: 1 }} />
                   <div style={{ fontSize: 11, color: "var(--r-fg3)" }}>~5 posts/wk · swipe →</div>
                 </div>
                 <div style={{ display: "flex", gap: 12, overflowX: "auto", margin: "0 -4px", padding: "0 4px 8px", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}>
-                  {PROJ_CALENDAR.map((w, wi) => (
-                    <div key={w.wk} style={{ flex: isMobile ? "0 0 80%" : "0 0 270px", maxWidth: 320, scrollSnapAlign: "start", background: "var(--r-surf)", border: "1px solid var(--r-bord)", borderRadius: 16, padding: "16px 18px", boxShadow: "var(--r-shadow-sm)" }}>
+                  {PROJ_CALENDAR.map((w, wi) => {
+                    const ws = projTaskDate(w.wk.replace(/^Wk of\s*/i, ""));
+                    const isNow = ws && projDayDiff(today, ws) >= 0 && projDayDiff(today, ws) <= 6;
+                    return (
+                    <div key={w.wk} style={{ flex: isMobile ? "0 0 80%" : "0 0 270px", maxWidth: 320, scrollSnapAlign: "start", background: "var(--r-surf)", border: `1px solid ${isNow ? PROJ_ACCENT + "66" : "var(--r-bord)"}`, borderRadius: 16, padding: "16px 18px", boxShadow: "var(--r-shadow-sm)" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: PROJ_ACCENT }}>{w.wk}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: projAccentText() }}>{w.wk}</div>
+                          {isNow && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: projAccentText(), background: PROJ_ACCENT + "1a", borderRadius: 999, padding: "2px 7px" }}>This week</span>}
+                        </div>
                         <div style={{ fontFamily: HERO_FONT, fontSize: 18, color: "var(--r-fg3)" }}>0{wi + 1}</div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
@@ -3680,14 +3832,14 @@ export default function App() {
                           const body = parts.slice(1).join(" — ");
                           return (
                             <div key={p} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                              <span style={{ flexShrink: 0, marginTop: 1, fontSize: 10, fontWeight: 700, color: PROJ_ACCENT, background: PROJ_ACCENT + "1a", borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" }}>{tag}</span>
+                              <span style={{ flexShrink: 0, marginTop: 1, fontSize: 10, fontWeight: 700, color: projAccentText(), background: PROJ_ACCENT + "1a", borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" }}>{tag}</span>
                               <span style={{ fontSize: 11.5, color: "var(--r-fg2)", lineHeight: 1.4 }}>{body}</span>
                             </div>
                           );
                         })}
                       </div>
                     </div>
-                  ))}
+                  ); })}
                 </div>
               </div>
               </>);
